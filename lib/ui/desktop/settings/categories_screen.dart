@@ -48,7 +48,9 @@ class CategoriesScreen extends ConsumerWidget {
               data: (all) {
                 final expense = _active(all, 'expense');
                 final income = _active(all, 'income');
-                final archived = all.where((c) => c.archivedAt != null).toList();
+                final archived = all
+                    .where((c) => c.archivedAt != null)
+                    .toList();
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

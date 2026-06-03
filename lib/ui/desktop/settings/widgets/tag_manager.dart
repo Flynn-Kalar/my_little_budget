@@ -58,8 +58,10 @@ class _TagManagerState extends ConsumerState<TagManager> {
         if (widget.tags.isEmpty && !_showAdd)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('등록된 태그가 없습니다.',
-                style: TextStyle(fontSize: 13, color: AppTokens.muted)),
+            child: Text(
+              '등록된 태그가 없습니다.',
+              style: TextStyle(fontSize: 13, color: AppTokens.muted),
+            ),
           ),
         for (final tag in widget.tags)
           Padding(
@@ -131,7 +133,9 @@ class _TagRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text('#${tag.name}', style: const TextStyle(fontSize: 14))),
+          Expanded(
+            child: Text('#${tag.name}', style: const TextStyle(fontSize: 14)),
+          ),
           IconButton(
             onPressed: busy ? null : onEdit,
             icon: const Icon(Icons.edit_outlined, size: 16),

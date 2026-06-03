@@ -55,9 +55,12 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
   }
 
   Future<void> _saveReorder() async {
-    final same = _draft.length == widget.items.length &&
-        List.generate(_draft.length, (i) => _draft[i].id == widget.items[i].id)
-            .every((x) => x);
+    final same =
+        _draft.length == widget.items.length &&
+        List.generate(
+          _draft.length,
+          (i) => _draft[i].id == widget.items[i].id,
+        ).every((x) => x);
     if (same) {
       setState(() => _reorderMode = false);
       return;
@@ -108,11 +111,14 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
     );
     if (ok != true) return;
     setState(() => _busyId = category.id);
-    final err = await ref.read(categoriesDaoProvider).deleteCategory(category.id);
+    final err = await ref
+        .read(categoriesDaoProvider)
+        .deleteCategory(category.id);
     if (mounted) {
       if (err != null) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(err)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err)));
       } else {
         refreshCategories(ref);
       }
@@ -128,19 +134,23 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
       children: [
         Row(
           children: [
-            Text(widget.title,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTokens.muted)),
+            Text(
+              widget.title,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTokens.muted,
+              ),
+            ),
             const Spacer(),
             if (!_isArchived && widget.items.length > 1)
               _reorderMode
                   ? Row(
                       children: [
                         TextButton.icon(
-                          onPressed:
-                              _saving ? null : () => setState(() => _reorderMode = false),
+                          onPressed: _saving
+                              ? null
+                              : () => setState(() => _reorderMode = false),
                           icon: const Icon(Icons.close, size: 14),
                           label: const Text('취소'),
                         ),
@@ -177,24 +187,24 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
                     onDone: () => setState(() => _editingId = null),
                   )
                 : _reorderMode
-                    ? _ReorderCategoryRow(
-                        category: visible[i],
-                        isFirst: i == 0,
-                        isLast: i == visible.length - 1,
-                        onUp: () => _swap(i, i - 1),
-                        onDown: () => _swap(i, i + 1),
-                      )
-                    : _CategoryRow(
-                        category: visible[i],
-                        archived: _isArchived,
-                        busy: _busyId == visible[i].id,
-                        onEdit: () => setState(() {
-                          _showAdd = false;
-                          _editingId = visible[i].id;
-                        }),
-                        onRestore: () => _restore(visible[i].id),
-                        onDelete: () => _delete(visible[i]),
-                      ),
+                ? _ReorderCategoryRow(
+                    category: visible[i],
+                    isFirst: i == 0,
+                    isLast: i == visible.length - 1,
+                    onUp: () => _swap(i, i - 1),
+                    onDown: () => _swap(i, i + 1),
+                  )
+                : _CategoryRow(
+                    category: visible[i],
+                    archived: _isArchived,
+                    busy: _busyId == visible[i].id,
+                    onEdit: () => setState(() {
+                      _showAdd = false;
+                      _editingId = visible[i].id;
+                    }),
+                    onRestore: () => _restore(visible[i].id),
+                    onDelete: () => _delete(visible[i]),
+                  ),
           ),
         if (!_isArchived && !_reorderMode)
           _showAdd
@@ -211,8 +221,9 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
                     }),
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('카테고리 추가'),
-                    style:
-                        TextButton.styleFrom(foregroundColor: AppTokens.muted),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTokens.muted,
+                    ),
                   ),
                 ),
       ],
@@ -250,10 +261,14 @@ class _CategoryRow extends StatelessWidget {
         children: [
           _ColorDot(color: category.color),
           const SizedBox(width: 12),
-          Expanded(child: Text(category.name, style: const TextStyle(fontSize: 14))),
+          Expanded(
+            child: Text(category.name, style: const TextStyle(fontSize: 14)),
+          ),
           if (archived)
-            Text(category.type == 'expense' ? '지출' : '수입',
-                style: const TextStyle(fontSize: 11, color: AppTokens.muted)),
+            Text(
+              category.type == 'expense' ? '지출' : '수입',
+              style: const TextStyle(fontSize: 11, color: AppTokens.muted),
+            ),
           const SizedBox(width: 8),
           if (archived) ...[
             TextButton.icon(
@@ -318,7 +333,9 @@ class _ReorderCategoryRow extends StatelessWidget {
           ),
           _ColorDot(color: category.color),
           const SizedBox(width: 12),
-          Expanded(child: Text(category.name, style: const TextStyle(fontSize: 14))),
+          Expanded(
+            child: Text(category.name, style: const TextStyle(fontSize: 14)),
+          ),
         ],
       ),
     );
@@ -331,11 +348,11 @@ class _ColorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: colorFromHex(color),
-        ),
-      );
+    width: 12,
+    height: 12,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: colorFromHex(color),
+    ),
+  );
 }

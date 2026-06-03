@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,8 +26,9 @@ class CategoryForm extends ConsumerStatefulWidget {
 }
 
 class _CategoryFormState extends ConsumerState<CategoryForm> {
-  late final _nameCtrl =
-      TextEditingController(text: widget.category?.name ?? '');
+  late final _nameCtrl = TextEditingController(
+    text: widget.category?.name ?? '',
+  );
   late String _color = widget.category?.color ?? randomColor();
   bool _busy = false;
 
@@ -53,16 +53,18 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(categoriesDaoProvider).saveCategory(
-            id: widget.category?.id,
-            draft: result.value!,
-          );
+      await ref
+          .read(categoriesDaoProvider)
+          .saveCategory(id: widget.category?.id, draft: result.value!);
       refreshCategories(ref);
       widget.onDone();
-    } on SqliteException catch (e) {
-      _show(e.message.contains('UNIQUE')
-          ? '같은 이름의 카테고리가 이미 존재합니다.'
-          : '저장 오류: ${e.message}');
+    } catch (e) {
+      final message = e.toString();
+      _show(
+        message.contains('UNIQUE')
+            ? '같은 이름의 카테고리가 이미 존재합니다.'
+            : '저장 오류: $message',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -82,8 +84,9 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
   }
 
   void _show(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -111,8 +114,10 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text('색상',
-                  style: TextStyle(fontSize: 12, color: AppTokens.muted)),
+              const Text(
+                '색상',
+                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+              ),
               const SizedBox(width: 12),
               for (final c in colorPalette)
                 Padding(

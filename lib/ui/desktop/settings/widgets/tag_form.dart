@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -48,18 +47,20 @@ class _TagFormState extends ConsumerState<TagForm> {
       }
       refreshTags(ref);
       widget.onDone();
-    } on SqliteException catch (e) {
-      _show(e.message.contains('UNIQUE')
-          ? '같은 이름의 태그가 이미 존재합니다.'
-          : '저장 오류: ${e.message}');
+    } catch (e) {
+      final message = e.toString();
+      _show(
+        message.contains('UNIQUE') ? '같은 이름의 태그가 이미 존재합니다.' : '저장 오류: $message',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   void _show(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -88,8 +89,10 @@ class _TagFormState extends ConsumerState<TagForm> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text('색상',
-                  style: TextStyle(fontSize: 12, color: AppTokens.muted)),
+              const Text(
+                '색상',
+                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+              ),
               const SizedBox(width: 12),
               for (final c in colorPalette)
                 Padding(
