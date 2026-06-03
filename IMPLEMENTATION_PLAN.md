@@ -145,17 +145,25 @@ Current status:
   - memo
 - SELL fields:
   - occurred date
-  - ticker
+  - ticker from the expanded holding row
   - quantity
   - total sell amount
   - fee
   - memo
 - DIVIDEND fields:
   - occurred date
-  - ticker
+  - ticker from the expanded holding row
   - dividend total amount
   - memo
-- SELL/DIVIDEND reuse existing `validateInvestment` and `checkTradableTicker`.
+- BUY creation remains in the top action button.
+- SELL/DIVIDEND creation is implemented as inline expansion under current holding rows:
+  - no top fixed SELL/DIVIDEND form
+  - clicking a holding row toggles its inline forms
+  - only one holding row can be expanded at a time
+  - clicking another row closes the previous expansion
+  - clicking the same row again collapses it
+  - save closes the inline area and refreshes investment/account providers
+- SELL/DIVIDEND reuse existing `validateInvestment`; inline creation uses the expanded holding ticker directly.
 - SELL additionally uses `checkSellQuantity` to reject selling more than current holdings.
 - Investment quantity precision policy is implemented:
   - quantity only supports 4 decimal places

@@ -142,8 +142,8 @@ Status:
 
 Currently input-capable:
 - Create BUY investment transaction.
-- Create SELL investment transaction with held ticker and held quantity validation.
-- Create DIVIDEND investment transaction with held ticker validation.
+- Create SELL investment transaction from an expanded holding row with automatic ticker and held quantity validation.
+- Create DIVIDEND investment transaction from an expanded holding row with automatic ticker selection.
 - Edit BUY/SELL/DIVIDEND investment transactions from monthly rows.
 - Delete investment transactions from monthly rows after confirmation.
 - Quantity precision policy is active for BUY/SELL:
