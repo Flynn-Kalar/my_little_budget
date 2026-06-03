@@ -53,7 +53,7 @@ Not routed yet:
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
 | budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, and existing group amount/adjustment/carry-forward editing. No create/delete yet. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
-| investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot, BUY/SELL/DIVIDEND creation. Edit/delete and PnL deferred. |
+| investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot, realized PnL read-only section, BUY/SELL/DIVIDEND creation. Edit/delete deferred. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme and backup/data management are TODO. |
 
 ## Detailed TODO
@@ -148,12 +148,9 @@ Currently input-capable:
 
 TODO:
 - Add investment edit/delete flow.
-- Add PnL tab:
-  - date range
-  - realized PnL rows
-  - summary
+- Consider a dedicated PnL tab only if the read-only monthly section becomes too dense.
 - Confirm account balance/account detail providers refresh after investment mutations.
-- Add focused widget tests for read-only rendering, mutations, and PnL.
+- Add focused widget tests for read-only rendering, mutations, and realized PnL.
 
 ### settings
 
@@ -188,7 +185,7 @@ Items:
 ## MVP Recommendation
 
 Shortest path to a usable MVP:
-1. Complete investments edit/delete and PnL.
+1. Complete investments edit/delete.
 2. Complete remaining budget create/delete flows.
 3. Add stats yearly route/screen.
 4. Add settings theme.

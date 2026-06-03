@@ -38,11 +38,21 @@ final currentHoldingsProvider =
       return dao.listCurrentHoldings();
     });
 
+final realizedPnlProvider = FutureProvider.autoDispose<List<RealizedPnL>>((
+  ref,
+) async {
+  final month = ref.watch(investmentMonthProvider);
+  final range = monthRange(month);
+  final dao = ref.watch(investmentsDaoProvider);
+  return dao.getRealizedPnL(range.start, range.end);
+});
+
 void refreshInvestments(WidgetRef ref, {int? accountId}) {
   ref.invalidate(investmentRowsProvider);
   ref.invalidate(investmentMonthlySummaryProvider);
   ref.invalidate(currentHoldingsProvider);
   ref.invalidate(investmentAccountProvider);
+  ref.invalidate(realizedPnlProvider);
   ref.invalidate(accountBalancesProvider);
   if (accountId != null) {
     ref.invalidate(accountByIdProvider(accountId));

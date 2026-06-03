@@ -21,6 +21,7 @@ class InvestmentsScreen extends ConsumerWidget {
     final summary = ref.watch(investmentMonthlySummaryProvider);
     final holdings = ref.watch(currentHoldingsProvider);
     final rows = ref.watch(investmentRowsProvider);
+    final realizedPnl = ref.watch(realizedPnlProvider);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 1100),
@@ -75,7 +76,13 @@ class InvestmentsScreen extends ConsumerWidget {
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
             const SizedBox(height: 16),
-            const _PnlTodoCard(),
+            realizedPnl.when(
+              data: (value) => _RealizedPnlCard(rows: value),
+              loading: () => const _InvestmentCard(
+                child: LinearProgressIndicator(minHeight: 3),
+              ),
+              error: (error, _) => _ErrorCard(message: error.toString()),
+            ),
             const SizedBox(height: 40),
           ],
         ),
@@ -521,58 +528,200 @@ class _SidePill extends StatelessWidget {
   }
 }
 
-class _PnlTodoCard extends StatelessWidget {
-  const _PnlTodoCard();
+class _RealizedPnlCard extends StatelessWidget {
+  const _RealizedPnlCard({required this.rows});
+
+  final List<RealizedPnL> rows;
 
   @override
   Widget build(BuildContext context) {
-    return const _InvestmentCard(
-      child: Row(
+    final totalPnl = rows.fold<int>(0, (sum, row) => sum + row.pnl);
+    final totalSell = rows
+        .where((row) => row.kind == RealizedKind.sell)
+        .fold<int>(0, (sum, row) => sum + row.sellAmount);
+    final totalDividend = rows
+        .where((row) => row.kind == RealizedKind.dividend)
+        .fold<int>(0, (sum, row) => sum + row.sellAmount);
+
+    return _InvestmentCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.insights_outlined, color: AppTokens.muted),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('실현손익', style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 2),
-                Text(
-                  'PnL 탭은 다음 단계에서 구현합니다.',
-                  style: TextStyle(color: AppTokens.muted),
+          const Text(
+            '실현손익',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _InlineMetric(
+                  label: '월간 실현손익',
+                  amount: totalPnl,
+                  color: totalPnl < 0 ? AppTokens.expense : AppTokens.income,
                 ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _InlineMetric(
+                  label: '총 매도금액',
+                  amount: totalSell,
+                  color: AppTokens.income,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _InlineMetric(
+                  label: '총 배당금',
+                  amount: totalDividend,
+                  color: AppTokens.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (rows.isEmpty)
+            const _EmptyState(message: '이번 달 실현손익 내역이 없습니다.')
+          else
+            Column(
+              children: [
+                const _RealizedPnlHeader(),
+                const Divider(height: 1),
+                for (final row in rows) _RealizedPnlRow(row: row),
               ],
             ),
-          ),
-          _StatusPill(label: 'TODO'),
         ],
       ),
     );
   }
 }
 
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label});
+class _InlineMetric extends StatelessWidget {
+  const _InlineMetric({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
 
   final String label;
+  final int amount;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTokens.sidebarActive,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: AppTokens.muted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-          ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: AppTokens.muted)),
+            const SizedBox(height: 4),
+            Text(
+              formatKRW(amount),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+class _RealizedPnlHeader extends StatelessWidget {
+  const _RealizedPnlHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(flex: 2, child: Text('거래일')),
+          Expanded(flex: 2, child: Text('종류')),
+          Expanded(flex: 2, child: Text('ticker')),
+          Expanded(flex: 2, child: Text('수량', textAlign: TextAlign.right)),
+          Expanded(flex: 3, child: Text('매도/배당', textAlign: TextAlign.right)),
+          Expanded(flex: 3, child: Text('원가', textAlign: TextAlign.right)),
+          Expanded(flex: 3, child: Text('손익', textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text('수익률', textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RealizedPnlRow extends StatelessWidget {
+  const _RealizedPnlRow({required this.row});
+
+  final RealizedPnL row;
+
+  @override
+  Widget build(BuildContext context) {
+    final side = row.kind == RealizedKind.sell ? 'sell' : 'dividend';
+    final pnlColor = row.pnl < 0 ? AppTokens.expense : AppTokens.income;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text('${row.occurredOn} ${row.occurredTime}'),
+          ),
+          Expanded(flex: 2, child: _SidePill(side: side)),
+          Expanded(
+            flex: 2,
+            child: Text(
+              row.ticker,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              row.kind == RealizedKind.dividend
+                  ? '-'
+                  : _formatQuantity(row.quantity),
+              textAlign: TextAlign.right,
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(formatKRW(row.sellAmount), textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(formatKRW(row.costBasis), textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              formatKRW(row.pnl),
+              textAlign: TextAlign.right,
+              style: TextStyle(color: pnlColor, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              row.kind == RealizedKind.dividend
+                  ? '-'
+                  : _formatPercent(row.returnRate),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -925,6 +1074,8 @@ String _formatQuantity(double value) {
   final fixed = value.toStringAsFixed(6);
   return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
 }
+
+String _formatPercent(double value) => '${(value * 100).toStringAsFixed(1)}%';
 
 String _sideLabel(String side) {
   return switch (side) {

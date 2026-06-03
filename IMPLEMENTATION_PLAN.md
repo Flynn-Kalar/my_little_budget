@@ -116,7 +116,7 @@ Current status:
 - `fl_chart` is not wired in this first pass; cards, lists, and tables are used.
 - `/stats/yearly` route and screen are not implemented yet.
 
-### Investments Creation Step
+### Investments Creation And Realized PnL Step
 
 Active files:
 - `lib/features/investments/investments_page.dart`
@@ -132,7 +132,7 @@ Current status:
   - monthly buy/sell/dividend/net summary
   - current holdings snapshot
   - current-month investment transaction list
-  - PnL TODO card
+  - current-month realized PnL read-only section
 - Investment transaction creation is implemented for BUY, SELL, and DIVIDEND.
 - BUY fields:
   - occurred date
@@ -163,9 +163,16 @@ Current status:
   - `investmentMonthlySummaryProvider`
   - `investmentAccountProvider`
   - `currentHoldingsProvider`
-- `refreshInvestments(ref, accountId: ...)` invalidates investment providers and account balance/detail providers when possible.
+  - `realizedPnlProvider`
+- `realizedPnlProvider` calculates the selected month range with `monthRange(month)` and calls `InvestmentsDao.getRealizedPnL(from, to)`.
+- The realized PnL section shows:
+  - monthly total realized PnL
+  - total sell amount
+  - total dividend amount
+  - SELL/DIVIDEND rows with date, ticker, quantity, sell/dividend amount, cost basis, PnL, and return rate
+  - empty state when the selected month has no realized PnL rows
+- `refreshInvestments(ref, accountId: ...)` invalidates investment providers, `realizedPnlProvider`, and account balance/detail providers when possible.
 - Investment edit/delete UI is not implemented yet.
-- PnL tab is not implemented yet.
 
 ## Remaining Placeholder
 
@@ -173,18 +180,15 @@ There are no remaining top-level `PlaceholderScaffold` screens in the current ro
 
 Note:
 - `/stats/yearly` is still not routed or implemented; `/stats` shows a TODO card for it.
-- Investments PnL is still represented by a TODO card.
+- Investments PnL is represented by a read-only monthly realized PnL section; a separate tab is still deferred.
 
 ## Investments Remaining Work
 
-Current read-only base and BUY/SELL/DIVIDEND creation step are complete.
+Current read-only base, BUY/SELL/DIVIDEND creation step, and monthly realized PnL section are complete.
 
 Next steps:
 1. Add investment edit/delete rows.
-2. Add PnL tab:
-   - date range
-   - realized PnL rows
-   - summary
+2. Consider a dedicated PnL tab only if the monthly read-only section needs more filtering or historical range controls.
 3. Confirm account-related providers refresh after every investment mutation.
 4. Add focused widget tests.
 
@@ -233,7 +237,7 @@ Next steps:
 
 Recommended order from the current code state:
 
-1. Investments edit/delete and PnL tab
+1. Investments edit/delete
 2. Budget create/delete flows
 3. Budget percentage/account-linked follow-up editing
 5. Stats category detail panel
