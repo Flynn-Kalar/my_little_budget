@@ -6,7 +6,9 @@ import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/investments_dao.dart';
 import '../../../data/database.dart';
+import '../../../data/providers.dart';
 import '../../../features/investments/cost_basis.dart';
+import '../../../features/investments/validation.dart';
 import 'providers.dart';
 
 class InvestmentsScreen extends ConsumerWidget {
@@ -31,7 +33,15 @@ class InvestmentsScreen extends ConsumerWidget {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            _InvestmentMonthNav(month: month),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _InvestmentMonthNav(month: month),
+                const _AddInvestmentButton(),
+              ],
+            ),
             const SizedBox(height: 16),
             account.when(
               data: (value) => _InvestmentAccountBanner(account: value),
@@ -70,6 +80,19 @@ class InvestmentsScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AddInvestmentButton extends StatelessWidget {
+  const _AddInvestmentButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: () => _InvestmentCreateDialog.show(context),
+      icon: const Icon(Icons.add, size: 18),
+      label: const Text('투자 거래 추가'),
     );
   }
 }
@@ -555,6 +578,233 @@ class _StatusPill extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _InvestmentCreateDialog extends ConsumerStatefulWidget {
+  const _InvestmentCreateDialog();
+
+  static Future<void> show(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => const _InvestmentCreateDialog(),
+    );
+  }
+
+  @override
+  ConsumerState<_InvestmentCreateDialog> createState() =>
+      _InvestmentCreateDialogState();
+}
+
+class _InvestmentCreateDialogState
+    extends ConsumerState<_InvestmentCreateDialog> {
+  final _date = TextEditingController(text: currentDateKey());
+  final _ticker = TextEditingController();
+  final _name = TextEditingController();
+  final _quantity = TextEditingController();
+  final _unitPrice = TextEditingController();
+  final _fee = TextEditingController(text: '0');
+  final _memo = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _date.dispose();
+    _ticker.dispose();
+    _name.dispose();
+    _quantity.dispose();
+    _unitPrice.dispose();
+    _fee.dispose();
+    _memo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final initial = parseDateKey(_date.text);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      _date.text = toDateKey(picked);
+    }
+  }
+
+  Future<void> _save() async {
+    setState(() => _busy = true);
+    try {
+      final quantity = double.tryParse(_quantity.text.trim());
+      final unitPrice = parseKRW(_unitPrice.text);
+      final fee = parseKRW(_fee.text);
+      final totalAmount = quantity == null
+          ? null
+          : (quantity * unitPrice).round() + fee;
+      final memo = _mergedMemo();
+      final result = validateInvestment(
+        side: 'buy',
+        occurredOn: _date.text.trim(),
+        occurredTime: nowTime(),
+        ticker: _ticker.text,
+        quantity: quantity,
+        totalAmount: totalAmount,
+        memo: memo,
+      );
+
+      if (result.isFail) {
+        _showSnack(result.errors.values.first);
+        return;
+      }
+
+      final linkedAccount = await ref.read(investmentAccountProvider.future);
+      await ref
+          .read(investmentsDaoProvider)
+          .saveInvestment(draft: result.value!);
+      if (!mounted) return;
+      refreshInvestments(ref, accountId: linkedAccount?.id);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('투자 매수 거래를 저장했습니다.')));
+    } catch (e) {
+      if (mounted) _showSnack('저장에 실패했습니다: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String? _mergedMemo() {
+    final name = _name.text.trim();
+    final memo = _memo.text.trim();
+    if (name.isEmpty && memo.isEmpty) return null;
+    if (name.isEmpty) return memo;
+    if (memo.isEmpty) return '종목명: $name';
+    return '종목명: $name\n$memo';
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final account = ref.watch(investmentAccountProvider);
+
+    return AlertDialog(
+      title: const Text('투자 거래 추가'),
+      content: SizedBox(
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _StatusPill(label: 'BUY만 지원'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _date,
+                readOnly: true,
+                decoration: InputDecoration(
+                  labelText: '거래일',
+                  suffixIcon: IconButton(
+                    onPressed: _busy ? null : _pickDate,
+                    icon: const Icon(Icons.calendar_month_outlined),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _ticker,
+                enabled: !_busy,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(labelText: '종목코드 / ticker'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _name,
+                enabled: !_busy,
+                decoration: const InputDecoration(
+                  labelText: '종목명 / name',
+                  helperText: '현재 DB에는 별도 종목명 컬럼이 없어 메모에 함께 저장됩니다.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _quantity,
+                      enabled: !_busy,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(labelText: '수량'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _unitPrice,
+                      enabled: !_busy,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: '단가',
+                        suffixText: '원',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _fee,
+                enabled: !_busy,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '수수료',
+                  suffixText: '원',
+                ),
+              ),
+              const SizedBox(height: 12),
+              account.when(
+                data: (value) => InputDecorator(
+                  decoration: const InputDecoration(labelText: '연결 계좌'),
+                  child: Text(value?.name ?? '활성 투자 계좌 없음'),
+                ),
+                loading: () => const LinearProgressIndicator(minHeight: 3),
+                error: (error, _) => Text(
+                  error.toString(),
+                  style: const TextStyle(color: AppTokens.expense),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _memo,
+                enabled: !_busy,
+                minLines: 2,
+                maxLines: 4,
+                decoration: const InputDecoration(labelText: '메모'),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'SELL/DIVIDEND와 PnL 탭은 다음 단계에서 구현합니다.',
+                style: TextStyle(color: AppTokens.muted, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+      ],
     );
   }
 }

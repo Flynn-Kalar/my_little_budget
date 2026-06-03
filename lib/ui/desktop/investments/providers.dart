@@ -6,6 +6,7 @@ import '../../../data/daos/investments_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/investments/cost_basis.dart';
+import '../accounts/providers.dart';
 
 final investmentMonthProvider = StateProvider<String>(
   (ref) => currentMonthKey(),
@@ -36,3 +37,15 @@ final currentHoldingsProvider =
       final dao = ref.watch(investmentsDaoProvider);
       return dao.listCurrentHoldings();
     });
+
+void refreshInvestments(WidgetRef ref, {int? accountId}) {
+  ref.invalidate(investmentRowsProvider);
+  ref.invalidate(investmentMonthlySummaryProvider);
+  ref.invalidate(currentHoldingsProvider);
+  ref.invalidate(investmentAccountProvider);
+  ref.invalidate(accountBalancesProvider);
+  if (accountId != null) {
+    ref.invalidate(accountByIdProvider(accountId));
+    ref.invalidate(accountTransactionsProvider(accountId));
+  }
+}

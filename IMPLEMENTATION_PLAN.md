@@ -116,7 +116,7 @@ Current status:
 - `fl_chart` is not wired in this first pass; cards, lists, and tables are used.
 - `/stats/yearly` route and screen are not implemented yet.
 
-### Investments Read-Only Screen
+### Investments BUY Creation Step
 
 Active files:
 - `lib/features/investments/investments_page.dart`
@@ -133,13 +133,24 @@ Current status:
   - current holdings snapshot
   - current-month investment transaction list
   - PnL TODO card
+- BUY transaction creation is implemented with:
+  - occurred date
+  - ticker
+  - display name captured into memo because the DB has no separate name column
+  - quantity
+  - unit price
+  - fee
+  - linked investment account display
+  - memo
 - Investment providers are implemented:
   - `investmentMonthProvider`
   - `investmentRowsProvider`
   - `investmentMonthlySummaryProvider`
   - `investmentAccountProvider`
   - `currentHoldingsProvider`
-- Buy/sell/dividend input UI is not implemented yet.
+- `refreshInvestments(ref, accountId: ...)` invalidates investment providers and account balance/detail providers when possible.
+- Sell/dividend input UI is not implemented yet.
+- Investment edit/delete UI is not implemented yet.
 - PnL tab is not implemented yet.
 
 ## Remaining Placeholder
@@ -152,18 +163,17 @@ Note:
 
 ## Investments Remaining Work
 
-Current read-only base is complete.
+Current read-only base and BUY creation step are complete.
 
 Next steps:
-1. Add create/edit/delete investment rows:
-   - buy first
-   - sell and dividend with `checkTradableTicker`
-2. Add PnL tab:
+1. Add SELL/DIVIDEND creation with `checkTradableTicker`.
+2. Add investment edit/delete rows.
+3. Add PnL tab:
    - date range
    - realized PnL rows
    - summary
-3. Confirm account-related providers refresh after investment mutations.
-4. Add focused widget tests.
+4. Confirm account-related providers refresh after every investment mutation.
+5. Add focused widget tests.
 
 ## Stats Remaining Work
 
@@ -210,7 +220,7 @@ Next steps:
 
 Recommended order from the current code state:
 
-1. Investments mutations and PnL tab
+1. Investments SELL/DIVIDEND, edit/delete, and PnL tab
 2. Budget create/delete flows
 3. Budget percentage/account-linked follow-up editing
 5. Stats category detail panel

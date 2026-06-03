@@ -53,7 +53,7 @@ Not routed yet:
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
 | budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, and existing group amount/adjustment/carry-forward editing. No create/delete yet. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
-| investments | `/investments` | READ_ONLY | No | Monthly rows, summary, investment account banner, holdings snapshot. PnL and mutations deferred. |
+| investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot, BUY creation. SELL/DIVIDEND and PnL deferred. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme and backup/data management are TODO. |
 
 ## Detailed TODO
@@ -138,13 +138,15 @@ TODO:
 ### investments
 
 Status:
-- `READ_ONLY`
+- `CRUD_INCOMPLETE`
 
 Currently input-capable:
-- None, except month navigation.
+- Create BUY investment transaction.
+- Month navigation.
 
 TODO:
-- Add investment create/edit/delete flow.
+- Add SELL/DIVIDEND creation.
+- Add investment edit/delete flow.
 - Validate sell/dividend with `checkTradableTicker`.
 - Add PnL tab:
   - date range
@@ -186,7 +188,7 @@ Items:
 ## MVP Recommendation
 
 Shortest path to a usable MVP:
-1. Complete investments mutations and PnL.
+1. Complete investments SELL/DIVIDEND, edit/delete, and PnL.
 2. Complete remaining budget create/delete flows.
 3. Add stats yearly route/screen.
 4. Add settings theme.
