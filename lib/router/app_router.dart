@@ -3,13 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../features/budget/budget_page.dart';
 import '../features/investments/investments_page.dart';
+import '../features/settings/settings_page.dart';
 import '../features/stats/stats_page.dart';
 import '../shell/sidebar_shell.dart';
 import '../ui/desktop/accounts/account_detail_screen.dart';
 import '../ui/desktop/accounts/accounts_screen.dart';
 import '../ui/desktop/settings/categories_screen.dart';
 import '../ui/desktop/settings/recurring_screen.dart';
-import '../ui/desktop/settings/settings_screen.dart';
 import '../ui/desktop/settings/tags_screen.dart';
 import '../ui/desktop/transactions/transactions_screen.dart';
 
@@ -51,7 +51,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
+            builder: (context, state) => const SettingsPage(),
             routes: [
               GoRoute(
                 path: 'categories',
