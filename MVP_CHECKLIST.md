@@ -51,7 +51,7 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
-| budget | `/budget` | READ_ONLY | No | Expected income, group vs actual rows, totals. No budget mutations yet. |
+| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing and existing group amount/adjustment/carry-forward editing. No create/copy/delete yet. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
 | investments | `/investments` | READ_ONLY | No | Monthly rows, summary, investment account banner, holdings snapshot. PnL and mutations deferred. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme and backup/data management are TODO. |
@@ -94,26 +94,26 @@ TODO:
 ### budget
 
 Status:
-- `READ_ONLY`
+- `CRUD_INCOMPLETE`
 
 Currently input-capable:
-- None, except month navigation.
+- Edit monthly expected income.
+- Edit existing fixed budget group amount.
+- Edit existing category-based group adjustment.
+- Edit existing category-based group carry-forward.
+- Month navigation.
 
 TODO:
-- Add monthly expected income editing.
 - Add previous-month copy.
 - Add create budget group flow:
   - fixed category-based group
   - percentage mode
   - account-linked mode
-- Add row-level edit/delete:
-  - amount
-  - adjustment
-  - percentage
-  - carry-forward
-  - delete
+- Add percentage group editing.
+- Add account-linked group editing behavior only where it affects DAO calculations.
+- Add row-level delete.
 - Add category add/remove for category-based groups.
-- Invalidate `overBudgetCountProvider` after budget mutations.
+- Keep invalidating `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider` after budget mutations.
 - Add focused widget tests for budget rendering and mutations.
 
 ### stats
@@ -187,7 +187,7 @@ Items:
 
 Shortest path to a usable MVP:
 1. Complete investments mutations and PnL.
-2. Complete budget mutations and income editing.
+2. Complete remaining budget create/copy/delete flows.
 3. Add stats yearly route/screen.
 4. Add settings theme.
 5. Add settings data management only after invalidation is explicit and tested.

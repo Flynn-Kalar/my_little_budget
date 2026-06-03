@@ -5,6 +5,7 @@ import '../../../core/date.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/budget_dao.dart';
+import '../../../data/providers.dart';
 import 'providers.dart';
 
 class BudgetScreen extends ConsumerWidget {
@@ -126,13 +127,15 @@ class _BudgetMonthNav extends ConsumerWidget {
   }
 }
 
-class _ExpectedIncomeCard extends StatelessWidget {
+class _ExpectedIncomeCard extends ConsumerWidget {
   const _ExpectedIncomeCard({required this.income});
 
   final int income;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final month = ref.watch(budgetMonthProvider);
+
     return _BudgetCard(
       child: Row(
         children: [
@@ -147,6 +150,16 @@ class _ExpectedIncomeCard extends StatelessWidget {
           Text(
             formatKRW(income),
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            onPressed: () => _ExpectedIncomeDialog.show(
+              context,
+              month: month,
+              income: income,
+            ),
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: '예상 수입 수정',
           ),
         ],
       ),
@@ -243,13 +256,13 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-class _BudgetGroupCard extends StatelessWidget {
+class _BudgetGroupCard extends ConsumerWidget {
   const _BudgetGroupCard({required this.row});
 
   final BudgetVsActual row;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final overBudget = row.spentAmount > row.budgetAmount;
     final progress = row.budgetAmount <= 0
         ? null
@@ -272,6 +285,12 @@ class _BudgetGroupCard extends StatelessWidget {
                 ),
               ),
               _ModeChip(row: row),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: () => _BudgetGroupEditDialog.show(context, row),
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: '예산 그룹 수정',
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -330,6 +349,11 @@ class _BudgetGroupCard extends StatelessWidget {
               ],
             ),
           ],
+          const SizedBox(height: 10),
+          const Text(
+            '삭제 기능은 다음 단계에서 구현합니다.',
+            style: TextStyle(color: AppTokens.muted, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -438,6 +462,221 @@ class _BudgetCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(padding: const EdgeInsets.all(16), child: child),
+    );
+  }
+}
+
+class _ExpectedIncomeDialog extends ConsumerStatefulWidget {
+  const _ExpectedIncomeDialog({required this.month, required this.income});
+
+  final String month;
+  final int income;
+
+  static Future<void> show(
+    BuildContext context, {
+    required String month,
+    required int income,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => _ExpectedIncomeDialog(month: month, income: income),
+    );
+  }
+
+  @override
+  ConsumerState<_ExpectedIncomeDialog> createState() => _ExpectedIncomeState();
+}
+
+class _ExpectedIncomeState extends ConsumerState<_ExpectedIncomeDialog> {
+  late final TextEditingController _income;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _income = TextEditingController(text: widget.income.toString());
+  }
+
+  @override
+  void dispose() {
+    _income.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(budgetDaoProvider)
+          .setMonthlyExpectedIncome(widget.month, parseKRW(_income.text));
+      if (!mounted) return;
+      refreshBudget(ref);
+      Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('예상 수입 수정'),
+      content: SizedBox(
+        width: 360,
+        child: TextField(
+          controller: _income,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: '월 예상 수입',
+            suffixText: '원',
+          ),
+          onSubmitted: (_) => _busy ? null : _save(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+      ],
+    );
+  }
+}
+
+class _BudgetGroupEditDialog extends ConsumerStatefulWidget {
+  const _BudgetGroupEditDialog({required this.row});
+
+  final BudgetVsActual row;
+
+  static Future<void> show(BuildContext context, BudgetVsActual row) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => _BudgetGroupEditDialog(row: row),
+    );
+  }
+
+  @override
+  ConsumerState<_BudgetGroupEditDialog> createState() =>
+      _BudgetGroupEditDialogState();
+}
+
+class _BudgetGroupEditDialogState
+    extends ConsumerState<_BudgetGroupEditDialog> {
+  late final TextEditingController _amount;
+  late final TextEditingController _adjustment;
+  late bool _carryForward;
+  bool _busy = false;
+
+  bool get _canEditAmount =>
+      widget.row.accountId == null && widget.row.incomePercentage == null;
+  bool get _canEditCarryForward => widget.row.accountId == null;
+
+  @override
+  void initState() {
+    super.initState();
+    _amount = TextEditingController(text: widget.row.baseAmount.toString());
+    _adjustment = TextEditingController(text: widget.row.adjustment.toString());
+    _carryForward = widget.row.carryForward;
+  }
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    _adjustment.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _busy = true);
+    try {
+      final dao = ref.read(budgetDaoProvider);
+      if (_canEditAmount) {
+        await dao.updateBudgetGroupAmount(
+          widget.row.groupId,
+          parseKRW(_amount.text),
+        );
+      }
+      if (widget.row.accountId == null) {
+        await dao.updateBudgetGroupAdjustment(
+          widget.row.groupId,
+          parseKRW(_adjustment.text),
+        );
+      }
+      if (_canEditCarryForward) {
+        await dao.updateBudgetGroupCarryForward(
+          widget.row.groupId,
+          _carryForward,
+        );
+      }
+      if (!mounted) return;
+      refreshBudget(ref);
+      Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final modeMessage = widget.row.accountId != null
+        ? '자산 연동 그룹은 자산 흐름으로 예산이 계산되어 금액/조정/이월을 수정하지 않습니다.'
+        : widget.row.incomePercentage != null
+        ? '소득 비율 그룹의 기준 예산은 예상 수입과 비율로 계산됩니다. 이번 단계에서는 조정액과 이월만 수정합니다.'
+        : null;
+
+    return AlertDialog(
+      title: Text(widget.row.groupName),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (modeMessage != null) ...[
+              Text(modeMessage, style: const TextStyle(color: AppTokens.muted)),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: _amount,
+              enabled: _canEditAmount && !_busy,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: '기준 예산',
+                suffixText: '원',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _adjustment,
+              enabled: widget.row.accountId == null && !_busy,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: '조정액',
+                suffixText: '원',
+              ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              value: _carryForward,
+              onChanged: _canEditCarryForward && !_busy
+                  ? (value) => setState(() => _carryForward = value)
+                  : null,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('잔액 이월'),
+              subtitle: const Text('삭제 기능은 다음 단계에서 구현합니다.'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+      ],
     );
   }
 }
