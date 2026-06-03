@@ -1,0 +1,29 @@
+import 'package:drift/drift.dart';
+
+import 'transactions.dart';
+
+/// SPEC §3.8
+/// 카테고리와 독립적인 자유 라벨. 한 거래에 여러 태그 가능.
+/// transfer/adjustment 거래에는 UI 가 노출하지 않음 (income/expense 만).
+@DataClassName('Tag')
+class Tags extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(min: 1, max: 20).unique()();
+  TextColumn get color => text().withDefault(const Constant('#64748b'))();
+  TextColumn get createdAt => text()
+      .withDefault(const CustomExpression("datetime('now')"))();
+}
+
+/// SPEC §3.8
+/// 거래 ↔ 태그 N:M.
+@DataClassName('TransactionTagLink')
+@TableIndex(name: 'idx_txtags_tag', columns: {#tagId})
+class TransactionTags extends Table {
+  IntColumn get transactionId => integer()
+      .references(Transactions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get tagId =>
+      integer().references(Tags, #id, onDelete: KeyAction.cascade)();
+
+  @override
+  Set<Column> get primaryKey => {transactionId, tagId};
+}
