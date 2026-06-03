@@ -9,6 +9,11 @@ Constraints:
 - Keep work in small UI/provider increments.
 - Preserve existing tests; run `flutter analyze` and `flutter test` after each screen step.
 
+Current phase:
+- MVP audit and completion pass.
+- `MVP_CHECKLIST.md` is the current status board for `DONE`, `READ_ONLY`, `CRUD_INCOMPLETE`, `NOT_IMPLEMENTED`, and `TECH_DEBT`.
+- Keep this plan aligned with `MVP_CHECKLIST.md` after each MVP step.
+
 ## Current Route Audit
 
 Source of truth:
@@ -30,6 +35,11 @@ Active routes:
 - `/settings/recurring` -> `lib/ui/desktop/settings/recurring_screen.dart`
 
 No active route currently points to `lib/ui/desktop/settings/settings_screen.dart`.
+
+Placeholder audit:
+- `PlaceholderScaffold` is still present as `lib/shell/placeholder_scaffold.dart`.
+- No active route or feature page imports `PlaceholderScaffold`.
+- A temporary route smoke widget test was run for all active routes and passed, then removed.
 
 ## Completed
 
