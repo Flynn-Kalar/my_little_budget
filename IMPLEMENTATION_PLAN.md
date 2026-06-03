@@ -23,7 +23,7 @@ Active routes:
 - `/accounts` -> `lib/ui/desktop/accounts/accounts_screen.dart`
 - `/accounts/:id` -> `lib/ui/desktop/accounts/account_detail_screen.dart`
 - `/investments` -> `lib/features/investments/investments_page.dart`
-  - Still uses `PlaceholderScaffold`
+  - `InvestmentsPage` delegates to `lib/ui/desktop/investments/investments_screen.dart`
 - `/settings` -> `lib/features/settings/settings_page.dart`
 - `/settings/categories` -> `lib/ui/desktop/settings/categories_screen.dart`
 - `/settings/tags` -> `lib/ui/desktop/settings/tags_screen.dart`
@@ -100,89 +100,54 @@ Current status:
 - `fl_chart` is not wired in this first pass; cards, lists, and tables are used.
 - `/stats/yearly` route and screen are not implemented yet.
 
-## Remaining Placeholder
+### Investments Read-Only Screen
 
-### InvestmentsPage
-
-Current file:
+Active files:
 - `lib/features/investments/investments_page.dart`
+- `lib/ui/desktop/investments/investments_screen.dart`
+- `lib/ui/desktop/investments/providers.dart`
 
 Current status:
-- Still uses `PlaceholderScaffold`.
-- No `lib/ui/desktop/investments/` implementation exists yet.
+- `InvestmentsPage` delegates to `InvestmentsScreen`.
+- `PlaceholderScaffold` has been removed from `/investments`.
+- Read-only screen is implemented with:
+  - current-month navigation
+  - investment account status banner
+  - monthly buy/sell/dividend/net summary
+  - current holdings snapshot
+  - current-month investment transaction list
+  - PnL TODO card
+- Investment providers are implemented:
+  - `investmentMonthProvider`
+  - `investmentRowsProvider`
+  - `investmentMonthlySummaryProvider`
+  - `investmentAccountProvider`
+  - `currentHoldingsProvider`
+- Buy/sell/dividend input UI is not implemented yet.
+- PnL tab is not implemented yet.
 
-SPEC sections:
-- investments table
-- cost basis and balance impact
-- `/investments`
+## Remaining Placeholder
 
-Reusable code:
-- `InvestmentsDao.listInvestmentsByMonth(month)`
-- `InvestmentsDao.investmentMonthlySummary(month)`
-- `InvestmentsDao.listInvestmentsByYear(year)`
-- `InvestmentsDao.investmentYearlySummary(year)`
-- `InvestmentsDao.availableInvestmentYears()`
-- `InvestmentsDao.listCurrentHoldings()`
-- `InvestmentsDao.getInvestmentAccount()`
-- `InvestmentsDao.getInvestmentById(id)`
-- `InvestmentsDao.listHeldTickers()`
-- `InvestmentsDao.getRealizedPnL(from, to)`
-- `InvestmentsDao.saveInvestment(id?, draft)`
-- `InvestmentsDao.deleteInvestment(id)`
-- `features/investments/cost_basis.dart`
-- `features/investments/validation.dart`
+There are no remaining top-level `PlaceholderScaffold` screens in the current route set.
 
-Providers to add:
-- `lib/ui/desktop/investments/providers.dart`
-- `investmentViewProvider`
-- `investmentMonthProvider`
-- `investmentRowsProvider`
-- `investmentMonthlySummaryProvider`
-- `investmentAccountProvider`
-- `heldTickersProvider`
-- `currentHoldingsProvider`
-- `pnlDateRangeProvider`
-- `realizedPnlProvider`
+Note:
+- `/stats/yearly` is still not routed or implemented; `/stats` shows a TODO card for it.
+- Investments PnL is still represented by a TODO card.
 
-Widgets/screens to add:
-- `lib/ui/desktop/investments/investments_screen.dart`
-- `lib/ui/desktop/investments/widgets/*` as needed
-- `InvestmentsScreen`
-- `InvestmentViewTabs`
-- `InvestmentAccountBanner`
-- `InvestmentMonthNav`
-- `InvestmentSummaryBar`
-- `HoldingsList`
-- `InvestmentList`
-- `InvestmentQuickRow`
-- `TickerField`
-- `PnLDateRange`
-- `InvestmentPnL`
+## Investments Remaining Work
 
-Implementation order:
-1. Replace `InvestmentsPage` with a thin wrapper to `InvestmentsScreen`.
-2. Add `lib/ui/desktop/investments/providers.dart`.
-3. Implement read-only investments list:
-   - investment account banner
-   - month nav
-   - monthly summary
-   - monthly rows
-4. Add current holdings snapshot.
-5. Add create/edit/delete investment rows:
+Current read-only base is complete.
+
+Next steps:
+1. Add create/edit/delete investment rows:
    - buy first
    - sell and dividend with `checkTradableTicker`
-6. Add PnL tab:
+2. Add PnL tab:
    - date range
    - realized PnL rows
    - summary
-7. Confirm account-related providers refresh after investment mutations.
-8. Add focused widget tests.
-9. Run `flutter analyze` and full `flutter test`.
-
-Risks/gaps:
-- `saveInvestment` can save with `accountId = null` when no active investment account exists; UI should make that state visible.
-- Sell/dividend validation must happen before DAO calls.
-- Investment mutations affect account balances and account detail virtual rows.
+3. Confirm account-related providers refresh after investment mutations.
+4. Add focused widget tests.
 
 ## Stats Remaining Work
 
@@ -234,20 +199,19 @@ Next steps:
 
 Recommended order from the current code state:
 
-1. Investments read-only screen
-2. Investments holdings snapshot
-3. Investments mutations and PnL tab
-4. Budget monthly income editing
-5. Budget previous-month copy
-6. Budget create/edit/delete flows
-7. Stats category detail panel
-8. Stats yearly screen
-9. Settings theme screen
-10. Settings data management
+1. Investments mutations and PnL tab
+2. Budget monthly income editing
+3. Budget previous-month copy
+4. Budget create/edit/delete flows
+5. Stats category detail panel
+6. Stats yearly screen
+7. Settings theme screen
+8. Settings data management
 
 Rationale:
-- Investments is now the only top-level remaining placeholder and already has strong DAO/logic/test coverage.
-- Budget and stats both have read-only bases, so their next steps are incremental enhancements.
+- The top-level placeholder pass is complete.
+- Investments, budget, and stats all have read-only bases, so their next steps are incremental enhancements.
+- Investments has strong DAO/logic/test coverage and is the most natural next mutation surface.
 - Settings data management has broad invalidation impact and should remain late.
 
 ## Verification Strategy
@@ -265,4 +229,4 @@ Do not:
 - Change DB schema for these screen steps.
 - Touch settings sub-screens while implementing unrelated screens.
 - Combine unrelated screen implementations in one pass.
-- Refactor transactions/accounts UI while implementing the remaining placeholder.
+- Refactor transactions/accounts UI while implementing these remaining enhancements.
