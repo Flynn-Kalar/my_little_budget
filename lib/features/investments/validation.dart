@@ -1,10 +1,5 @@
 import '../../core/validation.dart';
 
-/// SPEC §3.6 / §4.7 / §5.4 — 투자 입력 검증.
-///   buy/sell: quantity > 0 (소수점 허용 — 마이그 0015)
-///   dividend: quantity == 0 (입력값 무시하고 0 으로 정규화)
-///   totalAmount ≥ 1, ticker 1~40자
-
 const _sides = {'buy', 'sell', 'dividend'};
 
 class InvestmentDraft {
@@ -38,47 +33,50 @@ ValidationResult<InvestmentDraft> validateInvestment({
 }) {
   final errors = <String, String>{};
 
-  if (!_sides.contains(side)) errors['side'] = '거래 종류가 올바르지 않습니다';
-  if (!isDateKey(occurredOn)) errors['occurredOn'] = 'YYYY-MM-DD 형식이어야 합니다';
-  if (!isTimeKey(occurredTime)) errors['occurredTime'] = 'HH:MM 형식이어야 합니다';
+  if (!_sides.contains(side)) errors['side'] = '거래 종류가 올바르지 않습니다.';
+  if (!isDateKey(occurredOn)) errors['occurredOn'] = 'YYYY-MM-DD 형식이어야 합니다.';
+  if (!isTimeKey(occurredTime)) errors['occurredTime'] = 'HH:MM 형식이어야 합니다.';
 
   final cleanedTicker = ticker.trim();
   if (cleanedTicker.isEmpty || cleanedTicker.length > 40) {
-    errors['ticker'] = '종목명은 1~40자여야 합니다';
+    errors['ticker'] = '종목코드는 1~40자여야 합니다.';
   }
 
   final isDividend = side == 'dividend';
   final normalizedQty = isDividend ? 0.0 : quantity;
   if (!isDividend &&
-      (normalizedQty == null || !normalizedQty.isFinite || normalizedQty <= 0)) {
-    errors['quantity'] = '수량은 0보다 커야 합니다';
+      (normalizedQty == null ||
+          !normalizedQty.isFinite ||
+          normalizedQty <= 0)) {
+    errors['quantity'] = '수량은 0보다 커야 합니다.';
   }
 
   if (totalAmount == null || totalAmount < 1) {
-    errors['totalAmount'] = '금액은 1원 이상이어야 합니다';
+    errors['totalAmount'] = '금액은 1원 이상이어야 합니다.';
   }
 
-  final cleanedMemo =
-      (memo != null && memo.trim().isNotEmpty) ? memo.trim() : null;
+  final cleanedMemo = (memo != null && memo.trim().isNotEmpty)
+      ? memo.trim()
+      : null;
   if (cleanedMemo != null && cleanedMemo.length > 200) {
-    errors['memo'] = '메모는 200자 이하여야 합니다';
+    errors['memo'] = '메모는 200자 이하여야 합니다.';
   }
 
   if (errors.isNotEmpty) return ValidationResult.fail(errors);
 
-  return ValidationResult.ok(InvestmentDraft(
-    side: side,
-    occurredOn: occurredOn,
-    occurredTime: occurredTime,
-    ticker: cleanedTicker,
-    quantity: normalizedQty ?? 0,
-    totalAmount: totalAmount!,
-    memo: cleanedMemo,
-  ));
+  return ValidationResult.ok(
+    InvestmentDraft(
+      side: side,
+      occurredOn: occurredOn,
+      occurredTime: occurredTime,
+      ticker: cleanedTicker,
+      quantity: normalizedQty ?? 0,
+      totalAmount: totalAmount!,
+      memo: cleanedMemo,
+    ),
+  );
 }
 
-/// 매도·배당은 현재 보유 종목에만 허용. 단, 같은 ticker 의 기존 행을 수정 중이면 통과.
-/// SPEC §4.7. 통과하면 null, 막히면 에러 메시지 반환.
 String? checkTradableTicker({
   required String side,
   required String ticker,
@@ -89,6 +87,18 @@ String? checkTradableTicker({
   if (existingTicker == ticker) return null;
   if (heldTickers.contains(ticker)) return null;
   return side == 'sell'
-      ? '보유하지 않은 종목은 매도할 수 없습니다'
-      : '보유하지 않은 종목은 배당금을 입력할 수 없습니다';
+      ? '보유하지 않은 종목은 매도할 수 없습니다.'
+      : '보유하지 않은 종목은 배당(諛곕떦)을 입력할 수 없습니다.';
+}
+
+String? checkSellQuantity({
+  required String side,
+  required String ticker,
+  required double quantity,
+  required Map<String, double> heldQuantities,
+}) {
+  if (side != 'sell') return null;
+  final held = heldQuantities[ticker] ?? 0;
+  if (quantity <= held) return null;
+  return '보유 수량보다 많이 매도할 수 없습니다.';
 }

@@ -170,7 +170,7 @@ class _InvestmentAccountBanner extends StatelessWidget {
                 Text(
                   hasAccount
                       ? '${account!.name} 계좌에 투자 거래가 연결됩니다.'
-                      : '활성 투자 자산이 없으면 새 투자 거래는 계좌 없이 저장됩니다.',
+                      : '활성 투자 자산이 없으면 투자 거래는 계좌 없이 저장됩니다.',
                   style: const TextStyle(color: AppTokens.muted),
                 ),
               ],
@@ -443,6 +443,8 @@ class _InvestmentRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sideColor = _sideColor(row.side);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
@@ -472,7 +474,7 @@ class _InvestmentRow extends StatelessWidget {
             child: Text(
               formatKRW(row.totalAmount),
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(color: sideColor, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -488,36 +490,30 @@ class _SidePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (side) {
-      'buy' => '매수',
-      'sell' => '매도',
-      'dividend' => '배당',
-      _ => side,
-    };
-    final color = switch (side) {
-      'buy' => AppTokens.expense,
-      'sell' => AppTokens.income,
-      'dividend' => AppTokens.warning,
-      _ => AppTokens.muted,
-    };
-
     return Align(
       alignment: Alignment.centerLeft,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppTokens.sidebarActive,
+          color: _sideColor(side).withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: AppTokens.sidebarBorder),
+          border: Border.all(color: _sideColor(side).withValues(alpha: 0.35)),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_sideIcon(side), size: 12, color: _sideColor(side)),
+              const SizedBox(width: 4),
+              Text(
+                _sideLabel(side),
+                style: TextStyle(
+                  color: _sideColor(side),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -599,11 +595,13 @@ class _InvestmentCreateDialog extends ConsumerStatefulWidget {
 
 class _InvestmentCreateDialogState
     extends ConsumerState<_InvestmentCreateDialog> {
+  String _side = 'buy';
   final _date = TextEditingController(text: currentDateKey());
   final _ticker = TextEditingController();
   final _name = TextEditingController();
   final _quantity = TextEditingController();
   final _unitPrice = TextEditingController();
+  final _totalAmount = TextEditingController();
   final _fee = TextEditingController(text: '0');
   final _memo = TextEditingController();
   bool _busy = false;
@@ -615,22 +613,20 @@ class _InvestmentCreateDialogState
     _name.dispose();
     _quantity.dispose();
     _unitPrice.dispose();
+    _totalAmount.dispose();
     _fee.dispose();
     _memo.dispose();
     super.dispose();
   }
 
   Future<void> _pickDate() async {
-    final initial = parseDateKey(_date.text);
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
+      initialDate: parseDateKey(_date.text),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
-      _date.text = toDateKey(picked);
-    }
+    if (picked != null) _date.text = toDateKey(picked);
   }
 
   Future<void> _save() async {
@@ -639,22 +635,49 @@ class _InvestmentCreateDialogState
       final quantity = double.tryParse(_quantity.text.trim());
       final unitPrice = parseKRW(_unitPrice.text);
       final fee = parseKRW(_fee.text);
-      final totalAmount = quantity == null
-          ? null
-          : (quantity * unitPrice).round() + fee;
-      final memo = _mergedMemo();
+      final totalAmount = switch (_side) {
+        'buy' => quantity == null ? null : (quantity * unitPrice).round() + fee,
+        'sell' => parseKRW(_totalAmount.text) - fee,
+        'dividend' => parseKRW(_totalAmount.text),
+        _ => null,
+      };
       final result = validateInvestment(
-        side: 'buy',
+        side: _side,
         occurredOn: _date.text.trim(),
         occurredTime: nowTime(),
         ticker: _ticker.text,
-        quantity: quantity,
+        quantity: _side == 'dividend' ? 0 : quantity,
         totalAmount: totalAmount,
-        memo: memo,
+        memo: _mergedMemo(),
       );
 
       if (result.isFail) {
         _showSnack(result.errors.values.first);
+        return;
+      }
+
+      final holdings = await ref.read(currentHoldingsProvider.future);
+      final heldQuantities = {
+        for (final holding in holdings) holding.ticker: holding.quantity,
+      };
+      final heldTickers = heldQuantities.keys.toSet();
+      final tickerError = checkTradableTicker(
+        side: _side,
+        ticker: result.value!.ticker,
+        heldTickers: heldTickers,
+      );
+      if (tickerError != null) {
+        _showSnack(tickerError);
+        return;
+      }
+      final quantityError = checkSellQuantity(
+        side: _side,
+        ticker: result.value!.ticker,
+        quantity: result.value!.quantity,
+        heldQuantities: heldQuantities,
+      );
+      if (quantityError != null) {
+        _showSnack(quantityError);
         return;
       }
 
@@ -665,9 +688,9 @@ class _InvestmentCreateDialogState
       if (!mounted) return;
       refreshInvestments(ref, accountId: linkedAccount?.id);
       Navigator.pop(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('투자 매수 거래를 저장했습니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${_sideLabel(_side)} 거래를 저장했습니다.')),
+      );
     } catch (e) {
       if (mounted) _showSnack('저장에 실패했습니다: $e');
     } finally {
@@ -676,8 +699,9 @@ class _InvestmentCreateDialogState
   }
 
   String? _mergedMemo() {
-    final name = _name.text.trim();
     final memo = _memo.text.trim();
+    if (_side != 'buy') return memo.isEmpty ? null : memo;
+    final name = _name.text.trim();
     if (name.isEmpty && memo.isEmpty) return null;
     if (name.isEmpty) return memo;
     if (memo.isEmpty) return '종목명: $name';
@@ -697,13 +721,23 @@ class _InvestmentCreateDialogState
     return AlertDialog(
       title: const Text('투자 거래 추가'),
       content: SizedBox(
-        width: 520,
+        width: 540,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _StatusPill(label: 'BUY만 지원'),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'buy', label: Text('BUY')),
+                  ButtonSegment(value: 'sell', label: Text('SELL')),
+                  ButtonSegment(value: 'dividend', label: Text('DIVIDEND')),
+                ],
+                selected: {_side},
+                onSelectionChanged: _busy
+                    ? null
+                    : (values) => setState(() => _side = values.first),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: _date,
@@ -721,55 +755,74 @@ class _InvestmentCreateDialogState
                 controller: _ticker,
                 enabled: !_busy,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: '종목코드 / ticker'),
+                decoration: const InputDecoration(labelText: 'ticker'),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _name,
-                enabled: !_busy,
-                decoration: const InputDecoration(
-                  labelText: '종목명 / name',
-                  helperText: '현재 DB에는 별도 종목명 컬럼이 없어 메모에 함께 저장됩니다.',
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _quantity,
-                      enabled: !_busy,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(labelText: '수량'),
-                    ),
+              if (_side == 'buy') ...[
+                TextField(
+                  controller: _name,
+                  enabled: !_busy,
+                  decoration: const InputDecoration(
+                    labelText: '종목명 / name',
+                    helperText: '현재 DB에는 별도 종목명 컬럼이 없어 메모에 함께 저장됩니다.',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _unitPrice,
-                      enabled: !_busy,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: '단가',
-                        suffixText: '원',
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _QuantityField(controller: _quantity)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _unitPrice,
+                        enabled: !_busy,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '단가',
+                          suffixText: '원',
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _fee,
-                enabled: !_busy,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: '수수료',
-                  suffixText: '원',
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ] else if (_side == 'sell') ...[
+                _QuantityField(controller: _quantity, label: '매도 수량'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _totalAmount,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '총 매도금액',
+                    suffixText: '원',
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else ...[
+                TextField(
+                  controller: _totalAmount,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '배당금 총액',
+                    suffixText: '원',
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_side != 'dividend') ...[
+                TextField(
+                  controller: _fee,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '수수료',
+                    suffixText: '원',
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               account.when(
                 data: (value) => InputDecorator(
                   decoration: const InputDecoration(labelText: '연결 계좌'),
@@ -791,7 +844,7 @@ class _InvestmentCreateDialogState
               ),
               const SizedBox(height: 12),
               const Text(
-                'SELL/DIVIDEND와 PnL 탭은 다음 단계에서 구현합니다.',
+                'PnL 탭과 거래 수정/삭제는 다음 단계에서 구현합니다.',
                 style: TextStyle(color: AppTokens.muted, fontSize: 12),
               ),
             ],
@@ -805,6 +858,22 @@ class _InvestmentCreateDialogState
         ),
         FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
       ],
+    );
+  }
+}
+
+class _QuantityField extends StatelessWidget {
+  const _QuantityField({required this.controller, this.label = '수량'});
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(labelText: label),
     );
   }
 }
@@ -855,4 +924,31 @@ class _InvestmentCard extends StatelessWidget {
 String _formatQuantity(double value) {
   final fixed = value.toStringAsFixed(6);
   return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+}
+
+String _sideLabel(String side) {
+  return switch (side) {
+    'buy' => 'BUY',
+    'sell' => 'SELL',
+    'dividend' => 'DIVIDEND',
+    _ => side,
+  };
+}
+
+Color _sideColor(String side) {
+  return switch (side) {
+    'buy' => AppTokens.expense,
+    'sell' => AppTokens.income,
+    'dividend' => AppTokens.warning,
+    _ => AppTokens.muted,
+  };
+}
+
+IconData _sideIcon(String side) {
+  return switch (side) {
+    'buy' => Icons.south_west,
+    'sell' => Icons.north_east,
+    'dividend' => Icons.payments_outlined,
+    _ => Icons.circle_outlined,
+  };
 }
