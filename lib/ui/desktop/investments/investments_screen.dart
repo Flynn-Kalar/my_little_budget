@@ -8,6 +8,7 @@ import '../../../data/daos/investments_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/investments/cost_basis.dart';
+import '../../../features/investments/quantity_precision.dart';
 import '../../../features/investments/validation.dart';
 import 'providers.dart';
 
@@ -443,13 +444,13 @@ class _InvestmentRowsHeader extends StatelessWidget {
   }
 }
 
-class _InvestmentRow extends StatelessWidget {
+class _InvestmentRow extends ConsumerWidget {
   const _InvestmentRow({required this.row});
 
   final Investment row;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sideColor = _sideColor(row.side);
 
     return Padding(
@@ -484,9 +485,69 @@ class _InvestmentRow extends StatelessWidget {
               style: TextStyle(color: sideColor, fontWeight: FontWeight.w700),
             ),
           ),
+          SizedBox(
+            width: 88,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  tooltip: '수정',
+                  onPressed: () =>
+                      _InvestmentCreateDialog.show(context, investment: row),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                ),
+                IconButton(
+                  tooltip: '삭제',
+                  onPressed: () => _confirmDeleteInvestment(context, ref, row),
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  color: AppTokens.expense,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+}
+
+Future<void> _confirmDeleteInvestment(
+  BuildContext context,
+  WidgetRef ref,
+  Investment row,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('투자 거래 삭제'),
+      content: Text('${row.ticker} ${_sideLabel(row.side)} 거래를 삭제할까요?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('삭제'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final linkedAccount = await ref.read(investmentAccountProvider.future);
+    await ref.read(investmentsDaoProvider).deleteInvestment(row.id);
+    if (!context.mounted) return;
+    refreshInvestments(ref, accountId: linkedAccount?.id);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('투자 거래를 삭제했습니다.')));
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('삭제에 실패했습니다: $e')));
   }
 }
 
@@ -728,12 +789,14 @@ class _RealizedPnlRow extends StatelessWidget {
 }
 
 class _InvestmentCreateDialog extends ConsumerStatefulWidget {
-  const _InvestmentCreateDialog();
+  const _InvestmentCreateDialog({this.investment});
 
-  static Future<void> show(BuildContext context) {
+  final Investment? investment;
+
+  static Future<void> show(BuildContext context, {Investment? investment}) {
     return showDialog<void>(
       context: context,
-      builder: (_) => const _InvestmentCreateDialog(),
+      builder: (_) => _InvestmentCreateDialog(investment: investment),
     );
   }
 
@@ -754,6 +817,32 @@ class _InvestmentCreateDialogState
   final _fee = TextEditingController(text: '0');
   final _memo = TextEditingController();
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final row = widget.investment;
+    if (row == null) return;
+
+    _side = row.side;
+    _date.text = row.occurredOn;
+    _ticker.text = row.ticker;
+    _memo.text = row.memo ?? '';
+    if (row.side == 'dividend') {
+      _totalAmount.text = row.totalAmount.toString();
+      return;
+    }
+
+    _quantity.text = _formatQuantity(row.quantity);
+    if (row.side == 'buy') {
+      final unitPrice = row.quantity == 0
+          ? row.totalAmount
+          : (row.totalAmount / row.quantity).round();
+      _unitPrice.text = unitPrice.toString();
+    } else {
+      _totalAmount.text = row.totalAmount.toString();
+    }
+  }
 
   @override
   void dispose() {
@@ -781,7 +870,10 @@ class _InvestmentCreateDialogState
   Future<void> _save() async {
     setState(() => _busy = true);
     try {
-      final quantity = double.tryParse(_quantity.text.trim());
+      final rawQuantity = double.tryParse(_quantity.text.trim());
+      final quantity = rawQuantity == null
+          ? null
+          : normalizeQuantity(rawQuantity);
       final unitPrice = parseKRW(_unitPrice.text);
       final fee = parseKRW(_fee.text);
       final totalAmount = switch (_side) {
@@ -793,7 +885,7 @@ class _InvestmentCreateDialogState
       final result = validateInvestment(
         side: _side,
         occurredOn: _date.text.trim(),
-        occurredTime: nowTime(),
+        occurredTime: widget.investment?.occurredTime ?? nowTime(),
         ticker: _ticker.text,
         quantity: _side == 'dividend' ? 0 : quantity,
         totalAmount: totalAmount,
@@ -809,11 +901,17 @@ class _InvestmentCreateDialogState
       final heldQuantities = {
         for (final holding in holdings) holding.ticker: holding.quantity,
       };
+      final original = widget.investment;
+      if (original != null && original.side == 'sell') {
+        heldQuantities[original.ticker] =
+            (heldQuantities[original.ticker] ?? 0) + original.quantity;
+      }
       final heldTickers = heldQuantities.keys.toSet();
       final tickerError = checkTradableTicker(
         side: _side,
         ticker: result.value!.ticker,
         heldTickers: heldTickers,
+        existingTicker: widget.investment?.ticker,
       );
       if (tickerError != null) {
         _showSnack(tickerError);
@@ -833,7 +931,7 @@ class _InvestmentCreateDialogState
       final linkedAccount = await ref.read(investmentAccountProvider.future);
       await ref
           .read(investmentsDaoProvider)
-          .saveInvestment(draft: result.value!);
+          .saveInvestment(id: widget.investment?.id, draft: result.value!);
       if (!mounted) return;
       refreshInvestments(ref, accountId: linkedAccount?.id);
       Navigator.pop(context);
@@ -1071,8 +1169,7 @@ class _InvestmentCard extends StatelessWidget {
 }
 
 String _formatQuantity(double value) {
-  final fixed = value.toStringAsFixed(6);
-  return fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+  return formatInvestmentQuantity(value);
 }
 
 String _formatPercent(double value) => '${(value * 100).toStringAsFixed(1)}%';

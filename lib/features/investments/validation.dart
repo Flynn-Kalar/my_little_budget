@@ -1,4 +1,5 @@
 import '../../core/validation.dart';
+import 'quantity_precision.dart';
 
 const _sides = {'buy', 'sell', 'dividend'};
 
@@ -43,7 +44,9 @@ ValidationResult<InvestmentDraft> validateInvestment({
   }
 
   final isDividend = side == 'dividend';
-  final normalizedQty = isDividend ? 0.0 : quantity;
+  final normalizedQty = isDividend || quantity == null
+      ? (isDividend ? 0.0 : null)
+      : normalizeQuantity(quantity);
   if (!isDividend &&
       (normalizedQty == null ||
           !normalizedQty.isFinite ||
@@ -99,6 +102,6 @@ String? checkSellQuantity({
 }) {
   if (side != 'sell') return null;
   final held = heldQuantities[ticker] ?? 0;
-  if (quantity <= held) return null;
+  if (quantityUnitsLte(quantity, held)) return null;
   return '보유 수량보다 많이 매도할 수 없습니다.';
 }

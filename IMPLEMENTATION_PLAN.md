@@ -157,6 +157,18 @@ Current status:
   - memo
 - SELL/DIVIDEND reuse existing `validateInvestment` and `checkTradableTicker`.
 - SELL additionally uses `checkSellQuantity` to reject selling more than current holdings.
+- Investment quantity precision policy is implemented:
+  - quantity only supports 4 decimal places
+  - values with 5+ decimals are rounded at the 5th decimal place before storage
+  - amounts, unit prices, and fees remain integer KRW values
+  - holdings, average-cost, realized PnL, validation, investment rows, PnL rows, and account virtual rows use the same 4-decimal quantity policy
+  - internal holdings/PnL calculations use fixed 1/10000 units to avoid direct floating-point quantity comparisons
+- Investment row edit/delete is implemented:
+  - monthly list rows expose edit/delete actions
+  - edit reuses the investment dialog with existing row values
+  - BUY, SELL, and DIVIDEND can be updated through `InvestmentsDao.saveInvestment(id: draft:)`
+  - delete uses a confirmation dialog and `InvestmentsDao.deleteInvestment(id)`
+  - save/delete refresh investment rows, monthly summary, current holdings, realized PnL, investment account, account balances, and account detail providers when possible
 - Investment providers are implemented:
   - `investmentMonthProvider`
   - `investmentRowsProvider`
@@ -172,7 +184,6 @@ Current status:
   - SELL/DIVIDEND rows with date, ticker, quantity, sell/dividend amount, cost basis, PnL, and return rate
   - empty state when the selected month has no realized PnL rows
 - `refreshInvestments(ref, accountId: ...)` invalidates investment providers, `realizedPnlProvider`, and account balance/detail providers when possible.
-- Investment edit/delete UI is not implemented yet.
 
 ## Remaining Placeholder
 
@@ -184,13 +195,12 @@ Note:
 
 ## Investments Remaining Work
 
-Current read-only base, BUY/SELL/DIVIDEND creation step, and monthly realized PnL section are complete.
+Current read-only base, BUY/SELL/DIVIDEND creation, monthly realized PnL section, and investment edit/delete are complete.
 
 Next steps:
-1. Add investment edit/delete rows.
-2. Consider a dedicated PnL tab only if the monthly read-only section needs more filtering or historical range controls.
-3. Confirm account-related providers refresh after every investment mutation.
-4. Add focused widget tests.
+1. Consider a dedicated PnL tab only if the monthly read-only section needs more filtering or historical range controls.
+2. Add focused widget tests for investment mutations and realized PnL rendering.
+3. Revisit account detail virtual investment rows after more manual QA.
 
 ## Stats Remaining Work
 
@@ -237,18 +247,17 @@ Next steps:
 
 Recommended order from the current code state:
 
-1. Investments edit/delete
-2. Budget create/delete flows
-3. Budget percentage/account-linked follow-up editing
-5. Stats category detail panel
-6. Stats yearly screen
-7. Settings theme screen
-8. Settings data management
+1. Budget create/delete flows
+2. Budget percentage/account-linked follow-up editing
+3. Stats category detail panel
+4. Stats yearly screen
+5. Settings theme screen
+6. Settings data management
 
 Rationale:
 - The top-level placeholder pass is complete.
-- Investments, budget, and stats all have read-only bases, so their next steps are incremental enhancements.
-- Investments has strong DAO/logic/test coverage and is the most natural next mutation surface.
+- Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
+- Budget is the next largest CRUD gap because create/delete flows are still missing.
 - Settings data management has broad invalidation impact and should remain late.
 
 ## Verification Strategy

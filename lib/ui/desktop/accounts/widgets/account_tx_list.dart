@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
+import '../../../../features/investments/quantity_precision.dart';
 import '../../color_hex.dart';
 import '../../transactions/widgets/transaction_edit_dialog.dart';
 import '../providers.dart';
@@ -54,8 +55,10 @@ class AccountTxList extends ConsumerWidget {
                   border: Border.all(color: AppTokens.sidebarBorder),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text('거래 내역이 없습니다.',
-                    style: TextStyle(color: AppTokens.muted)),
+                child: const Text(
+                  '거래 내역이 없습니다.',
+                  style: TextStyle(color: AppTokens.muted),
+                ),
               ),
               const SizedBox(height: 20),
               _InitialBalanceRow(initialBalance: initialBalance),
@@ -197,7 +200,9 @@ class _GeneralRow extends ConsumerWidget {
                               title,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w500),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                           if (row.tags.isNotEmpty) ...[
@@ -216,7 +221,9 @@ class _GeneralRow extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 12, color: AppTokens.muted),
+                            fontSize: 12,
+                            color: AppTokens.muted,
+                          ),
                         ),
                     ],
                   ),
@@ -263,8 +270,11 @@ class _AdjustmentRow extends ConsumerWidget {
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
-          onTap: () =>
-              AdjustmentEditDialog.show(context, row: row, accountId: accountId),
+          onTap: () => AdjustmentEditDialog.show(
+            context,
+            row: row,
+            accountId: accountId,
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -286,16 +296,22 @@ class _AdjustmentRow extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('잔액 조정',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      const Text(
+                        '잔액 조정',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       if (metaParts.isNotEmpty)
                         Text(
                           metaParts.join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 12, color: AppTokens.muted),
+                            fontSize: 12,
+                            color: AppTokens.muted,
+                          ),
                         ),
                     ],
                   ),
@@ -335,24 +351,27 @@ class _InvestmentVirtualRow extends StatelessWidget {
     final amountColor = impact > 0
         ? AppTokens.income
         : impact < 0
-            ? AppTokens.expense
-            : AppTokens.muted;
-    final sign = impact > 0 ? '+' : impact < 0 ? '−' : '';
+        ? AppTokens.expense
+        : AppTokens.muted;
+    final sign = impact > 0
+        ? '+'
+        : impact < 0
+        ? '−'
+        : '';
     final amountText = side == 'buy'
         ? '자산 전환'
         : '$sign${formatKRW(impact.abs())}';
     final detail = switch (side) {
-      'buy' => '매입 ${formatKRW(row.originalAmount ?? 0)} · '
-          '${_qty(row.quantity)}주',
-      'sell' => '매도 ${formatKRW(row.originalAmount ?? 0)} · '
-          '평단원가 ${formatKRW(row.costBasis ?? 0)}',
+      'buy' =>
+        '매입 ${formatKRW(row.originalAmount ?? 0)} · '
+            '${_qty(row.quantity)}주',
+      'sell' =>
+        '매도 ${formatKRW(row.originalAmount ?? 0)} · '
+            '평단원가 ${formatKRW(row.costBasis ?? 0)}',
       _ => '배당금',
     };
     final showTime = row.occurredTime != '00:00';
-    final meta = [
-      if (showTime) row.occurredTime,
-      detail,
-    ].join(' · ');
+    final meta = [if (showTime) row.occurredTime, detail].join(' · ');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -365,16 +384,16 @@ class _InvestmentVirtualRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              border: Border.all(
-                color: AppTokens.sidebarBorder,
-              ),
+              border: Border.all(color: AppTokens.sidebarBorder),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: sideColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(4),
@@ -393,16 +412,22 @@ class _InvestmentVirtualRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(row.ticker ?? '',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(
+                        row.ticker ?? '',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       Text(
                         meta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 12, color: AppTokens.muted),
+                          fontSize: 12,
+                          color: AppTokens.muted,
+                        ),
                       ),
                     ],
                   ),
@@ -424,11 +449,9 @@ class _InvestmentVirtualRow extends StatelessWidget {
   }
 
   String _qty(double? q) {
-    if (q == null) return '0';
+    if (q == null) return formatInvestmentQuantity(0);
     // 소수점 12자리까지, 불필요한 0 제거
-    final s = q.toStringAsFixed(12);
-    final trimmed = s.replaceFirst(RegExp(r'\.?0+$'), '');
-    return trimmed.isEmpty ? '0' : trimmed;
+    return formatInvestmentQuantity(q);
   }
 }
 
@@ -490,8 +513,10 @@ class _InitialBalanceRow extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               const Expanded(
-                child: Text('초기 잔액',
-                    style: TextStyle(fontSize: 14, color: AppTokens.muted)),
+                child: Text(
+                  '초기 잔액',
+                  style: TextStyle(fontSize: 14, color: AppTokens.muted),
+                ),
               ),
               Text(
                 formatKRW(initialBalance),

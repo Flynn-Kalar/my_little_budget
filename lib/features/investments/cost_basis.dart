@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'quantity_precision.dart';
+
 /// SPEC §3.10 — 투자 평단가(average-cost) 계산.
 ///
 /// 전체 투자 기록을 시간 오름차순으로 훑으며 종목별 (보유수량, 원가) 를 유지하고,
@@ -72,8 +74,8 @@ class InvestmentEvent {
 }
 
 class _Position {
-  _Position(this.qty, this.basis);
-  double qty;
+  _Position(this.units, this.basis);
+  int units;
   int basis; // 정수 원가 누적 (sell 시 round 한 costBasis 차감)
 }
 
@@ -82,8 +84,16 @@ class _Position {
 /// 출력은 입력과 같은 1:1 (모든 entry 가 event 가 됨), **정렬은 하지 않음**(입력 처리순).
 List<InvestmentEvent> computeInvestmentEvents(List<InvestmentEntry> entries) {
   final sorted = [...entries]
-    ..sort((a, b) => _cmp(a.occurredOn, a.occurredTime, a.id, b.occurredOn,
-        b.occurredTime, b.id));
+    ..sort(
+      (a, b) => _cmp(
+        a.occurredOn,
+        a.occurredTime,
+        a.id,
+        b.occurredOn,
+        b.occurredTime,
+        b.id,
+      ),
+    );
   final positions = <String, _Position>{};
   final result = <InvestmentEvent>[];
 
@@ -92,55 +102,64 @@ List<InvestmentEvent> computeInvestmentEvents(List<InvestmentEntry> entries) {
 
     switch (r.side) {
       case InvestmentSide.buy:
-        pos.qty += r.quantity;
+        final buyUnits = quantityUnits(r.quantity);
+        pos.units += buyUnits;
         pos.basis += r.totalAmount;
         positions[r.ticker] = pos;
-        result.add(InvestmentEvent(
-          id: r.id,
-          side: InvestmentSide.buy,
-          occurredOn: r.occurredOn,
-          occurredTime: r.occurredTime,
-          ticker: r.ticker,
-          quantity: r.quantity,
-          originalAmount: r.totalAmount,
-          costBasis: 0,
-          balanceImpact: 0,
-          accountId: r.accountId,
-        ));
+        result.add(
+          InvestmentEvent(
+            id: r.id,
+            side: InvestmentSide.buy,
+            occurredOn: r.occurredOn,
+            occurredTime: r.occurredTime,
+            ticker: r.ticker,
+            quantity: buyUnits / investmentQuantityScale,
+            originalAmount: r.totalAmount,
+            costBasis: 0,
+            balanceImpact: 0,
+            accountId: r.accountId,
+          ),
+        );
 
       case InvestmentSide.dividend:
-        result.add(InvestmentEvent(
-          id: r.id,
-          side: InvestmentSide.dividend,
-          occurredOn: r.occurredOn,
-          occurredTime: r.occurredTime,
-          ticker: r.ticker,
-          quantity: 0,
-          originalAmount: r.totalAmount,
-          costBasis: 0,
-          balanceImpact: r.totalAmount,
-          accountId: r.accountId,
-        ));
+        result.add(
+          InvestmentEvent(
+            id: r.id,
+            side: InvestmentSide.dividend,
+            occurredOn: r.occurredOn,
+            occurredTime: r.occurredTime,
+            ticker: r.ticker,
+            quantity: 0,
+            originalAmount: r.totalAmount,
+            costBasis: 0,
+            balanceImpact: r.totalAmount,
+            accountId: r.accountId,
+          ),
+        );
 
       case InvestmentSide.sell:
-        final sellQty = math.min(r.quantity, pos.qty);
-        final avg = pos.qty > 0 ? pos.basis / pos.qty : 0.0;
-        final costBasis = (avg * sellQty).round();
-        pos.qty -= sellQty;
+        final requestedUnits = quantityUnits(r.quantity);
+        final sellUnits = math.min(requestedUnits, pos.units);
+        final costBasis = pos.units > 0
+            ? (pos.basis * sellUnits / pos.units).round()
+            : 0;
+        pos.units -= sellUnits;
         pos.basis = math.max(0, pos.basis - costBasis);
         positions[r.ticker] = pos;
-        result.add(InvestmentEvent(
-          id: r.id,
-          side: InvestmentSide.sell,
-          occurredOn: r.occurredOn,
-          occurredTime: r.occurredTime,
-          ticker: r.ticker,
-          quantity: r.quantity,
-          originalAmount: r.totalAmount,
-          costBasis: costBasis,
-          balanceImpact: r.totalAmount - costBasis,
-          accountId: r.accountId,
-        ));
+        result.add(
+          InvestmentEvent(
+            id: r.id,
+            side: InvestmentSide.sell,
+            occurredOn: r.occurredOn,
+            occurredTime: r.occurredTime,
+            ticker: r.ticker,
+            quantity: requestedUnits / investmentQuantityScale,
+            originalAmount: r.totalAmount,
+            costBasis: costBasis,
+            balanceImpact: r.totalAmount - costBasis,
+            accountId: r.accountId,
+          ),
+        );
     }
   }
 
@@ -153,17 +172,26 @@ List<InvestmentEvent> eventsForAccount(
   List<InvestmentEntry> all,
   int accountId,
 ) {
-  return computeInvestmentEvents(all)
-      .where((e) => e.accountId == accountId)
-      .toList()
-    ..sort((a, b) => _cmp(b.occurredOn, b.occurredTime, b.id, a.occurredOn,
-        a.occurredTime, a.id));
+  return computeInvestmentEvents(
+    all,
+  ).where((e) => e.accountId == accountId).toList()..sort(
+    (a, b) => _cmp(
+      b.occurredOn,
+      b.occurredTime,
+      b.id,
+      a.occurredOn,
+      a.occurredTime,
+      a.id,
+    ),
+  );
 }
 
 /// 자산 잔액에 더해질 투자 손익 합계 = Σ balanceImpact.
 int investmentBalanceImpact(List<InvestmentEntry> all, int accountId) {
-  return eventsForAccount(all, accountId)
-      .fold(0, (sum, e) => sum + e.balanceImpact);
+  return eventsForAccount(
+    all,
+    accountId,
+  ).fold(0, (sum, e) => sum + e.balanceImpact);
 }
 
 enum RealizedKind { sell, dividend }
@@ -211,40 +239,47 @@ List<RealizedPnL> realizedPnL(
       continue;
     }
     final isSell = e.side == InvestmentSide.sell;
-    rows.add(RealizedPnL(
-      id: e.id,
-      kind: isSell ? RealizedKind.sell : RealizedKind.dividend,
-      occurredOn: e.occurredOn,
-      occurredTime: e.occurredTime,
-      ticker: e.ticker,
-      quantity: e.quantity,
-      sellAmount: e.originalAmount,
-      costBasis: e.costBasis,
-      pnl: e.balanceImpact,
-      returnRate:
-          isSell && e.costBasis > 0 ? e.balanceImpact / e.costBasis : 0.0,
-    ));
+    rows.add(
+      RealizedPnL(
+        id: e.id,
+        kind: isSell ? RealizedKind.sell : RealizedKind.dividend,
+        occurredOn: e.occurredOn,
+        occurredTime: e.occurredTime,
+        ticker: e.ticker,
+        quantity: e.quantity,
+        sellAmount: e.originalAmount,
+        costBasis: e.costBasis,
+        pnl: e.balanceImpact,
+        returnRate: isSell && e.costBasis > 0
+            ? e.balanceImpact / e.costBasis
+            : 0.0,
+      ),
+    );
   }
 
-  return rows
-    ..sort((a, b) => _cmp(b.occurredOn, b.occurredTime, b.id, a.occurredOn,
-        a.occurredTime, a.id));
+  return rows..sort(
+    (a, b) => _cmp(
+      b.occurredOn,
+      b.occurredTime,
+      b.id,
+      a.occurredOn,
+      a.occurredTime,
+      a.id,
+    ),
+  );
 }
 
 /// 보유수량이 남은 종목(정렬됨). = Tauri listHeldTickers (SQL `> 0` 그대로).
 List<String> heldTickers(List<InvestmentEntry> all) {
-  final held = <String, double>{};
+  final held = <String, int>{};
   for (final r in all) {
     if (r.side == InvestmentSide.buy) {
-      held[r.ticker] = (held[r.ticker] ?? 0) + r.quantity;
+      held[r.ticker] = (held[r.ticker] ?? 0) + quantityUnits(r.quantity);
     } else if (r.side == InvestmentSide.sell) {
-      held[r.ticker] = (held[r.ticker] ?? 0) - r.quantity;
+      held[r.ticker] = (held[r.ticker] ?? 0) - quantityUnits(r.quantity);
     }
   }
-  return held.entries
-      .where((e) => e.value > 0)
-      .map((e) => e.key)
-      .toList()
+  return held.entries.where((e) => e.value > 0).map((e) => e.key).toList()
     ..sort();
 }
 
@@ -255,22 +290,34 @@ List<String> heldTickers(List<InvestmentEntry> all) {
 ///   - totalCost 큰 순으로 정렬.
 List<CurrentHolding> currentHoldings(List<InvestmentEntry> all) {
   final sorted = [...all]
-    ..sort((a, b) => _cmp(a.occurredOn, a.occurredTime, a.id, b.occurredOn,
-        b.occurredTime, b.id));
+    ..sort(
+      (a, b) => _cmp(
+        a.occurredOn,
+        a.occurredTime,
+        a.id,
+        b.occurredOn,
+        b.occurredTime,
+        b.id,
+      ),
+    );
 
-  final positions = <String, ({double qty, double basis})>{};
+  final positions = <String, ({int units, int basis})>{};
   for (final r in sorted) {
-    var pos = positions[r.ticker] ?? (qty: 0.0, basis: 0.0);
+    var pos = positions[r.ticker] ?? (units: 0, basis: 0);
     switch (r.side) {
       case InvestmentSide.buy:
-        pos = (qty: pos.qty + r.quantity, basis: pos.basis + r.totalAmount);
-      case InvestmentSide.sell:
-        final sellQty = math.min(r.quantity, pos.qty);
-        final avg = pos.qty > 0 ? pos.basis / pos.qty : 0.0;
-        final costBasis = avg * sellQty;
         pos = (
-          qty: pos.qty - sellQty,
-          basis: math.max(0.0, pos.basis - costBasis),
+          units: pos.units + quantityUnits(r.quantity),
+          basis: pos.basis + r.totalAmount,
+        );
+      case InvestmentSide.sell:
+        final sellUnits = math.min(quantityUnits(r.quantity), pos.units);
+        final costBasis = pos.units > 0
+            ? (pos.basis * sellUnits / pos.units).round()
+            : 0;
+        pos = (
+          units: pos.units - sellUnits,
+          basis: math.max(0, pos.basis - costBasis),
         );
       case InvestmentSide.dividend:
         // 포지션 영향 없음
@@ -279,15 +326,16 @@ List<CurrentHolding> currentHoldings(List<InvestmentEntry> all) {
     positions[r.ticker] = pos;
   }
 
-  const eps = 1e-9;
   return positions.entries
-      .where((e) => e.value.qty > eps)
-      .map((e) => CurrentHolding(
-            ticker: e.key,
-            quantity: e.value.qty,
-            totalCost: e.value.basis.round(),
-            avgCost: e.value.basis / e.value.qty,
-          ))
+      .where((e) => e.value.units > 0)
+      .map(
+        (e) => CurrentHolding(
+          ticker: e.key,
+          quantity: e.value.units / investmentQuantityScale,
+          totalCost: e.value.basis,
+          avgCost: e.value.basis / (e.value.units / investmentQuantityScale),
+        ),
+      )
       .toList()
     ..sort((a, b) => b.totalCost.compareTo(a.totalCost));
 }

@@ -144,10 +144,14 @@ Currently input-capable:
 - Create BUY investment transaction.
 - Create SELL investment transaction with held ticker and held quantity validation.
 - Create DIVIDEND investment transaction with held ticker validation.
+- Edit BUY/SELL/DIVIDEND investment transactions from monthly rows.
+- Delete investment transactions from monthly rows after confirmation.
+- Quantity precision policy is active for BUY/SELL:
+  - quantity is rounded to 4 decimal places before storage/calculation
+  - holdings, average cost, realized PnL, and account virtual rows display quantity with 4 decimal places
 - Month navigation.
 
 TODO:
-- Add investment edit/delete flow.
 - Consider a dedicated PnL tab only if the read-only monthly section becomes too dense.
 - Confirm account balance/account detail providers refresh after investment mutations.
 - Add focused widget tests for read-only rendering, mutations, and realized PnL.
@@ -185,7 +189,7 @@ Items:
 ## MVP Recommendation
 
 Shortest path to a usable MVP:
-1. Complete investments edit/delete.
+1. Complete budget create/delete flows.
 2. Complete remaining budget create/delete flows.
 3. Add stats yearly route/screen.
 4. Add settings theme.
