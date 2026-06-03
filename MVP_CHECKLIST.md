@@ -51,7 +51,7 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
-| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing and existing group amount/adjustment/carry-forward editing. No create/copy/delete yet. |
+| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, and existing group amount/adjustment/carry-forward editing. No create/delete yet. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
 | investments | `/investments` | READ_ONLY | No | Monthly rows, summary, investment account banner, holdings snapshot. PnL and mutations deferred. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme and backup/data management are TODO. |
@@ -101,10 +101,10 @@ Currently input-capable:
 - Edit existing fixed budget group amount.
 - Edit existing category-based group adjustment.
 - Edit existing category-based group carry-forward.
+- Copy previous month budget groups into the selected month.
 - Month navigation.
 
 TODO:
-- Add previous-month copy.
 - Add create budget group flow:
   - fixed category-based group
   - percentage mode
@@ -187,7 +187,7 @@ Items:
 
 Shortest path to a usable MVP:
 1. Complete investments mutations and PnL.
-2. Complete remaining budget create/copy/delete flows.
+2. Complete remaining budget create/delete flows.
 3. Add stats yearly route/screen.
 4. Add settings theme.
 5. Add settings data management only after invalidation is explicit and tested.

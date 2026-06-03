@@ -28,7 +28,20 @@ class BudgetScreen extends ConsumerWidget {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            _BudgetMonthNav(month: month),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _BudgetMonthNav(month: month),
+                _CopyPreviousMonthButton(month: month),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '이전 달에서 복사할 때 같은 이름의 예산 그룹은 건너뜁니다.',
+              style: TextStyle(color: AppTokens.muted, fontSize: 12),
+            ),
             const SizedBox(height: 16),
             income.when(
               data: (value) => _ExpectedIncomeCard(income: value),
@@ -49,6 +62,57 @@ class BudgetScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CopyPreviousMonthButton extends ConsumerStatefulWidget {
+  const _CopyPreviousMonthButton({required this.month});
+
+  final String month;
+
+  @override
+  ConsumerState<_CopyPreviousMonthButton> createState() =>
+      _CopyPreviousMonthButtonState();
+}
+
+class _CopyPreviousMonthButtonState
+    extends ConsumerState<_CopyPreviousMonthButton> {
+  bool _busy = false;
+
+  Future<void> _copy() async {
+    setState(() => _busy = true);
+    final sourceMonth = shiftMonth(widget.month, -1);
+    try {
+      final copied = await ref
+          .read(budgetDaoProvider)
+          .copyBudgetGroupsWithCarryforward(sourceMonth, widget.month);
+      if (!mounted) return;
+      refreshBudget(ref);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$sourceMonth 예산에서 $copied개 그룹을 복사했습니다. 같은 이름의 그룹은 건너뜁니다.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: _busy ? null : _copy,
+      icon: _busy
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.copy_all_outlined, size: 18),
+      label: const Text('이전 달에서 복사'),
     );
   }
 }

@@ -81,6 +81,7 @@ Current status:
   - remaining amount
   - `budgetGroupVsActual` row list
   - monthly expected income editing
+  - previous-month budget copy with carry-forward
   - existing fixed-group amount editing
   - existing category-based group adjustment editing
   - existing category-based group carry-forward editing
@@ -90,7 +91,7 @@ Current status:
   - `budgetRowsProvider`
 - `refreshBudget(ref)` invalidates `monthlyExpectedIncomeProvider`, `budgetRowsProvider`, and `overBudgetCountProvider`.
 - Budget group delete UI is intentionally left as TODO.
-- Budget group create/copy UI is not implemented yet.
+- Budget group create UI is not implemented yet.
 
 ### Stats Read-Only Screen
 
@@ -181,20 +182,19 @@ Next steps:
 
 ## Budget Remaining Work
 
-Current read-only base and first edit step are complete. Continue only after preserving the existing provider shape and refresh behavior.
+Current read-only base, first edit step, and previous-month copy are complete. Continue only after preserving the existing provider shape and refresh behavior.
 
 Next steps:
-1. Add previous-month copy with `BudgetDao.copyBudgetGroupsWithCarryforward`.
-2. Add create budget group flow:
+1. Add create budget group flow:
    - fixed category-based group
    - percentage mode
    - account-linked mode
-3. Add percentage group editing.
-4. Add account-linked group editing only where it affects DAO calculations.
-5. Add row-level delete.
-6. Add category add/remove for category-based groups.
-7. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
-8. Add focused widget tests for create/copy/edit flows.
+2. Add percentage group editing.
+3. Add account-linked group editing only where it affects DAO calculations.
+4. Add row-level delete.
+5. Add category add/remove for category-based groups.
+6. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
+7. Add focused widget tests for create/copy/edit flows.
 
 ## Settings Remaining Work
 
@@ -211,9 +211,8 @@ Next steps:
 Recommended order from the current code state:
 
 1. Investments mutations and PnL tab
-2. Budget previous-month copy
-3. Budget create/delete flows
-4. Budget percentage/account-linked follow-up editing
+2. Budget create/delete flows
+3. Budget percentage/account-linked follow-up editing
 5. Stats category detail panel
 6. Stats yearly screen
 7. Settings theme screen
