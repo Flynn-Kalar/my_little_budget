@@ -51,7 +51,7 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
-| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed category-based group creation, existing group editing, and row delete. Percentage/account-linked follow-ups remain. |
+| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing, account-linked TODO edit state, and row delete. Category add/remove editing remains. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
 | investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot with inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme and backup/data management are TODO. |
@@ -99,7 +99,10 @@ Status:
 Currently input-capable:
 - Edit monthly expected income.
 - Create fixed category-based budget groups.
+- Create percentage category-based budget groups.
+- Create account-linked budget groups within the existing DAO/schema.
 - Edit existing fixed budget group amount.
+- Edit existing percentage budget group percentage.
 - Edit existing category-based group adjustment.
 - Edit existing category-based group carry-forward.
 - Delete existing budget groups.
@@ -107,8 +110,7 @@ Currently input-capable:
 - Month navigation.
 
 TODO:
-- Add percentage mode creation/editing.
-- Add account-linked mode creation/editing behavior only where it affects DAO calculations.
+- Add account-linked group account-change editing only if a minimal DAO method is added deliberately.
 - Add category add/remove for category-based groups.
 - Keep invalidating `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider` after budget mutations.
 - Add focused widget tests for budget rendering and mutations.
@@ -186,8 +188,7 @@ Items:
 ## MVP Recommendation
 
 Shortest path to a usable MVP:
-1. Complete budget create/delete flows.
-2. Complete remaining budget create/delete flows.
-3. Add stats yearly route/screen.
-4. Add settings theme.
-5. Add settings data management only after invalidation is explicit and tested.
+1. Complete budget category add/remove editing.
+2. Add stats yearly route/screen.
+3. Add settings theme.
+4. Add settings data management only after invalidation is explicit and tested.

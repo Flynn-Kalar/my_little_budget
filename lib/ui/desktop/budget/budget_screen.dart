@@ -5,7 +5,10 @@ import '../../../core/date.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/budget_dao.dart';
+import '../../../data/database.dart';
 import '../../../data/providers.dart';
+import '../../../features/budget/logic.dart';
+import '../../../features/budget/validation.dart';
 import 'providers.dart';
 
 class BudgetScreen extends ConsumerWidget {
@@ -126,7 +129,7 @@ class _AddBudgetGroupButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FilledButton.icon(
-      onPressed: () => _BudgetGroupCreateDialog.show(context, month: month),
+      onPressed: () => _BudgetGroupModeDialog.show(context, month: month),
       icon: const Icon(Icons.add, size: 18),
       label: const Text('예산 그룹 추가'),
     );
@@ -367,7 +370,7 @@ class _BudgetGroupCard extends ConsumerWidget {
               _ModeChip(row: row),
               const SizedBox(width: 4),
               IconButton(
-                onPressed: () => _BudgetGroupEditDialog.show(context, row),
+                onPressed: () => _BudgetGroupModeEditDialog.show(context, row),
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: '예산 그룹 수정',
               ),
@@ -584,13 +587,6 @@ class _BudgetGroupCreateDialog extends ConsumerStatefulWidget {
 
   final String month;
 
-  static Future<void> show(BuildContext context, {required String month}) {
-    return showDialog<void>(
-      context: context,
-      builder: (_) => _BudgetGroupCreateDialog(month: month),
-    );
-  }
-
   @override
   ConsumerState<_BudgetGroupCreateDialog> createState() =>
       _BudgetGroupCreateDialogState();
@@ -758,6 +754,516 @@ class _BudgetGroupCreateDialogState
   }
 }
 
+enum _BudgetGroupMode {
+  fixed('고정 금액'),
+  percentage('소득 비율'),
+  accountLinked('계좌 연동');
+
+  const _BudgetGroupMode(this.label);
+  final String label;
+}
+
+_BudgetGroupMode _modeForRow(BudgetVsActual row) {
+  if (row.accountId != null) return _BudgetGroupMode.accountLinked;
+  if (row.incomePercentage != null) return _BudgetGroupMode.percentage;
+  return _BudgetGroupMode.fixed;
+}
+
+class _BudgetGroupModeDialog extends ConsumerStatefulWidget {
+  const _BudgetGroupModeDialog({required this.month});
+
+  final String month;
+
+  static Future<void> show(BuildContext context, {required String month}) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => _BudgetGroupModeDialog(month: month),
+    );
+  }
+
+  @override
+  ConsumerState<_BudgetGroupModeDialog> createState() =>
+      _BudgetGroupModeDialogState();
+}
+
+class _BudgetGroupModeDialogState
+    extends ConsumerState<_BudgetGroupModeDialog> {
+  final _name = TextEditingController();
+  final _amount = TextEditingController();
+  final _percentage = TextEditingController();
+  final _categoryIds = <int>{};
+  _BudgetGroupMode _mode = _BudgetGroupMode.fixed;
+  int? _accountId;
+  bool _carryForward = false;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _amount.dispose();
+    _percentage.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final result = validateBudgetGroup(
+      name: _name.text,
+      month: widget.month,
+      amount: _mode == _BudgetGroupMode.fixed ? parseKRW(_amount.text) : 0,
+      categoryIds: _mode == _BudgetGroupMode.accountLinked
+          ? const []
+          : _categoryIds.toList(),
+      accountId: _mode == _BudgetGroupMode.accountLinked ? _accountId : null,
+      percentage: _mode == _BudgetGroupMode.percentage
+          ? int.tryParse(_percentage.text.trim())
+          : null,
+      carryForward: _mode == _BudgetGroupMode.accountLinked
+          ? false
+          : _carryForward,
+    );
+    if (result.isFail) {
+      _showSnack(result.errors.values.first);
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      final draft = result.value!;
+      await ref
+          .read(budgetDaoProvider)
+          .createBudgetGroup(
+            name: draft.name,
+            month: draft.month,
+            amount: draft.amount,
+            categoryIds: draft.categoryIds,
+            accountId: draft.accountId,
+            percentage: draft.percentage,
+            carryForward: draft.carryForward,
+          );
+      if (!mounted) return;
+      refreshBudget(ref);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('예산 그룹을 추가했습니다.')));
+    } catch (e) {
+      if (mounted) _showSnack('예산 그룹 추가에 실패했습니다: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = ref.watch(budgetExpenseCategoriesProvider);
+    final accounts = ref.watch(budgetActiveAccountsProvider);
+    final income = ref.watch(monthlyExpectedIncomeProvider).asData?.value ?? 0;
+    final percent = int.tryParse(_percentage.text.trim()) ?? 0;
+    final preview = percentageBase(expectedIncome: income, percentage: percent);
+
+    return AlertDialog(
+      title: const Text('예산 그룹 추가'),
+      content: SizedBox(
+        width: 540,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _name,
+                enabled: !_busy,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: '그룹명'),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<_BudgetGroupMode>(
+                segments: [
+                  for (final mode in _BudgetGroupMode.values)
+                    ButtonSegment(value: mode, label: Text(mode.label)),
+                ],
+                selected: {_mode},
+                onSelectionChanged: _busy
+                    ? null
+                    : (selected) => setState(() {
+                        _mode = selected.first;
+                        if (_mode == _BudgetGroupMode.accountLinked) {
+                          _carryForward = false;
+                        }
+                      }),
+              ),
+              const SizedBox(height: 12),
+              if (_mode == _BudgetGroupMode.fixed) ...[
+                TextField(
+                  controller: _amount,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '월 예산 금액',
+                    suffixText: '원',
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_mode == _BudgetGroupMode.percentage) ...[
+                TextField(
+                  controller: _percentage,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '예상 수입 대비 비율',
+                    suffixText: '%',
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '현재 예상 수입 ${formatKRW(income)} 기준: ${formatKRW(preview)}',
+                  style: const TextStyle(color: AppTokens.muted),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_mode == _BudgetGroupMode.accountLinked) ...[
+                accounts.when(
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return const Text(
+                        '연결 가능한 계좌가 없습니다.',
+                        style: TextStyle(color: AppTokens.muted),
+                      );
+                    }
+                    return DropdownButtonFormField<int>(
+                      initialValue: _accountId,
+                      items: [
+                        for (final account in items)
+                          DropdownMenuItem(
+                            value: account.id,
+                            child: Text(account.name),
+                          ),
+                      ],
+                      onChanged: _busy
+                          ? null
+                          : (value) => setState(() => _accountId = value),
+                      decoration: const InputDecoration(labelText: '연결 계좌'),
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(minHeight: 3),
+                  error: (error, _) => Text(
+                    error.toString(),
+                    style: const TextStyle(color: AppTokens.expense),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '계좌 연동 그룹은 선택 계좌의 월초 잔액과 이번 달 입출금 흐름으로 예산을 계산합니다. carry-forward와 카테고리 연결은 사용하지 않습니다.',
+                  style: TextStyle(color: AppTokens.muted, fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_mode != _BudgetGroupMode.accountLinked) ...[
+                SwitchListTile(
+                  value: _carryForward,
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _carryForward = value),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('carry-forward 사용'),
+                ),
+                const SizedBox(height: 12),
+                _CategorySelector(
+                  categories: categories,
+                  selectedIds: _categoryIds,
+                  enabled: !_busy,
+                  onChanged: () => setState(() {}),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '카테고리 add/remove 편집은 다음 단계 TODO로 유지합니다.',
+                  style: TextStyle(color: AppTokens.muted, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+      ],
+    );
+  }
+}
+
+class _CategorySelector extends StatelessWidget {
+  const _CategorySelector({
+    required this.categories,
+    required this.selectedIds,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final AsyncValue<List<Category>> categories;
+  final Set<int> selectedIds;
+  final bool enabled;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('연결 카테고리', style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        categories.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return const Text(
+                '사용 가능한 지출 카테고리가 없습니다.',
+                style: TextStyle(color: AppTokens.muted),
+              );
+            }
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final category in items)
+                  FilterChip(
+                    label: Text(category.name),
+                    selected: selectedIds.contains(category.id),
+                    onSelected: enabled
+                        ? (selected) {
+                            if (selected) {
+                              selectedIds.add(category.id);
+                            } else {
+                              selectedIds.remove(category.id);
+                            }
+                            onChanged();
+                          }
+                        : null,
+                  ),
+              ],
+            );
+          },
+          loading: () => const LinearProgressIndicator(minHeight: 3),
+          error: (error, _) => Text(
+            error.toString(),
+            style: const TextStyle(color: AppTokens.expense),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BudgetGroupModeEditDialog extends ConsumerStatefulWidget {
+  const _BudgetGroupModeEditDialog({required this.row});
+
+  final BudgetVsActual row;
+
+  static Future<void> show(BuildContext context, BudgetVsActual row) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => _BudgetGroupModeEditDialog(row: row),
+    );
+  }
+
+  @override
+  ConsumerState<_BudgetGroupModeEditDialog> createState() =>
+      _BudgetGroupModeEditDialogState();
+}
+
+class _BudgetGroupModeEditDialogState
+    extends ConsumerState<_BudgetGroupModeEditDialog> {
+  late final _amount = TextEditingController(
+    text: widget.row.baseAmount.toString(),
+  );
+  late final _percentage = TextEditingController(
+    text: widget.row.incomePercentage?.toString() ?? '',
+  );
+  late final _adjustment = TextEditingController(
+    text: widget.row.adjustment.toString(),
+  );
+  late bool _carryForward = widget.row.carryForward;
+  bool _busy = false;
+
+  _BudgetGroupMode get _mode => _modeForRow(widget.row);
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    _percentage.dispose();
+    _adjustment.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final dao = ref.read(budgetDaoProvider);
+    final percentage = int.tryParse(_percentage.text.trim());
+
+    if (_mode == _BudgetGroupMode.percentage &&
+        (percentage == null || percentage <= 0 || percentage > 1000)) {
+      _showSnack('퍼센트는 1~1000 사이 정수여야 합니다.');
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      if (_mode == _BudgetGroupMode.fixed) {
+        await dao.updateBudgetGroupAmount(
+          widget.row.groupId,
+          parseKRW(_amount.text),
+        );
+      }
+      if (_mode == _BudgetGroupMode.percentage) {
+        await dao.updateBudgetGroupPercentage(widget.row.groupId, percentage);
+      }
+      if (_mode != _BudgetGroupMode.accountLinked) {
+        await dao.updateBudgetGroupAdjustment(
+          widget.row.groupId,
+          parseKRW(_adjustment.text),
+        );
+        await dao.updateBudgetGroupCarryForward(
+          widget.row.groupId,
+          _carryForward,
+        );
+      }
+      if (!mounted) return;
+      refreshBudget(ref);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('예산 그룹을 수정했습니다.')));
+    } catch (e) {
+      if (mounted) _showSnack('예산 그룹 수정에 실패했습니다: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final income =
+        widget.row.expectedIncome ??
+        ref.watch(monthlyExpectedIncomeProvider).asData?.value ??
+        0;
+    final percent =
+        int.tryParse(_percentage.text.trim()) ??
+        widget.row.incomePercentage ??
+        0;
+    final preview = percentageBase(expectedIncome: income, percentage: percent);
+
+    return AlertDialog(
+      title: Text(widget.row.groupName),
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _InfoChip(label: _mode.label),
+              const SizedBox(height: 12),
+              if (_mode == _BudgetGroupMode.fixed) ...[
+                TextField(
+                  controller: _amount,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '월 예산 금액',
+                    suffixText: '원',
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_mode == _BudgetGroupMode.percentage) ...[
+                TextField(
+                  controller: _percentage,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '예상 수입 대비 비율',
+                    suffixText: '%',
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '현재 예상 수입 ${formatKRW(income)} 기준: ${formatKRW(preview)}',
+                  style: const TextStyle(color: AppTokens.muted),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_mode == _BudgetGroupMode.accountLinked) ...[
+                Text(
+                  widget.row.accountName == null
+                      ? '연결 계좌 정보를 확인할 수 없습니다.'
+                      : '연결 계좌: ${widget.row.accountName}',
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '현재 DAO는 account-linked 그룹의 연결 계좌 변경을 위한 update 메서드를 제공하지 않습니다. 생성과 계산은 지원하며, 편집은 TODO 상태로 표시합니다.',
+                  style: TextStyle(color: AppTokens.muted, fontSize: 12),
+                ),
+              ] else ...[
+                TextField(
+                  controller: _adjustment,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '조정액',
+                    suffixText: '원',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  value: _carryForward,
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _carryForward = value),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('carry-forward 사용'),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '연결 카테고리 add/remove 편집은 다음 단계 TODO로 유지합니다.',
+                  style: TextStyle(color: AppTokens.muted, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: _busy || _mode == _BudgetGroupMode.accountLinked
+              ? null
+              : _save,
+          child: const Text('저장'),
+        ),
+      ],
+    );
+  }
+}
+
 class _ExpectedIncomeDialog extends ConsumerStatefulWidget {
   const _ExpectedIncomeDialog({required this.month, required this.income});
 
@@ -841,13 +1347,6 @@ class _BudgetGroupEditDialog extends ConsumerStatefulWidget {
   const _BudgetGroupEditDialog({required this.row});
 
   final BudgetVsActual row;
-
-  static Future<void> show(BuildContext context, BudgetVsActual row) {
-    return showDialog<void>(
-      context: context,
-      builder: (_) => _BudgetGroupEditDialog(row: row),
-    );
-  }
 
   @override
   ConsumerState<_BudgetGroupEditDialog> createState() =>

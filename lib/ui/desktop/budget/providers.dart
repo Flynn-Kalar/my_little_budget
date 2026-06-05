@@ -31,6 +31,13 @@ final budgetExpenseCategoriesProvider =
       return dao.getActiveCategories('expense');
     });
 
+final budgetActiveAccountsProvider = FutureProvider.autoDispose<List<Account>>((
+  ref,
+) {
+  final dao = ref.watch(accountsDaoProvider);
+  return dao.getActiveAccounts();
+});
+
 void refreshBudget(WidgetRef ref) {
   ref.invalidate(monthlyExpectedIncomeProvider);
   ref.invalidate(budgetRowsProvider);
