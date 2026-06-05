@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
 import '../../../core/money.dart';
@@ -374,53 +375,31 @@ class _YearlyTodoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _StatsCard(
+    return _StatsCard(
       child: Row(
         children: [
-          Icon(Icons.table_chart_outlined, color: AppTokens.muted),
-          SizedBox(width: 12),
-          Expanded(
+          const Icon(Icons.table_chart_outlined, color: AppTokens.muted),
+          const SizedBox(width: 12),
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('연간 통계', style: TextStyle(fontWeight: FontWeight.bold)),
                 SizedBox(height: 2),
                 Text(
-                  '/stats/yearly는 다음 단계에서 구현합니다.',
+                  '월별 수입/지출/순액과 카테고리별 연간 지출을 확인합니다.',
                   style: TextStyle(color: AppTokens.muted),
                 ),
               ],
             ),
           ),
-          _StatusPill(label: 'TODO'),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppTokens.sidebarActive,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: AppTokens.muted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+          const SizedBox(width: 12),
+          OutlinedButton.icon(
+            onPressed: () => context.go('/stats/yearly'),
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('연간 통계 보기'),
           ),
-        ),
+        ],
       ),
     );
   }

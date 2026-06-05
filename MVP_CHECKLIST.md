@@ -41,7 +41,6 @@ Result:
 - No active import or route currently uses `PlaceholderScaffold`.
 
 Not routed yet:
-- `/stats/yearly`
 - `/settings/theme`
 
 ## Screen Status
@@ -51,7 +50,7 @@ Not routed yet:
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
 | budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing with category add/remove, account-linked TODO edit state, and row delete. |
-| stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
+| stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
 | investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot with inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; data backup/restore has a first-pass screen; theme is TODO. |
 
@@ -120,16 +119,10 @@ Status:
 - `READ_ONLY`
 
 Currently input-capable:
-- None, except month navigation.
+- None, except month/year navigation.
 
 TODO:
 - Add selected category detail panel.
-- Add `/stats/yearly` route.
-- Implement yearly stats:
-  - available years
-  - expense pivot
-  - income pivot
-  - net table
 - Consider `fl_chart` visuals after table/list data surface is stable.
 - Add focused widget tests for `/stats` and `/stats/yearly`.
 
@@ -189,6 +182,5 @@ Items:
 ## MVP Recommendation
 
 Shortest path to a usable MVP:
-1. Add stats yearly route/screen.
-2. Add settings theme.
-3. Add optional settings reset UI only after invalidation is explicit and tested.
+1. Add settings theme.
+2. Add optional settings reset UI only after invalidation is explicit and tested.

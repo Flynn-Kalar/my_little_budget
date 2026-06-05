@@ -12,6 +12,7 @@ import '../ui/desktop/settings/categories_screen.dart';
 import '../ui/desktop/settings/data_management_screen.dart';
 import '../ui/desktop/settings/recurring_screen.dart';
 import '../ui/desktop/settings/tags_screen.dart';
+import '../ui/desktop/stats/yearly_stats_screen.dart';
 import '../ui/desktop/transactions/transactions_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -32,6 +33,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/stats',
             builder: (context, state) => const StatsPage(),
+            routes: [
+              GoRoute(
+                path: 'yearly',
+                builder: (context, state) => const YearlyStatsScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/accounts',

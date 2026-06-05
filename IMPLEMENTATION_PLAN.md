@@ -25,6 +25,7 @@ Active routes:
   - `BudgetPage` delegates to `lib/ui/desktop/budget/budget_screen.dart`
 - `/stats` -> `lib/features/stats/stats_page.dart`
   - `StatsPage` delegates to `lib/ui/desktop/stats/stats_screen.dart`
+- `/stats/yearly` -> `lib/ui/desktop/stats/yearly_stats_screen.dart`
 - `/accounts` -> `lib/ui/desktop/accounts/accounts_screen.dart`
 - `/accounts/:id` -> `lib/ui/desktop/accounts/account_detail_screen.dart`
 - `/investments` -> `lib/features/investments/investments_page.dart`
@@ -140,6 +141,7 @@ Current status:
 Active files:
 - `lib/features/stats/stats_page.dart`
 - `lib/ui/desktop/stats/stats_screen.dart`
+- `lib/ui/desktop/stats/yearly_stats_screen.dart`
 - `lib/ui/desktop/stats/providers.dart`
 
 Current status:
@@ -150,13 +152,22 @@ Current status:
   - current-month expense category breakdown
   - recent 12-month income/expense/net trend table
   - recent 12-month income/expense/net totals
-  - `/stats/yearly` TODO card
+  - `/stats/yearly` entry button
+- `/stats/yearly` is implemented with:
+  - year selector
+  - monthly income/expense/net table
+  - yearly income/expense/net totals
+  - category annual expense totals
+  - empty states for years with no transaction data
 - Stats providers are implemented:
   - `statsMonthProvider`
+  - `statsYearProvider`
   - `statsExpenseBreakdownProvider`
   - `statsMonthlyTrendProvider`
+  - `availableStatsYearsProvider`
+  - `yearlyMonthlyTrendProvider`
+  - `yearlyExpenseByCategoryProvider`
 - `fl_chart` is not wired in this first pass; cards, lists, and tables are used.
-- `/stats/yearly` route and screen are not implemented yet.
 
 ### Investments Creation And Realized PnL Step
 
@@ -240,7 +251,6 @@ Current status:
 There are no remaining top-level `PlaceholderScaffold` screens in the current route set.
 
 Note:
-- `/stats/yearly` is still not routed or implemented; `/stats` shows a TODO card for it.
 - Investments PnL is represented by a read-only monthly realized PnL section; a separate tab is still deferred.
 
 ## Investments Remaining Work
@@ -254,18 +264,12 @@ Next steps:
 
 ## Stats Remaining Work
 
-Current monthly read-only base is complete.
+Current monthly read-only base and yearly read-only screen are complete.
 
 Next steps:
 1. Add selected category state and category transaction detail panel.
-2. Add `/stats/yearly` route.
-3. Implement yearly stats screen:
-   - available years
-   - expense pivot
-   - income pivot
-   - net table
-4. Consider replacing list/table visuals with `fl_chart` after the read-only data surface is stable.
-5. Add focused widget tests for `/stats` and `/stats/yearly`.
+2. Consider replacing list/table visuals with `fl_chart` after the read-only data surface is stable.
+3. Add focused widget tests for `/stats` and `/stats/yearly`.
 
 ## Budget Remaining Work
 
@@ -292,9 +296,8 @@ Next steps:
 Recommended order from the current code state:
 
 1. Stats category detail panel
-2. Stats yearly screen
-3. Settings theme screen
-4. Optional settings reset UI
+2. Settings theme screen
+3. Optional settings reset UI
 
 Rationale:
 - The top-level placeholder pass is complete.
