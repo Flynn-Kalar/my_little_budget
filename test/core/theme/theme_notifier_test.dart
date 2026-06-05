@@ -22,7 +22,8 @@ void main() {
     addTearDown(container.dispose);
     await container.read(themeProvider.notifier).whenReady;
 
-    await container.read(themeProvider.notifier)
+    await container
+        .read(themeProvider.notifier)
         .setColor(ThemeToken.income, const Color(0xFF112233));
     expect(container.read(themeProvider).income, const Color(0xFF112233));
 
@@ -56,5 +57,26 @@ void main() {
     expect(container.read(themeProvider).income, defaultTheme.income);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('mlb-theme-v1'), isNull);
+  });
+
+  test('theme mode persists in SharedPreferences', () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(themeModeProvider.notifier).whenReady;
+
+    await container.read(themeModeProvider.notifier).setMode(ThemeMode.dark);
+    expect(container.read(themeModeProvider), ThemeMode.dark);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('mlb-theme-mode-v1'), 'dark');
+  });
+
+  test('theme mode reloads from SharedPreferences', () async {
+    SharedPreferences.setMockInitialValues({'mlb-theme-mode-v1': 'light'});
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    await container.read(themeModeProvider.notifier).whenReady;
+
+    expect(container.read(themeModeProvider), ThemeMode.light);
   });
 }

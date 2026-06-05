@@ -45,8 +45,8 @@ class SettingsPage extends StatelessWidget {
             _SettingsCard(
               icon: Icons.palette_outlined,
               title: '테마 설정',
-              subtitle: '색상 저장 로직은 준비되어 있습니다. 화면 연결 예정입니다.',
-              disabledLabel: 'TODO',
+              subtitle: '화면 모드와 주요 색상 토큰 설정',
+              path: '/settings/theme',
             ),
             _SettingsCard(
               icon: Icons.import_export_outlined,
@@ -68,14 +68,12 @@ class _SettingsCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.path,
-    this.disabledLabel,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final String? path;
-  final String? disabledLabel;
 
   bool get _enabled => path != null;
 
@@ -125,10 +123,6 @@ class _SettingsCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (disabledLabel != null) ...[
-                            const SizedBox(width: 8),
-                            _StatusPill(label: disabledLabel!),
-                          ],
                         ],
                       ),
                       const SizedBox(height: 2),
@@ -153,31 +147,6 @@ class _SettingsCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppTokens.sidebarActive,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: AppTokens.muted,
         ),
       ),
     );

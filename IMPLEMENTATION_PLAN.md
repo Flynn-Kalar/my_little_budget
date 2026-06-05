@@ -35,6 +35,7 @@ Active routes:
 - `/settings/tags` -> `lib/ui/desktop/settings/tags_screen.dart`
 - `/settings/recurring` -> `lib/ui/desktop/settings/recurring_screen.dart`
 - `/settings/data` -> `lib/ui/desktop/settings/data_management_screen.dart`
+- `/settings/theme` -> `lib/ui/desktop/settings/theme_screen.dart`
 
 No active route currently points to `lib/ui/desktop/settings/settings_screen.dart`.
 
@@ -58,9 +59,15 @@ Current status:
   - `/settings/tags`
   - `/settings/recurring`
   - `/settings/data`
-- Theme settings is represented as a disabled/TODO card.
+  - `/settings/theme`
+- Theme settings is connected to a first-pass theme screen.
 - Data backup/restore is connected to a first-pass data management screen.
 - Settings sub-screens remain under `lib/ui/desktop/settings/`.
+- The theme screen supports:
+  - system/light/dark mode selection
+  - persisted theme mode through SharedPreferences
+  - persisted color token changes through the existing `themeProvider`
+  - immediate `MaterialApp` theme updates through `themeProvider` and `themeModeProvider`
 - The data management screen supports:
   - export to a single JSON backup file
   - filename format `my_little_budget-backup-yyyyMMdd-HHmmss.json`
@@ -285,25 +292,22 @@ Next steps:
 Current main page is complete as a navigation/status surface.
 
 Next steps:
-1. Add `/settings/theme` route.
-2. Implement `ThemeScreen` using existing theme notifier/code.
-3. Add optional reset UI only after deciding provider invalidation scope and destructive confirmation UX.
-4. Add focused widget/integration coverage for `/settings/data`.
-5. Keep existing `/settings/categories`, `/settings/tags`, `/settings/recurring`, and `/settings/data` routes intact.
+1. Add optional reset UI only after deciding provider invalidation scope and destructive confirmation UX.
+2. Add focused widget/integration coverage for `/settings/theme` and `/settings/data`.
+3. Keep existing `/settings/categories`, `/settings/tags`, `/settings/recurring`, `/settings/theme`, and `/settings/data` routes intact.
 
 ## Next Implementation Order
 
 Recommended order from the current code state:
 
 1. Stats category detail panel
-2. Settings theme screen
-3. Optional settings reset UI
+2. Optional settings reset UI
 
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
 - Budget category-based CRUD is now mostly covered; account-linked edit support remains intentionally limited by the current DAO.
-- Settings data export/import is now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
+- Settings theme and data export/import are now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
 
 ## Verification Strategy
 

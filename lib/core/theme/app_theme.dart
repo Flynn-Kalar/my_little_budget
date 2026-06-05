@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme_colors.dart';
+
 /// SPEC §2.2 의 7개 테마 토큰. 일단 정적 기본값.
 /// 추후 ThemeProvider + SharedPreferences 영속 추가.
 class AppTokens {
@@ -18,13 +20,24 @@ class AppTokens {
   static const muted = Color(0xFF6B7280);
 }
 
-ThemeData buildAppTheme() {
+ThemeData buildAppTheme({
+  ThemeColors colors = defaultTheme,
+  Brightness brightness = Brightness.light,
+}) {
+  final scheme = ColorScheme.fromSeed(
+    seedColor: colors.income,
+    brightness: brightness,
+    surface: brightness == Brightness.light ? colors.surface : null,
+  );
+
   return ThemeData(
     useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: AppTokens.income,
-      surface: AppTokens.surface,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: brightness == Brightness.light
+        ? colors.background
+        : scheme.surface,
+    cardTheme: CardThemeData(
+      color: brightness == Brightness.light ? colors.surface : null,
     ),
-    scaffoldBackgroundColor: AppTokens.background,
   );
 }
