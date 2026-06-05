@@ -35,6 +35,7 @@ class BudgetScreen extends ConsumerWidget {
               children: [
                 _BudgetMonthNav(month: month),
                 _CopyPreviousMonthButton(month: month),
+                _AddBudgetGroupButton(month: month),
               ],
             ),
             const SizedBox(height: 8),
@@ -113,6 +114,21 @@ class _CopyPreviousMonthButtonState
             )
           : const Icon(Icons.copy_all_outlined, size: 18),
       label: const Text('이전 달에서 복사'),
+    );
+  }
+}
+
+class _AddBudgetGroupButton extends StatelessWidget {
+  const _AddBudgetGroupButton({required this.month});
+
+  final String month;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: () => _BudgetGroupCreateDialog.show(context, month: month),
+      icon: const Icon(Icons.add, size: 18),
+      label: const Text('예산 그룹 추가'),
     );
   }
 }
@@ -355,6 +371,12 @@ class _BudgetGroupCard extends ConsumerWidget {
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: '예산 그룹 수정',
               ),
+              IconButton(
+                onPressed: () => _confirmDeleteBudgetGroup(context, ref, row),
+                icon: const Icon(Icons.delete_outline),
+                tooltip: '예산 그룹 삭제',
+                color: AppTokens.expense,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -413,15 +435,42 @@ class _BudgetGroupCard extends ConsumerWidget {
               ],
             ),
           ],
-          const SizedBox(height: 10),
-          const Text(
-            '삭제 기능은 다음 단계에서 구현합니다.',
-            style: TextStyle(color: AppTokens.muted, fontSize: 12),
-          ),
         ],
       ),
     );
   }
+}
+
+Future<void> _confirmDeleteBudgetGroup(
+  BuildContext context,
+  WidgetRef ref,
+  BudgetVsActual row,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('예산 그룹 삭제'),
+      content: Text("'${row.groupName}' 예산 그룹을 삭제할까요?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('삭제'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  await ref.read(budgetDaoProvider).deleteBudgetGroup(row.groupId);
+  if (!context.mounted) return;
+  refreshBudget(ref);
+  ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(const SnackBar(content: Text('예산 그룹을 삭제했습니다.')));
 }
 
 class _ModeChip extends StatelessWidget {
@@ -526,6 +575,185 @@ class _BudgetCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(padding: const EdgeInsets.all(16), child: child),
+    );
+  }
+}
+
+class _BudgetGroupCreateDialog extends ConsumerStatefulWidget {
+  const _BudgetGroupCreateDialog({required this.month});
+
+  final String month;
+
+  static Future<void> show(BuildContext context, {required String month}) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => _BudgetGroupCreateDialog(month: month),
+    );
+  }
+
+  @override
+  ConsumerState<_BudgetGroupCreateDialog> createState() =>
+      _BudgetGroupCreateDialogState();
+}
+
+class _BudgetGroupCreateDialogState
+    extends ConsumerState<_BudgetGroupCreateDialog> {
+  final _name = TextEditingController();
+  final _amount = TextEditingController();
+  final _categoryIds = <int>{};
+  bool _carryForward = false;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _amount.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      _showSnack('그룹명을 입력해주세요.');
+      return;
+    }
+    if (_categoryIds.isEmpty) {
+      _showSnack('연결 카테고리를 선택해주세요.');
+      return;
+    }
+    final amount = parseKRW(_amount.text);
+    if (amount < 1) {
+      _showSnack('월 예산 금액을 입력해주세요.');
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(budgetDaoProvider)
+          .createBudgetGroup(
+            name: name,
+            month: widget.month,
+            amount: amount,
+            categoryIds: _categoryIds.toList(),
+            carryForward: _carryForward,
+          );
+      if (!mounted) return;
+      refreshBudget(ref);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('예산 그룹을 추가했습니다.')));
+    } catch (e) {
+      if (mounted) _showSnack('예산 그룹 추가에 실패했습니다: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = ref.watch(budgetExpenseCategoriesProvider);
+
+    return AlertDialog(
+      title: const Text('예산 그룹 추가'),
+      content: SizedBox(
+        width: 480,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _name,
+                enabled: !_busy,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: '그룹명'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _amount,
+                enabled: !_busy,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '월 예산 금액',
+                  suffixText: '원',
+                ),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                value: _carryForward,
+                onChanged: _busy
+                    ? null
+                    : (value) => setState(() => _carryForward = value),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('carry-forward 사용'),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '연결 카테고리',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              categories.when(
+                data: (items) {
+                  if (items.isEmpty) {
+                    return const Text(
+                      '사용 가능한 지출 카테고리가 없습니다.',
+                      style: TextStyle(color: AppTokens.muted),
+                    );
+                  }
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final category in items)
+                        FilterChip(
+                          label: Text(category.name),
+                          selected: _categoryIds.contains(category.id),
+                          onSelected: _busy
+                              ? null
+                              : (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      _categoryIds.add(category.id);
+                                    } else {
+                                      _categoryIds.remove(category.id);
+                                    }
+                                  });
+                                },
+                        ),
+                    ],
+                  );
+                },
+                loading: () => const LinearProgressIndicator(minHeight: 3),
+                error: (error, _) => Text(
+                  error.toString(),
+                  style: const TextStyle(color: AppTokens.expense),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'percentage/account-linked mode와 카테고리 편집은 다음 단계에서 다룹니다.',
+                style: TextStyle(color: AppTokens.muted, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('취소'),
+        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+      ],
     );
   }
 }

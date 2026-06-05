@@ -51,7 +51,7 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
-| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, and existing group amount/adjustment/carry-forward editing. No create/delete yet. |
+| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed category-based group creation, existing group editing, and row delete. Percentage/account-linked follow-ups remain. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
 | investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot with inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme and backup/data management are TODO. |
@@ -98,20 +98,17 @@ Status:
 
 Currently input-capable:
 - Edit monthly expected income.
+- Create fixed category-based budget groups.
 - Edit existing fixed budget group amount.
 - Edit existing category-based group adjustment.
 - Edit existing category-based group carry-forward.
+- Delete existing budget groups.
 - Copy previous month budget groups into the selected month.
 - Month navigation.
 
 TODO:
-- Add create budget group flow:
-  - fixed category-based group
-  - percentage mode
-  - account-linked mode
-- Add percentage group editing.
-- Add account-linked group editing behavior only where it affects DAO calculations.
-- Add row-level delete.
+- Add percentage mode creation/editing.
+- Add account-linked mode creation/editing behavior only where it affects DAO calculations.
 - Add category add/remove for category-based groups.
 - Keep invalidating `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider` after budget mutations.
 - Add focused widget tests for budget rendering and mutations.

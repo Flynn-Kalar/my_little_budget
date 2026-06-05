@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../core/date.dart';
 import '../../../data/daos/budget_dao.dart';
+import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../shell/badges_providers.dart';
 
@@ -23,6 +24,12 @@ final budgetRowsProvider = FutureProvider.autoDispose<List<BudgetVsActual>>((
   final dao = ref.watch(budgetDaoProvider);
   return dao.budgetGroupVsActual(month);
 });
+
+final budgetExpenseCategoriesProvider =
+    FutureProvider.autoDispose<List<Category>>((ref) {
+      final dao = ref.watch(categoriesDaoProvider);
+      return dao.getActiveCategories('expense');
+    });
 
 void refreshBudget(WidgetRef ref) {
   ref.invalidate(monthlyExpectedIncomeProvider);

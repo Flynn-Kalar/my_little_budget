@@ -82,16 +82,23 @@ Current status:
   - `budgetGroupVsActual` row list
   - monthly expected income editing
   - previous-month budget copy with carry-forward
+  - fixed category-based budget group creation
   - existing fixed-group amount editing
   - existing category-based group adjustment editing
   - existing category-based group carry-forward editing
+  - budget group delete with confirmation
 - Budget providers are implemented:
   - `budgetMonthProvider`
   - `monthlyExpectedIncomeProvider`
   - `budgetRowsProvider`
+  - `budgetExpenseCategoriesProvider`
 - `refreshBudget(ref)` invalidates `monthlyExpectedIncomeProvider`, `budgetRowsProvider`, and `overBudgetCountProvider`.
-- Budget group delete UI is intentionally left as TODO.
-- Budget group create UI is not implemented yet.
+- Budget group creation currently supports fixed category-based groups only:
+  - group name
+  - monthly budget amount
+  - linked expense categories
+  - carry-forward flag
+- Percentage mode, account-linked mode, and category add/remove editing are intentionally still TODO.
 
 ### Stats Read-Only Screen
 
@@ -227,19 +234,14 @@ Next steps:
 
 ## Budget Remaining Work
 
-Current read-only base, first edit step, and previous-month copy are complete. Continue only after preserving the existing provider shape and refresh behavior.
+Current read-only base, first edit step, previous-month copy, fixed category-based creation, and row delete are complete. Continue only after preserving the existing provider shape and refresh behavior.
 
 Next steps:
-1. Add create budget group flow:
-   - fixed category-based group
-   - percentage mode
-   - account-linked mode
-2. Add percentage group editing.
-3. Add account-linked group editing only where it affects DAO calculations.
-4. Add row-level delete.
-5. Add category add/remove for category-based groups.
-6. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
-7. Add focused widget tests for create/copy/edit flows.
+1. Add percentage mode creation/editing.
+2. Add account-linked mode creation/editing only where it affects DAO calculations.
+3. Add category add/remove editing for category-based groups.
+4. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
+5. Add focused widget tests for create/copy/edit/delete flows.
 
 ## Settings Remaining Work
 
@@ -255,8 +257,8 @@ Next steps:
 
 Recommended order from the current code state:
 
-1. Budget create/delete flows
-2. Budget percentage/account-linked follow-up editing
+1. Budget percentage/account-linked follow-up editing
+2. Budget category add/remove editing
 3. Stats category detail panel
 4. Stats yearly screen
 5. Settings theme screen
@@ -265,7 +267,7 @@ Recommended order from the current code state:
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
-- Budget is the next largest CRUD gap because create/delete flows are still missing.
+- Budget is the next largest CRUD gap because percentage/account-linked and category add/remove flows are still missing.
 - Settings data management has broad invalidation impact and should remain late.
 
 ## Verification Strategy
