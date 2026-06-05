@@ -7,15 +7,11 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/accounts_dao.dart';
 import '../../../../data/providers.dart';
 import '../../color_hex.dart';
+import '../account_refresh.dart';
 import '../providers.dart';
 import 'account_form_dialog.dart';
 
-const _kindLabels = {
-  'cash': '현금',
-  'bank': '은행',
-  'card': '카드',
-  'other': '기타',
-};
+const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};
 
 /// SPEC §4.2 — 자산 목록. 호버 편집·순서 편집·추가 통합.
 class AccountList extends ConsumerStatefulWidget {
@@ -43,9 +39,12 @@ class _State extends ConsumerState<AccountList> {
   }
 
   Future<void> _saveReorder(List<AccountBalance> original) async {
-    final sameOrder = _draft.length == original.length &&
-        List.generate(_draft.length, (i) => _draft[i].accountId == original[i].accountId)
-            .every((x) => x);
+    final sameOrder =
+        _draft.length == original.length &&
+        List.generate(
+          _draft.length,
+          (i) => _draft[i].accountId == original[i].accountId,
+        ).every((x) => x);
     if (sameOrder) {
       setState(() => _reorderMode = false);
       return;
@@ -55,7 +54,7 @@ class _State extends ConsumerState<AccountList> {
       await ref
           .read(accountsDaoProvider)
           .updateAccountOrder(_draft.map((a) => a.accountId).toList());
-      refreshAccountsList(ref);
+      refreshAccountMetadata(ref);
     } finally {
       if (mounted) {
         setState(() {
@@ -131,8 +130,10 @@ class _State extends ConsumerState<AccountList> {
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(20),
-                child: Text('등록된 계좌가 없습니다.',
-                    style: TextStyle(color: AppTokens.muted)),
+                child: Text(
+                  '등록된 계좌가 없습니다.',
+                  style: TextStyle(color: AppTokens.muted),
+                ),
               )
             else
               for (var i = 0; i < visible.length; i++)
@@ -147,17 +148,18 @@ class _State extends ConsumerState<AccountList> {
                           onDown: () => _swap(i, i + 1),
                         )
                       : MouseRegion(
-                          onEnter: (_) => setState(
-                              () => _hoveredId = visible[i].accountId),
+                          onEnter: (_) =>
+                              setState(() => _hoveredId = visible[i].accountId),
                           onExit: (_) => setState(() => _hoveredId = null),
                           child: _DisplayRow(
                             account: visible[i],
-                            showEditIcon:
-                                _hoveredId == visible[i].accountId,
-                            onTap: () => context
-                                .go('/accounts/${visible[i].accountId}'),
-                            onEdit: () => AccountFormDialog.show(context,
-                                account: visible[i]),
+                            showEditIcon: _hoveredId == visible[i].accountId,
+                            onTap: () =>
+                                context.go('/accounts/${visible[i].accountId}'),
+                            onEdit: () => AccountFormDialog.show(
+                              context,
+                              account: visible[i],
+                            ),
                           ),
                         ),
                 ),
@@ -216,8 +218,7 @@ class _DisplayRow extends StatelessWidget {
               _ColorDot(color: account.color),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(account.name,
-                    style: const TextStyle(fontSize: 14)),
+                child: Text(account.name, style: const TextStyle(fontSize: 14)),
               ),
               _Meta(account: account),
               const SizedBox(width: 8),
@@ -274,8 +275,7 @@ class _ReorderRow extends StatelessWidget {
                 tooltip: '위로',
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints(minWidth: 28, minHeight: 22),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 22),
               ),
               IconButton(
                 onPressed: isLast ? null : onDown,
@@ -283,8 +283,7 @@ class _ReorderRow extends StatelessWidget {
                 tooltip: '아래로',
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
-                constraints:
-                    const BoxConstraints(minWidth: 28, minHeight: 22),
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 22),
               ),
             ],
           ),
@@ -308,13 +307,13 @@ class _ColorDot extends StatelessWidget {
   final String color;
   @override
   Widget build(BuildContext context) => Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: colorFromHex(color),
-        ),
-      );
+    width: 12,
+    height: 12,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: colorFromHex(color),
+    ),
+  );
 }
 
 class _Meta extends StatelessWidget {
@@ -325,8 +324,10 @@ class _Meta extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(_kindLabels[account.kind] ?? account.kind,
-            style: const TextStyle(fontSize: 11, color: AppTokens.muted)),
+        Text(
+          _kindLabels[account.kind] ?? account.kind,
+          style: const TextStyle(fontSize: 11, color: AppTokens.muted),
+        ),
         if (account.isInvestment) ...[
           const SizedBox(width: 8),
           Container(
@@ -335,14 +336,18 @@ class _Meta extends StatelessWidget {
               color: AppTokens.transfer.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Text('투자',
-                style: TextStyle(fontSize: 10, color: AppTokens.transfer)),
+            child: const Text(
+              '투자',
+              style: TextStyle(fontSize: 10, color: AppTokens.transfer),
+            ),
           ),
         ],
         if (account.excludeFromTotal) ...[
           const SizedBox(width: 8),
-          const Text('제외',
-              style: TextStyle(fontSize: 11, color: AppTokens.muted)),
+          const Text(
+            '제외',
+            style: TextStyle(fontSize: 11, color: AppTokens.muted),
+          ),
         ],
       ],
     );
@@ -357,8 +362,8 @@ class _BalanceText extends StatelessWidget {
     final color = account.excludeFromTotal
         ? AppTokens.muted
         : account.balance < 0
-            ? AppTokens.expense
-            : null;
+        ? AppTokens.expense
+        : null;
     return Text(
       formatKRW(account.balance),
       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color),

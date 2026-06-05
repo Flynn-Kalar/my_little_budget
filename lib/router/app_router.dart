@@ -75,8 +75,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const RecurringScreen(),
               ),
               GoRoute(
-                path: 'data',
+                path: 'backup',
                 builder: (context, state) => const DataManagementScreen(),
+              ),
+              GoRoute(
+                path: 'data',
+                redirect: (context, state) => '/settings/backup',
               ),
               GoRoute(
                 path: 'theme',

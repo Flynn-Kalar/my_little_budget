@@ -10,8 +10,8 @@ Constraints:
 - Preserve existing tests; run `flutter analyze` and `flutter test` after each screen step.
 
 Current phase:
-- MVP audit and completion pass.
-- `MVP_CHECKLIST.md` is the current status board for `DONE`, `READ_ONLY`, `CRUD_INCOMPLETE`, `NOT_IMPLEMENTED`, and `TECH_DEBT`.
+- MVP stabilization pass.
+- `MVP_CHECKLIST.md` is the current status board for `DONE`, `PARTIAL`, `TODO`, `READ_ONLY`, `NOT_IMPLEMENTED`, and `TECH_DEBT`.
 - Keep this plan aligned with `MVP_CHECKLIST.md` after each MVP step.
 
 ## Current Route Audit
@@ -34,15 +34,25 @@ Active routes:
 - `/settings/categories` -> `lib/ui/desktop/settings/categories_screen.dart`
 - `/settings/tags` -> `lib/ui/desktop/settings/tags_screen.dart`
 - `/settings/recurring` -> `lib/ui/desktop/settings/recurring_screen.dart`
-- `/settings/data` -> `lib/ui/desktop/settings/data_management_screen.dart`
 - `/settings/theme` -> `lib/ui/desktop/settings/theme_screen.dart`
+- `/settings/backup` -> `lib/ui/desktop/settings/data_management_screen.dart`
+- `/settings/data` -> compatibility redirect to `/settings/backup`
 
 No active route currently points to `lib/ui/desktop/settings/settings_screen.dart`.
 
 Placeholder audit:
-- `PlaceholderScaffold` is still present as `lib/shell/placeholder_scaffold.dart`.
+- `PlaceholderScaffold` has been removed.
 - No active route or feature page imports `PlaceholderScaffold`.
-- A temporary route smoke widget test was run for all active routes and passed, then removed.
+- A permanent route smoke widget test covers:
+  - `/transactions`
+  - `/accounts`
+  - `/budget`
+  - `/stats`
+  - `/stats/yearly`
+  - `/investments`
+  - `/settings`
+  - `/settings/theme`
+  - `/settings/backup`
 
 ## Completed
 
@@ -58,8 +68,8 @@ Current status:
   - `/settings/categories`
   - `/settings/tags`
   - `/settings/recurring`
-  - `/settings/data`
   - `/settings/theme`
+  - `/settings/backup`
 - Theme settings is connected to a first-pass theme screen.
 - Data backup/restore is connected to a first-pass data management screen.
 - Settings sub-screens remain under `lib/ui/desktop/settings/`.
@@ -78,7 +88,6 @@ Current status:
   - broad provider invalidation after import so visible data refreshes without app restart
 
 Remaining settings work:
-- Add a real `/settings/theme` route and screen.
 - Add optional reset UI only after provider invalidation and destructive UX are tested carefully.
 
 ### Budget Editing Step 1
@@ -261,6 +270,8 @@ Current status:
 
 There are no remaining top-level `PlaceholderScaffold` screens in the current route set.
 
+The legacy placeholder scaffold file has been deleted.
+
 Note:
 - Investments PnL is represented by a read-only monthly realized PnL section; a separate tab is still deferred.
 
@@ -296,8 +307,20 @@ Current main page is complete as a navigation/status surface.
 
 Next steps:
 1. Add optional reset UI only after deciding provider invalidation scope and destructive confirmation UX.
-2. Add focused widget/integration coverage for `/settings/theme` and `/settings/data`.
-3. Keep existing `/settings/categories`, `/settings/tags`, `/settings/recurring`, `/settings/theme`, and `/settings/data` routes intact.
+2. Add focused widget/integration coverage for `/settings/theme` and `/settings/backup`.
+3. Keep existing `/settings/categories`, `/settings/tags`, `/settings/recurring`, `/settings/theme`, and `/settings/backup` routes intact.
+
+## Stabilization Notes
+
+Current pass:
+- `/settings/backup` is the canonical backup/restore route.
+- `/settings/data` redirects to `/settings/backup` for compatibility.
+- Cross-screen provider invalidation was tightened for:
+  - transaction save/delete/duplicate flows
+  - category/tag/recurring settings mutations
+  - account metadata changes
+  - account adjustment transaction mutations
+- DB schema and backup JSON format were not changed.
 
 ## Next Implementation Order
 

@@ -4,14 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/providers.dart';
 import '../../color_hex.dart';
+import '../account_refresh.dart';
 import '../providers.dart';
 
-const _kindLabels = {
-  'cash': '현금',
-  'bank': '은행',
-  'card': '카드',
-  'other': '기타',
-};
+const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};
 
 /// SPEC §4.2 — 보관된 자산 (접이식). 없으면 미표시.
 class ArchivedAccounts extends ConsumerStatefulWidget {
@@ -29,7 +25,7 @@ class _State extends ConsumerState<ArchivedAccounts> {
     setState(() => _busyId = id);
     try {
       await ref.read(accountsDaoProvider).restoreAccount(id);
-      refreshAccountsList(ref);
+      refreshAccountMetadata(ref, accountId: id);
     } finally {
       if (mounted) setState(() => _busyId = null);
     }
@@ -43,8 +39,9 @@ class _State extends ConsumerState<ArchivedAccounts> {
         content: Text("'$name' 자산을 완전히 삭제합니다. 되돌릴 수 없습니다."),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('취소')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppTokens.warning),
             onPressed: () => Navigator.pop(ctx, true),
@@ -58,10 +55,11 @@ class _State extends ConsumerState<ArchivedAccounts> {
     final err = await ref.read(accountsDaoProvider).deleteAccount(id);
     if (mounted) {
       if (err != null) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(err)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err)));
       } else {
-        refreshAccountsList(ref);
+        refreshAccountMetadata(ref, accountId: id);
       }
       setState(() => _busyId = null);
     }
@@ -85,13 +83,18 @@ class _State extends ConsumerState<ArchivedAccounts> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(_open ? Icons.expand_more : Icons.chevron_right,
-                      size: 16, color: AppTokens.muted),
+                  Icon(
+                    _open ? Icons.expand_more : Icons.chevron_right,
+                    size: 16,
+                    color: AppTokens.muted,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     '보관된 자산 (${items.length})',
                     style: const TextStyle(
-                        fontSize: 13, color: AppTokens.muted),
+                      fontSize: 13,
+                      color: AppTokens.muted,
+                    ),
                   ),
                 ],
               ),
@@ -127,16 +130,26 @@ class _State extends ConsumerState<ArchivedAccounts> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(a.name,
-                            style: const TextStyle(
-                                fontSize: 14, color: AppTokens.muted)),
-                      ),
-                      Text(_kindLabels[a.kind] ?? a.kind,
+                        child: Text(
+                          a.name,
                           style: const TextStyle(
-                              fontSize: 11, color: AppTokens.muted)),
+                            fontSize: 14,
+                            color: AppTokens.muted,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _kindLabels[a.kind] ?? a.kind,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppTokens.muted,
+                        ),
+                      ),
                       const SizedBox(width: 4),
                       TextButton.icon(
-                        onPressed: _busyId == a.id ? null : () => _restore(a.id),
+                        onPressed: _busyId == a.id
+                            ? null
+                            : () => _restore(a.id),
                         icon: const Icon(Icons.unarchive_outlined, size: 14),
                         label: const Text('복원'),
                         style: TextButton.styleFrom(

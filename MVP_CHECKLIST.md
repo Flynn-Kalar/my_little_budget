@@ -1,6 +1,6 @@
 # MVP CHECKLIST
 
-Last audit: 2026-06-03
+Last audit: 2026-06-05
 
 Scope:
 - transactions
@@ -12,6 +12,8 @@ Scope:
 
 Classification:
 - `DONE`: usable MVP surface with the expected primary create/read/update/delete flow or completed scope.
+- `PARTIAL`: route renders and core workflow works, but a deliberate MVP follow-up remains.
+- `TODO`: deferred work that is not required for the current MVP stabilization pass.
 - `READ_ONLY`: route renders real data but intentionally has no mutation UI yet.
 - `CRUD_INCOMPLETE`: route has some mutation UI, but important MVP CRUD or connected workflows are missing.
 - `NOT_IMPLEMENTED`: no real routed screen yet.
@@ -33,12 +35,15 @@ Active routes checked:
 - `/settings/categories`
 - `/settings/tags`
 - `/settings/recurring`
+- `/settings/theme`
+- `/settings/backup`
 
 Result:
 - All active routes point to concrete screens.
-- A temporary route smoke widget test was run and all active routes rendered without exceptions.
-- `PlaceholderScaffold` remains as an unused file at `lib/shell/placeholder_scaffold.dart`.
+- A permanent route smoke widget test covers the MVP route set.
+- `PlaceholderScaffold` has been removed.
 - No active import or route currently uses `PlaceholderScaffold`.
+- `/settings/data` remains only as a compatibility redirect to `/settings/backup`.
 
 Not routed yet:
 - None in the current MVP route set.
@@ -49,10 +54,10 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
-| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing with category add/remove, account-linked account editing, and row delete. |
+| budget | `/budget` | PARTIAL | Yes | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation/editing, category add/remove, account-linked account editing, and row delete are implemented. Remaining work is test/UX hardening. |
 | stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
-| investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot with inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. |
-| settings | `/settings`, `/settings/theme`, `/settings/data` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore have first-pass screens. |
+| investments | `/investments` | PARTIAL | Yes | Monthly rows, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. Remaining work is test/UX hardening. |
+| settings | `/settings`, `/settings/theme`, `/settings/backup` | PARTIAL | Yes | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore have first-pass screens. |
 
 ## Detailed TODO
 
@@ -92,7 +97,7 @@ TODO:
 ### budget
 
 Status:
-- `CRUD_INCOMPLETE`
+- `PARTIAL`
 
 Currently input-capable:
 - Edit monthly expected income.
@@ -129,7 +134,7 @@ TODO:
 ### investments
 
 Status:
-- `CRUD_INCOMPLETE`
+- `PARTIAL`
 
 Currently input-capable:
 - Create BUY investment transaction.
@@ -144,13 +149,12 @@ Currently input-capable:
 
 TODO:
 - Consider a dedicated PnL tab only if the read-only monthly section becomes too dense.
-- Confirm account balance/account detail providers refresh after investment mutations.
 - Add focused widget tests for read-only rendering, mutations, and realized PnL.
 
 ### settings
 
 Status:
-- `CRUD_INCOMPLETE`
+- `PARTIAL`
 
 Currently input-capable:
 - Categories CRUD/reorder/archive/delete/restore.
@@ -174,9 +178,8 @@ Status:
 - `TECH_DEBT`
 
 Items:
-- `lib/shell/placeholder_scaffold.dart` is unused and can be deleted after one more route/import audit.
+- Cross-screen provider invalidation was tightened for transaction, settings, account metadata, and account adjustment mutations.
 - Several existing Korean strings/comments appear mojibake-encoded in source files; fix as a separate text cleanup pass to avoid mixing with feature work.
-- Add permanent route smoke tests for all active routes.
 - Expand widget tests for the new read-only budget/stats/investments screens.
 - Keep DB schema unchanged until a specific DAO/schema gap is proven.
 

@@ -52,7 +52,7 @@ class SettingsPage extends StatelessWidget {
               icon: Icons.import_export_outlined,
               title: '데이터 백업/복원',
               subtitle: 'JSON 백업 파일 내보내기와 전체 교체 방식 복원',
-              path: '/settings/data',
+              path: '/settings/backup',
             ),
             SizedBox(height: 40),
           ],

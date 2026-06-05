@@ -7,15 +7,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/accounts_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/accounts/validation.dart';
-import '../providers.dart';
+import '../account_refresh.dart';
 import 'color_swatch_picker.dart';
 
-const _kindLabels = {
-  'cash': '현금',
-  'bank': '은행',
-  'card': '카드',
-  'other': '기타',
-};
+const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};
 
 /// SPEC §4.2 — 자산 신규/편집/보관 다이얼로그.
 class AccountFormDialog extends ConsumerStatefulWidget {
@@ -34,13 +29,15 @@ class AccountFormDialog extends ConsumerStatefulWidget {
 }
 
 class _State extends ConsumerState<AccountFormDialog> {
-  late final _nameCtrl = TextEditingController(text: widget.account?.name ?? '');
+  late final _nameCtrl = TextEditingController(
+    text: widget.account?.name ?? '',
+  );
   late final _balanceCtrl = TextEditingController(
     text: (widget.account?.balance ?? 0).toString(),
   );
   late String _kind = widget.account?.kind ?? 'bank';
-  late String _color = widget.account?.color ??
-      randomColor(); // 신규는 마운트 시 1회 랜덤
+  late String _color =
+      widget.account?.color ?? randomColor(); // 신규는 마운트 시 1회 랜덤
   late bool _excludeFromTotal = widget.account?.excludeFromTotal ?? false;
   late bool _isInvestment = widget.account?.isInvestment ?? false;
   bool _busy = false;
@@ -63,18 +60,24 @@ class _State extends ConsumerState<AccountFormDialog> {
       isInvestment: _isInvestment,
     );
     if (result.isFail) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(result.errors.values.first)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.errors.values.first)));
       return;
     }
     setState(() => _busy = true);
     try {
-      await ref.read(accountsDaoProvider).saveAccount(
+      await ref
+          .read(accountsDaoProvider)
+          .saveAccount(
             id: widget.account?.accountId,
             draft: result.value!,
             currentBalance: parseKRW(_balanceCtrl.text),
           );
-      refreshAccountsList(ref);
+      refreshAccountMetadata(ref, accountId: widget.account?.accountId);
+      if (widget.account != null) {
+        refreshAccountTransactionMutation(ref, widget.account!.accountId);
+      }
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -87,7 +90,7 @@ class _State extends ConsumerState<AccountFormDialog> {
     setState(() => _busy = true);
     try {
       await ref.read(accountsDaoProvider).archiveAccount(acc.accountId);
-      refreshAccountsList(ref);
+      refreshAccountMetadata(ref, accountId: acc.accountId);
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -122,8 +125,10 @@ class _State extends ConsumerState<AccountFormDialog> {
                   border: OutlineInputBorder(),
                 ),
                 items: _kindLabels.entries
-                    .map((e) =>
-                        DropdownMenuItem(value: e.key, child: Text(e.value)))
+                    .map(
+                      (e) =>
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    )
                     .toList(),
                 onChanged: (v) => setState(() => _kind = v ?? 'bank'),
               ),
@@ -141,8 +146,10 @@ class _State extends ConsumerState<AccountFormDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('색상',
-                  style: TextStyle(fontSize: 12, color: AppTokens.muted)),
+              const Text(
+                '색상',
+                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+              ),
               const SizedBox(height: 8),
               ColorSwatchPicker(
                 value: _color,
@@ -151,15 +158,16 @@ class _State extends ConsumerState<AccountFormDialog> {
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('총 순자산에서 제외',
-                    style: TextStyle(fontSize: 14)),
+                title: const Text('총 순자산에서 제외', style: TextStyle(fontSize: 14)),
                 value: _excludeFromTotal,
                 onChanged: (v) => setState(() => _excludeFromTotal = v),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('투자 페이지 연동 (1개 자산만)',
-                    style: TextStyle(fontSize: 14)),
+                title: const Text(
+                  '투자 페이지 연동 (1개 자산만)',
+                  style: TextStyle(fontSize: 14),
+                ),
                 value: _isInvestment,
                 onChanged: (v) => setState(() => _isInvestment = v),
               ),
@@ -178,10 +186,7 @@ class _State extends ConsumerState<AccountFormDialog> {
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('취소'),
         ),
-        FilledButton(
-          onPressed: _busy ? null : _save,
-          child: const Text('저장'),
-        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
       ],
     );
   }

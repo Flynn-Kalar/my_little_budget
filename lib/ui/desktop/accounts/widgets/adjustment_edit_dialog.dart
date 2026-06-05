@@ -7,7 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
-import '../providers.dart';
+import '../account_refresh.dart';
 
 /// SPEC §4.3 — 자산 잔액 조정 거래 편집. 타입 토글 없이 날짜/시각/금액/메모만.
 class AdjustmentEditDialog extends ConsumerStatefulWidget {
@@ -27,8 +27,7 @@ class AdjustmentEditDialog extends ConsumerStatefulWidget {
   }) {
     return showDialog<void>(
       context: context,
-      builder: (_) =>
-          AdjustmentEditDialog(row: row, accountId: accountId),
+      builder: (_) => AdjustmentEditDialog(row: row, accountId: accountId),
     );
   }
 
@@ -39,8 +38,9 @@ class AdjustmentEditDialog extends ConsumerStatefulWidget {
 class _State extends ConsumerState<AdjustmentEditDialog> {
   late DateTime _date = parseDateKey(widget.row.occurredOn);
   late final String _time = widget.row.occurredTime;
-  late final _amountCtrl =
-      TextEditingController(text: widget.row.amount.toString());
+  late final _amountCtrl = TextEditingController(
+    text: widget.row.amount.toString(),
+  );
   late final _memoCtrl = TextEditingController(text: widget.row.memo ?? '');
   bool _busy = false;
 
@@ -72,23 +72,23 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
       accountId: widget.accountId,
     );
     if (result.isFail) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(result.errors.values.first)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.errors.values.first)));
       return;
     }
     setState(() => _busy = true);
-    await ref.read(transactionsDaoProvider).saveTransaction(
-          id: widget.row.id,
-          draft: result.value!,
-        );
-    refreshAccountDetail(ref, widget.accountId);
+    await ref
+        .read(transactionsDaoProvider)
+        .saveTransaction(id: widget.row.id, draft: result.value!);
+    refreshAccountTransactionMutation(ref, widget.accountId);
     if (mounted) Navigator.pop(context);
   }
 
   Future<void> _delete() async {
     setState(() => _busy = true);
     await ref.read(transactionsDaoProvider).deleteTransaction(widget.row.id);
-    refreshAccountDetail(ref, widget.accountId);
+    refreshAccountTransactionMutation(ref, widget.accountId);
     if (mounted) Navigator.pop(context);
   }
 
@@ -144,10 +144,7 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('취소'),
         ),
-        FilledButton(
-          onPressed: _busy ? null : _save,
-          child: const Text('저장'),
-        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
       ],
     );
   }
