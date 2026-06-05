@@ -38,6 +38,15 @@ final budgetActiveAccountsProvider = FutureProvider.autoDispose<List<Account>>((
   return dao.getActiveAccounts();
 });
 
+final budgetAccountLinkedPreviewProvider = FutureProvider.autoDispose
+    .family<({int available, int spent}), ({int accountId, String month})>((
+      ref,
+      args,
+    ) {
+      final dao = ref.watch(budgetDaoProvider);
+      return dao.accountLinkedBudgetPreview(args.accountId, args.month);
+    });
+
 void refreshBudget(WidgetRef ref) {
   ref.invalidate(monthlyExpectedIncomeProvider);
   ref.invalidate(budgetRowsProvider);

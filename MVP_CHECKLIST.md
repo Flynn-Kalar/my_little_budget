@@ -49,7 +49,7 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
-| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing with category add/remove, account-linked TODO edit state, and row delete. |
+| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing with category add/remove, account-linked account editing, and row delete. |
 | stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
 | investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot with inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. |
 | settings | `/settings`, `/settings/theme`, `/settings/data` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore have first-pass screens. |
@@ -104,12 +104,12 @@ Currently input-capable:
 - Edit existing category-based group adjustment.
 - Edit existing category-based group carry-forward.
 - Edit linked expense categories for existing fixed/percentage category-based groups.
+- Edit linked account for existing account-linked budget groups with calculation preview.
 - Delete existing budget groups.
 - Copy previous month budget groups into the selected month.
 - Month navigation.
 
 TODO:
-- Add account-linked group account-change editing only if a minimal DAO method is added deliberately.
 - Keep invalidating `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider` after budget mutations.
 - Add focused widget tests for budget rendering and mutations.
 

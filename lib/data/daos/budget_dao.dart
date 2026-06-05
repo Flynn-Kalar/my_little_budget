@@ -14,7 +14,11 @@ part 'budget_dao.g.dart';
 /// SPEC §3.4 / §4.4 — 예산 그룹 조회·계산·CRUD.
 
 class CategoryRef {
-  const CategoryRef({required this.id, required this.name, required this.color});
+  const CategoryRef({
+    required this.id,
+    required this.name,
+    required this.color,
+  });
   final int id;
   final String name;
   final String color;
@@ -81,21 +85,24 @@ class BudgetVsActual {
   final List<CategoryRef> categories;
 }
 
-@DriftAccessor(tables: [
-  BudgetGroups,
-  BudgetGroupCategories,
-  Categories,
-  Accounts,
-  Transactions,
-  MonthlyIncome,
-])
+@DriftAccessor(
+  tables: [
+    BudgetGroups,
+    BudgetGroupCategories,
+    Categories,
+    Accounts,
+    Transactions,
+    MonthlyIncome,
+  ],
+)
 class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   BudgetDao(super.db);
 
   // ── 월 예상 소득 ──────────────────────────────────────────────
   Future<int> getMonthlyExpectedIncome(String month) async {
-    final row = await (select(monthlyIncome)..where((m) => m.month.equals(month)))
-        .getSingleOrNull();
+    final row = await (select(
+      monthlyIncome,
+    )..where((m) => m.month.equals(month))).getSingleOrNull();
     return row?.expectedIncome ?? 0;
   }
 
@@ -144,11 +151,13 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
 
     final catsByGroup = <int, List<CategoryRef>>{};
     for (final m in memberships) {
-      (catsByGroup[m.read<int>('gid')] ??= []).add(CategoryRef(
-        id: m.read<int>('id'),
-        name: m.read<String>('name'),
-        color: m.read<String>('color'),
-      ));
+      (catsByGroup[m.read<int>('gid')] ??= []).add(
+        CategoryRef(
+          id: m.read<int>('id'),
+          name: m.read<String>('name'),
+          color: m.read<String>('color'),
+        ),
+      );
     }
 
     return rows.map((r) {
@@ -216,12 +225,16 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   Future<void> updateBudgetGroupPercentage(int groupId, int? percentage) =>
       _patch(groupId, BudgetGroupsCompanion(percentage: Value(percentage)));
 
+  Future<void> updateBudgetGroupAccount(int groupId, int accountId) =>
+      _patch(groupId, BudgetGroupsCompanion(accountId: Value(accountId)));
+
   Future<void> updateBudgetGroupCarryForward(int groupId, bool carryForward) =>
       _patch(groupId, BudgetGroupsCompanion(carryForward: Value(carryForward)));
 
   Future<void> _patch(int groupId, BudgetGroupsCompanion patch) async {
-    await (update(budgetGroups)..where((g) => g.id.equals(groupId)))
-        .write(patch.copyWith(updatedAt: Value(sqlNow())));
+    await (update(budgetGroups)..where((g) => g.id.equals(groupId))).write(
+      patch.copyWith(updatedAt: Value(sqlNow())),
+    );
   }
 
   Future<void> addCategoryToGroup(int groupId, int categoryId) async {
@@ -235,8 +248,9 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   }
 
   Future<void> removeCategoryFromGroup(int groupId, int categoryId) async {
-    await (delete(budgetGroupCategories)
-          ..where((m) => m.groupId.equals(groupId) & m.categoryId.equals(categoryId)))
+    await (delete(budgetGroupCategories)..where(
+          (m) => m.groupId.equals(groupId) & m.categoryId.equals(categoryId),
+        ))
         .go();
   }
 
@@ -263,7 +277,11 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
 
       if (g.accountId != null) {
         // 자산 연동 예산
-        final flow = await _accountBudget(g.accountId!, bounds.start, bounds.end);
+        final flow = await _accountBudget(
+          g.accountId!,
+          bounds.start,
+          bounds.end,
+        );
         budgetAmount = flow.available;
         spentAmount = flow.spent;
         baseAmount = flow.available;
@@ -294,25 +312,30 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
           );
           usedExpectedIncome = expectedIncome;
         }
-        budgetAmount = effectiveBudget(base: baseAmount, adjustment: adjustment);
+        budgetAmount = effectiveBudget(
+          base: baseAmount,
+          adjustment: adjustment,
+        );
       }
 
-      result.add(BudgetVsActual(
-        groupId: g.id,
-        groupName: g.name,
-        budgetAmount: budgetAmount,
-        baseAmount: baseAmount,
-        adjustment: adjustment,
-        carryForward: g.carryForward,
-        spentAmount: spentAmount,
-        usagePercent: usagePercent(spent: spentAmount, budget: budgetAmount),
-        incomePercentage: g.percentage,
-        expectedIncome: usedExpectedIncome,
-        accountId: g.accountId,
-        accountName: g.accountName,
-        accountColor: g.accountColor,
-        categories: g.categories,
-      ));
+      result.add(
+        BudgetVsActual(
+          groupId: g.id,
+          groupName: g.name,
+          budgetAmount: budgetAmount,
+          baseAmount: baseAmount,
+          adjustment: adjustment,
+          carryForward: g.carryForward,
+          spentAmount: spentAmount,
+          usagePercent: usagePercent(spent: spentAmount, budget: budgetAmount),
+          incomePercentage: g.percentage,
+          expectedIncome: usedExpectedIncome,
+          accountId: g.accountId,
+          accountName: g.accountName,
+          accountColor: g.accountColor,
+          categories: g.categories,
+        ),
+      );
     }
     return result;
   }
@@ -323,8 +346,9 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
     String monthStart,
     String monthEnd,
   ) async {
-    final acc = await (select(accounts)..where((a) => a.id.equals(accountId)))
-        .getSingleOrNull();
+    final acc = await (select(
+      accounts,
+    )..where((a) => a.id.equals(accountId))).getSingleOrNull();
     final initial = acc?.initialBalance ?? 0;
 
     final beforeVars = [
@@ -343,7 +367,8 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
       readsFrom: {transactions},
     ).getSingle();
 
-    final startBalance = initial +
+    final startBalance =
+        initial +
         before.read<int>('inflow') -
         before.read<int>('outflow') +
         before.read<int>('adjust');
@@ -371,6 +396,14 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
     );
   }
 
+  Future<({int available, int spent})> accountLinkedBudgetPreview(
+    int accountId,
+    String month,
+  ) {
+    final bounds = monthRange(month);
+    return _accountBudget(accountId, bounds.start, bounds.end);
+  }
+
   // ── 이전 달 복사 ─────────────────────────────────────────────
   /// SPEC §4.4 — 이전 달 그룹을 대상 월로 복사. carryForward 면 잔금을 조정액으로 이월.
   Future<int> copyBudgetGroupsWithCarryforward(
@@ -390,10 +423,12 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
       }
 
       for (final sg in sourceGroups) {
-        final existing = await (select(budgetGroups)
-              ..where((g) =>
-                  g.name.equals(sg.groupName) & g.month.equals(targetMonth)))
-            .getSingleOrNull();
+        final existing =
+            await (select(budgetGroups)..where(
+                  (g) =>
+                      g.name.equals(sg.groupName) & g.month.equals(targetMonth),
+                ))
+                .getSingleOrNull();
         if (existing != null) continue;
 
         if (sg.accountId != null) {

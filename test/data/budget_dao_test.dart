@@ -170,5 +170,36 @@ void main() {
       expect(result.first.spentAmount, 40000);
       expect(result.first.budgetAmount, 0); // 월초 0 + 입금 0
     });
+
+    test('account-linked group account can be changed', () async {
+      final accounts = await db.accountsDao.getActiveAccounts();
+      final fromId = accounts[0].id;
+      final toId = accounts[1].id;
+      final catId = await expenseCat();
+
+      await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'income',
+          amount: 50000,
+          occurredOn: '2025-05-01',
+          occurredTime: '00:00',
+          accountId: toId,
+          categoryId: catId,
+        ),
+      );
+
+      final groupId = await db.budgetDao.createBudgetGroup(
+        name: 'account-linked-edit',
+        month: '2025-05',
+        amount: 0,
+        accountId: fromId,
+      );
+
+      await db.budgetDao.updateBudgetGroupAccount(groupId, toId);
+      final result = await db.budgetDao.budgetGroupVsActual('2025-05');
+
+      expect(result.single.accountId, toId);
+      expect(result.single.budgetAmount, 50000);
+    });
   });
 }

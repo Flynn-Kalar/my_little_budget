@@ -108,7 +108,7 @@ Current status:
   - existing category-based group adjustment editing
   - existing category-based group carry-forward editing
   - existing fixed/percentage category-based group category add/remove editing
-  - account-linked group edit dialog TODO state where DAO update support is absent
+  - account-linked group linked-account editing with calculation preview
   - budget group delete with confirmation
 - Budget providers are implemented:
   - `budgetMonthProvider`
@@ -141,7 +141,11 @@ Current status:
   - selected-state display for currently linked expense categories
   - adding/removing expense category mappings through existing `BudgetDao` methods
   - validation that at least one category remains linked
-- Account-linked editing currently displays the connected account and an explicit TODO because the existing DAO does not expose an accountId update method.
+- Account-linked editing currently supports:
+  - selected-state display for the currently linked account
+  - linked account change through `BudgetDao.updateBudgetGroupAccount`
+  - calculation preview through `BudgetDao.accountLinkedBudgetPreview`
+  - validation that a valid account remains selected
 
 ### Stats Read-Only Screen
 
@@ -280,12 +284,11 @@ Next steps:
 
 ## Budget Remaining Work
 
-Current read-only base, first edit step, previous-month copy, fixed/percentage/account-linked creation, fixed/percentage editing, category add/remove editing, account-linked TODO edit state, and row delete are complete. Continue only after preserving the existing provider shape and refresh behavior.
+Current read-only base, first edit step, previous-month copy, fixed/percentage/account-linked creation, fixed/percentage editing, category add/remove editing, account-linked account editing, and row delete are complete. Continue only after preserving the existing provider shape and refresh behavior.
 
 Next steps:
-1. Consider a minimal account-linked account-change update only if it is still required after UX review.
-2. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
-3. Add focused widget tests for create/copy/edit/delete flows.
+1. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
+2. Add focused widget tests for create/copy/edit/delete flows.
 
 ## Settings Remaining Work
 
@@ -306,7 +309,7 @@ Recommended order from the current code state:
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
-- Budget category-based CRUD is now mostly covered; account-linked edit support remains intentionally limited by the current DAO.
+- Budget CRUD is now mostly covered; remaining budget work is focused widget coverage and manual UX QA.
 - Settings theme and data export/import are now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
 
 ## Verification Strategy

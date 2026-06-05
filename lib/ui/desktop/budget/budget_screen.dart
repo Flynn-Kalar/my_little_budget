@@ -1081,6 +1081,112 @@ Future<void> _syncBudgetGroupCategories(
   }
 }
 
+class _AccountLinkedEditor extends ConsumerWidget {
+  const _AccountLinkedEditor({
+    required this.accountId,
+    required this.month,
+    required this.busy,
+    required this.onChanged,
+  });
+
+  final int? accountId;
+  final String month;
+  final bool busy;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accounts = ref.watch(budgetActiveAccountsProvider);
+    final preview = accountId == null
+        ? null
+        : ref.watch(
+            budgetAccountLinkedPreviewProvider((
+              accountId: accountId!,
+              month: month,
+            )),
+          );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        accounts.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return const Text(
+                '연결 가능한 계좌가 없습니다.',
+                style: TextStyle(color: AppTokens.muted),
+              );
+            }
+            return DropdownButtonFormField<int>(
+              initialValue: accountId,
+              items: [
+                for (final account in items)
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(account.name),
+                  ),
+              ],
+              onChanged: busy ? null : onChanged,
+              decoration: const InputDecoration(labelText: '연결 계좌'),
+            );
+          },
+          loading: () => const LinearProgressIndicator(minHeight: 3),
+          error: (error, _) => Text(
+            error.toString(),
+            style: const TextStyle(color: AppTokens.expense),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (preview != null)
+          preview.when(
+            data: (value) => _AccountLinkedPreview(flow: value),
+            loading: () => const LinearProgressIndicator(minHeight: 3),
+            error: (error, _) => Text(
+              error.toString(),
+              style: const TextStyle(color: AppTokens.expense),
+            ),
+          )
+        else
+          const Text(
+            '계좌를 선택하면 이번 달 예산 계산 preview가 표시됩니다.',
+            style: TextStyle(color: AppTokens.muted, fontSize: 12),
+          ),
+      ],
+    );
+  }
+}
+
+class _AccountLinkedPreview extends StatelessWidget {
+  const _AccountLinkedPreview({required this.flow});
+
+  final ({int available, int spent}) flow;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTokens.sidebarActive,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTokens.sidebarBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Expanded(
+              child: _AmountPair(label: '예산 preview', amount: flow.available),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _AmountPair(label: '사용 preview', amount: flow.spent),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _BudgetGroupModeEditDialog extends ConsumerStatefulWidget {
   const _BudgetGroupModeEditDialog({required this.row});
 
@@ -1110,6 +1216,7 @@ class _BudgetGroupModeEditDialogState
     text: widget.row.adjustment.toString(),
   );
   late final Set<int> _categoryIds;
+  late int? _accountId = widget.row.accountId;
   late bool _carryForward = widget.row.carryForward;
   bool _busy = false;
 
@@ -1132,6 +1239,12 @@ class _BudgetGroupModeEditDialogState
   Future<void> _save() async {
     final dao = ref.read(budgetDaoProvider);
     final percentage = int.tryParse(_percentage.text.trim());
+
+    if (_mode == _BudgetGroupMode.accountLinked &&
+        (_accountId == null || _accountId! <= 0)) {
+      _showSnack('연결 계좌를 선택해 주세요.');
+      return;
+    }
 
     if (_mode != _BudgetGroupMode.accountLinked && _categoryIds.isEmpty) {
       _showSnack('연결 카테고리를 하나 이상 선택해 주세요.');
@@ -1166,6 +1279,9 @@ class _BudgetGroupModeEditDialogState
         );
         await _syncBudgetGroupCategories(dao, widget.row, _categoryIds);
       }
+      if (_mode == _BudgetGroupMode.accountLinked) {
+        await dao.updateBudgetGroupAccount(widget.row.groupId, _accountId!);
+      }
       if (!mounted) return;
       refreshBudget(ref);
       Navigator.pop(context);
@@ -1188,6 +1304,7 @@ class _BudgetGroupModeEditDialogState
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(budgetExpenseCategoriesProvider);
+    final month = ref.watch(budgetMonthProvider);
     final income =
         widget.row.expectedIncome ??
         ref.watch(monthlyExpectedIncomeProvider).asData?.value ??
@@ -1240,15 +1357,11 @@ class _BudgetGroupModeEditDialogState
                 const SizedBox(height: 12),
               ],
               if (_mode == _BudgetGroupMode.accountLinked) ...[
-                Text(
-                  widget.row.accountName == null
-                      ? '연결 계좌 정보를 확인할 수 없습니다.'
-                      : '연결 계좌: ${widget.row.accountName}',
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '현재 DAO는 account-linked 그룹의 연결 계좌 변경을 위한 update 메서드를 제공하지 않습니다. 생성과 계산은 지원하며, 편집은 TODO 상태로 표시합니다.',
-                  style: TextStyle(color: AppTokens.muted, fontSize: 12),
+                _AccountLinkedEditor(
+                  accountId: _accountId,
+                  month: month,
+                  busy: _busy,
+                  onChanged: (value) => setState(() => _accountId = value),
                 ),
               ] else ...[
                 TextField(
@@ -1286,12 +1399,7 @@ class _BudgetGroupModeEditDialogState
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('취소'),
         ),
-        FilledButton(
-          onPressed: _busy || _mode == _BudgetGroupMode.accountLinked
-              ? null
-              : _save,
-          child: const Text('저장'),
-        ),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
       ],
     );
   }
