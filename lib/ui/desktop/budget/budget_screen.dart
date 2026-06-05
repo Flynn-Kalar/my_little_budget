@@ -1064,6 +1064,23 @@ class _CategorySelector extends StatelessWidget {
   }
 }
 
+Future<void> _syncBudgetGroupCategories(
+  BudgetDao dao,
+  BudgetVsActual row,
+  Set<int> selectedIds,
+) async {
+  final before = row.categories.map((category) => category.id).toSet();
+  final toAdd = selectedIds.difference(before);
+  final toRemove = before.difference(selectedIds);
+
+  for (final categoryId in toAdd) {
+    await dao.addCategoryToGroup(row.groupId, categoryId);
+  }
+  for (final categoryId in toRemove) {
+    await dao.removeCategoryFromGroup(row.groupId, categoryId);
+  }
+}
+
 class _BudgetGroupModeEditDialog extends ConsumerStatefulWidget {
   const _BudgetGroupModeEditDialog({required this.row});
 
@@ -1092,10 +1109,17 @@ class _BudgetGroupModeEditDialogState
   late final _adjustment = TextEditingController(
     text: widget.row.adjustment.toString(),
   );
+  late final Set<int> _categoryIds;
   late bool _carryForward = widget.row.carryForward;
   bool _busy = false;
 
   _BudgetGroupMode get _mode => _modeForRow(widget.row);
+
+  @override
+  void initState() {
+    super.initState();
+    _categoryIds = widget.row.categories.map((category) => category.id).toSet();
+  }
 
   @override
   void dispose() {
@@ -1108,6 +1132,11 @@ class _BudgetGroupModeEditDialogState
   Future<void> _save() async {
     final dao = ref.read(budgetDaoProvider);
     final percentage = int.tryParse(_percentage.text.trim());
+
+    if (_mode != _BudgetGroupMode.accountLinked && _categoryIds.isEmpty) {
+      _showSnack('연결 카테고리를 하나 이상 선택해 주세요.');
+      return;
+    }
 
     if (_mode == _BudgetGroupMode.percentage &&
         (percentage == null || percentage <= 0 || percentage > 1000)) {
@@ -1135,6 +1164,7 @@ class _BudgetGroupModeEditDialogState
           widget.row.groupId,
           _carryForward,
         );
+        await _syncBudgetGroupCategories(dao, widget.row, _categoryIds);
       }
       if (!mounted) return;
       refreshBudget(ref);
@@ -1157,6 +1187,7 @@ class _BudgetGroupModeEditDialogState
 
   @override
   Widget build(BuildContext context) {
+    final categories = ref.watch(budgetExpenseCategoriesProvider);
     final income =
         widget.row.expectedIncome ??
         ref.watch(monthlyExpectedIncomeProvider).asData?.value ??
@@ -1238,10 +1269,12 @@ class _BudgetGroupModeEditDialogState
                   contentPadding: EdgeInsets.zero,
                   title: const Text('carry-forward 사용'),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  '연결 카테고리 add/remove 편집은 다음 단계 TODO로 유지합니다.',
-                  style: TextStyle(color: AppTokens.muted, fontSize: 12),
+                const SizedBox(height: 12),
+                _CategorySelector(
+                  categories: categories,
+                  selectedIds: _categoryIds,
+                  enabled: !_busy,
+                  onChanged: () => setState(() {}),
                 ),
               ],
             ],

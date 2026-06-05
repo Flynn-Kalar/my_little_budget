@@ -99,6 +99,7 @@ Current status:
   - existing percentage-group percentage editing with expected-income preview
   - existing category-based group adjustment editing
   - existing category-based group carry-forward editing
+  - existing fixed/percentage category-based group category add/remove editing
   - account-linked group edit dialog TODO state where DAO update support is absent
   - budget group delete with confirmation
 - Budget providers are implemented:
@@ -128,8 +129,11 @@ Current status:
   - percentage value update
   - adjustment update
   - carry-forward update
+- Category-based editing currently supports:
+  - selected-state display for currently linked expense categories
+  - adding/removing expense category mappings through existing `BudgetDao` methods
+  - validation that at least one category remains linked
 - Account-linked editing currently displays the connected account and an explicit TODO because the existing DAO does not expose an accountId update method.
-- Category add/remove editing is intentionally still TODO.
 
 ### Stats Read-Only Screen
 
@@ -265,13 +269,12 @@ Next steps:
 
 ## Budget Remaining Work
 
-Current read-only base, first edit step, previous-month copy, fixed/percentage/account-linked creation, fixed/percentage editing, account-linked TODO edit state, and row delete are complete. Continue only after preserving the existing provider shape and refresh behavior.
+Current read-only base, first edit step, previous-month copy, fixed/percentage/account-linked creation, fixed/percentage editing, category add/remove editing, account-linked TODO edit state, and row delete are complete. Continue only after preserving the existing provider shape and refresh behavior.
 
 Next steps:
-1. Add category add/remove editing for category-based groups.
-2. Consider a minimal account-linked account-change update only if it is still required after UX review.
-3. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
-4. Add focused widget tests for create/copy/edit/delete flows.
+1. Consider a minimal account-linked account-change update only if it is still required after UX review.
+2. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
+3. Add focused widget tests for create/copy/edit/delete flows.
 
 ## Settings Remaining Work
 
@@ -288,16 +291,15 @@ Next steps:
 
 Recommended order from the current code state:
 
-1. Budget category add/remove editing
-2. Stats category detail panel
-3. Stats yearly screen
-4. Settings theme screen
-5. Optional settings reset UI
+1. Stats category detail panel
+2. Stats yearly screen
+3. Settings theme screen
+4. Optional settings reset UI
 
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
-- Budget is the next largest CRUD gap because category add/remove editing is still missing, and account-linked edit support is intentionally limited by the current DAO.
+- Budget category-based CRUD is now mostly covered; account-linked edit support remains intentionally limited by the current DAO.
 - Settings data export/import is now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
 
 ## Verification Strategy

@@ -64,6 +64,43 @@ void main() {
       expect(result.first.incomePercentage, 30);
       expect(result.first.expectedIncome, 3000000);
     });
+
+    test(
+      'category mappings can be added and removed for existing groups',
+      () async {
+        final accId = await firstAccount();
+        final catA = await expenseCat(0);
+        final catB = await expenseCat(1);
+        await addExpense(accId, catA, 10000, '2025-05-03');
+        await addExpense(accId, catB, 20000, '2025-05-04');
+
+        final groupId = await db.budgetDao.createBudgetGroup(
+          name: 'category-edit',
+          month: '2025-05',
+          amount: 100000,
+          categoryIds: [catA],
+        );
+        expect(
+          (await db.budgetDao.budgetGroupVsActual(
+            '2025-05',
+          )).single.spentAmount,
+          10000,
+        );
+
+        await db.budgetDao.addCategoryToGroup(groupId, catB);
+        expect(
+          (await db.budgetDao.budgetGroupVsActual(
+            '2025-05',
+          )).single.spentAmount,
+          30000,
+        );
+
+        await db.budgetDao.removeCategoryFromGroup(groupId, catA);
+        final result = await db.budgetDao.budgetGroupVsActual('2025-05');
+        expect(result.single.spentAmount, 20000);
+        expect(result.single.categories.map((category) => category.id), [catB]);
+      },
+    );
   });
 
   group('이전 달 복사 + 이월 (SPEC §4.4)', () {
@@ -80,8 +117,10 @@ void main() {
       );
       await addExpense(accId, catId, 70000, '2025-04-10');
 
-      final copied =
-          await db.budgetDao.copyBudgetGroupsWithCarryforward('2025-04', '2025-05');
+      final copied = await db.budgetDao.copyBudgetGroupsWithCarryforward(
+        '2025-04',
+        '2025-05',
+      );
       expect(copied, 1);
 
       final may = await db.budgetDao.budgetGroupVsActual('2025-05');
@@ -93,13 +132,21 @@ void main() {
     test('이미 같은 이름 그룹이 있으면 복사 건너뜀', () async {
       final catId = await expenseCat();
       await db.budgetDao.createBudgetGroup(
-        name: '식비', month: '2025-04', amount: 100000, categoryIds: [catId],
+        name: '식비',
+        month: '2025-04',
+        amount: 100000,
+        categoryIds: [catId],
       );
       await db.budgetDao.createBudgetGroup(
-        name: '식비', month: '2025-05', amount: 50000, categoryIds: [catId],
+        name: '식비',
+        month: '2025-05',
+        amount: 50000,
+        categoryIds: [catId],
       );
-      final copied =
-          await db.budgetDao.copyBudgetGroupsWithCarryforward('2025-04', '2025-05');
+      final copied = await db.budgetDao.copyBudgetGroupsWithCarryforward(
+        '2025-04',
+        '2025-05',
+      );
       expect(copied, 0);
     });
   });

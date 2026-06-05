@@ -50,7 +50,7 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
-| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing, account-linked TODO edit state, and row delete. Category add/remove editing remains. |
+| budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing with category add/remove, account-linked TODO edit state, and row delete. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
 | investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot with inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. |
 | settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; data backup/restore has a first-pass screen; theme is TODO. |
@@ -104,13 +104,13 @@ Currently input-capable:
 - Edit existing percentage budget group percentage.
 - Edit existing category-based group adjustment.
 - Edit existing category-based group carry-forward.
+- Edit linked expense categories for existing fixed/percentage category-based groups.
 - Delete existing budget groups.
 - Copy previous month budget groups into the selected month.
 - Month navigation.
 
 TODO:
 - Add account-linked group account-change editing only if a minimal DAO method is added deliberately.
-- Add category add/remove for category-based groups.
 - Keep invalidating `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider` after budget mutations.
 - Add focused widget tests for budget rendering and mutations.
 
@@ -189,7 +189,6 @@ Items:
 ## MVP Recommendation
 
 Shortest path to a usable MVP:
-1. Complete budget category add/remove editing.
-2. Add stats yearly route/screen.
-3. Add settings theme.
-4. Add optional settings reset UI only after invalidation is explicit and tested.
+1. Add stats yearly route/screen.
+2. Add settings theme.
+3. Add optional settings reset UI only after invalidation is explicit and tested.
