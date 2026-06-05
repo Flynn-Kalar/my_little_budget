@@ -51,9 +51,8 @@ class SettingsPage extends StatelessWidget {
             _SettingsCard(
               icon: Icons.import_export_outlined,
               title: '데이터 백업/복원',
-              subtitle:
-                  'BackupDao export/import/reset 로직은 구현되어 있습니다. 파일 선택 UI 연결 예정입니다.',
-              disabledLabel: '연결 예정',
+              subtitle: 'JSON 백업 파일 내보내기와 전체 교체 방식 복원',
+              path: '/settings/data',
             ),
             SizedBox(height: 40),
           ],

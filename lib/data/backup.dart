@@ -35,25 +35,26 @@ class Backup {
   final List<RecurringTransaction> recurringTransactions;
 
   Map<String, dynamic> toJson() => {
-        'version': backupVersion,
-        'appName': backupAppName,
-        'exportedAt': exportedAt,
-        'data': {
-          'accounts': accounts.map((e) => e.toJson()).toList(),
-          'categories': categories.map((e) => e.toJson()).toList(),
-          'budgetGroups': budgetGroups.map((e) => e.toJson()).toList(),
-          'budgetGroupCategories':
-              budgetGroupCategories.map((e) => e.toJson()).toList(),
-          'transactions': transactions.map((e) => e.toJson()).toList(),
-          'investments': investments.map((e) => e.toJson()).toList(),
-          'tags': tags.map((e) => e.toJson()).toList(),
-          'transactionTags':
-              transactionTags.map((e) => e.toJson()).toList(),
-          'monthlyIncome': monthlyIncome.map((e) => e.toJson()).toList(),
-          'recurringTransactions':
-              recurringTransactions.map((e) => e.toJson()).toList(),
-        },
-      };
+    'version': backupVersion,
+    'appName': backupAppName,
+    'exportedAt': exportedAt,
+    'data': {
+      'accounts': accounts.map((e) => e.toJson()).toList(),
+      'categories': categories.map((e) => e.toJson()).toList(),
+      'budgetGroups': budgetGroups.map((e) => e.toJson()).toList(),
+      'budgetGroupCategories': budgetGroupCategories
+          .map((e) => e.toJson())
+          .toList(),
+      'transactions': transactions.map((e) => e.toJson()).toList(),
+      'investments': investments.map((e) => e.toJson()).toList(),
+      'tags': tags.map((e) => e.toJson()).toList(),
+      'transactionTags': transactionTags.map((e) => e.toJson()).toList(),
+      'monthlyIncome': monthlyIncome.map((e) => e.toJson()).toList(),
+      'recurringTransactions': recurringTransactions
+          .map((e) => e.toJson())
+          .toList(),
+    },
+  };
 
   String toJsonString() => const JsonEncoder.withIndent('  ').convert(toJson());
 }
@@ -89,45 +90,53 @@ BackupParseResult parseBackup(String jsonString) {
   if (data is! Map) return const BackupParseResult.fail('data 필드가 없습니다');
 
   try {
-    return BackupParseResult.ok(Backup(
-      exportedAt: raw['exportedAt'] as String? ?? '',
-      accounts: _list(data['accounts'])
-          .map((j) => Account.fromJson(
-              _bools(j, const ['excludeFromTotal', 'isInvestment'])))
-          .toList(),
-      categories: _list(data['categories'])
-          .map(Category.fromJson)
-          .toList(),
-      budgetGroups: _list(data['budgetGroups'])
-          .map((j) => BudgetGroup.fromJson(_bools(j, const ['carryForward'])))
-          .toList(),
-      budgetGroupCategories: _list(data['budgetGroupCategories'])
-          .map(BudgetGroupCategoryLink.fromJson)
-          .toList(),
-      transactions:
-          _list(data['transactions']).map(Transaction.fromJson).toList(),
-      investments:
-          _list(data['investments']).map(Investment.fromJson).toList(),
-      tags: _list(data['tags']).map(Tag.fromJson).toList(),
-      transactionTags: _list(data['transactionTags'])
-          .map(TransactionTagLink.fromJson)
-          .toList(),
-      monthlyIncome:
-          _list(data['monthlyIncome']).map(MonthlyIncomeRow.fromJson).toList(),
-      recurringTransactions: _list(data['recurringTransactions'])
-          .map((j) => RecurringTransaction.fromJson(_bools(j, const ['active'])))
-          .toList(),
-    ));
+    return BackupParseResult.ok(
+      Backup(
+        exportedAt: raw['exportedAt'] as String? ?? '',
+        accounts: _list(data['accounts'])
+            .map(
+              (j) => Account.fromJson(
+                _bools(j, const ['excludeFromTotal', 'isInvestment']),
+              ),
+            )
+            .toList(),
+        categories: _list(data['categories']).map(Category.fromJson).toList(),
+        budgetGroups: _list(data['budgetGroups'])
+            .map((j) => BudgetGroup.fromJson(_bools(j, const ['carryForward'])))
+            .toList(),
+        budgetGroupCategories: _list(
+          data['budgetGroupCategories'],
+        ).map(BudgetGroupCategoryLink.fromJson).toList(),
+        transactions: _list(
+          data['transactions'],
+        ).map(Transaction.fromJson).toList(),
+        investments: _list(
+          data['investments'],
+        ).map(Investment.fromJson).toList(),
+        tags: _list(data['tags']).map(Tag.fromJson).toList(),
+        transactionTags: _list(
+          data['transactionTags'],
+        ).map(TransactionTagLink.fromJson).toList(),
+        monthlyIncome: _list(
+          data['monthlyIncome'],
+        ).map(MonthlyIncomeRow.fromJson).toList(),
+        recurringTransactions: _list(data['recurringTransactions'])
+            .map(
+              (j) => RecurringTransaction.fromJson(_bools(j, const ['active'])),
+            )
+            .toList(),
+      ),
+    );
   } catch (e) {
     return BackupParseResult.fail('파일 형식 오류: $e');
   }
 }
 
-/// SPEC §5.2 — 백업 파일명: mlb-backup-YYYYMMDD-HHMMSS.json
+/// SPEC §5.2 — 백업 파일명: my_little_budget-backup-YYYYMMDD-HHMMSS.json
 String buildBackupFilename({DateTime? now}) {
   final d = now ?? DateTime.now();
   String two(int n) => n.toString().padLeft(2, '0');
-  return 'mlb-backup-${d.year}${two(d.month)}${two(d.day)}-'
+  return 'my_little_budget-backup-${d.year}${two(d.month)}${two(d.day)}-'
       '${two(d.hour)}${two(d.minute)}${two(d.second)}.json';
 }
 

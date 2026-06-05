@@ -13,8 +13,9 @@ void main() {
 
   Future<void> addExpense(int amount, String on, {String? memo}) async {
     final accId = (await db.accountsDao.getActiveAccounts()).first.id;
-    final catId =
-        (await db.categoriesDao.getActiveCategories('expense')).first.id;
+    final catId = (await db.categoriesDao.getActiveCategories(
+      'expense',
+    )).first.id;
     await db.transactionsDao.saveTransaction(
       draft: TransactionDraft(
         type: 'expense',
@@ -29,6 +30,13 @@ void main() {
   }
 
   group('export/import 라운드트립 (SPEC §5.2)', () {
+    test('backup filename uses requested timestamp format', () {
+      expect(
+        buildBackupFilename(now: DateTime(2026, 6, 5, 9, 8, 7)),
+        'my_little_budget-backup-20260605-090807.json',
+      );
+    });
+
     test('export → JSON → parse → import 후 데이터 일치', () async {
       await addExpense(5000, '2026-05-10', memo: '점심');
       await addExpense(3000, '2026-05-15', memo: '카페');
@@ -83,14 +91,21 @@ void main() {
 
     test('잘못된 JSON / 버전 / appName 거부', () {
       expect(parseBackup('not json').isOk, false);
-      expect(parseBackup('{"version":2,"appName":"my_little_budget","data":{}}').isOk, false);
-      expect(parseBackup('{"version":1,"appName":"other","data":{}}').isOk, false);
+      expect(
+        parseBackup(
+          '{"version":2,"appName":"my_little_budget","data":{}}',
+        ).isOk,
+        false,
+      );
+      expect(
+        parseBackup('{"version":1,"appName":"other","data":{}}').isOk,
+        false,
+      );
     });
   });
 
   group('resetAllData (SPEC §4.8.5)', () {
-    test('거래 wipe, 카테고리 기본값 복구, 기본 자산 유지(초기잔액 0), 사용자 추가 자산 삭제',
-        () async {
+    test('거래 wipe, 카테고리 기본값 복구, 기본 자산 유지(초기잔액 0), 사용자 추가 자산 삭제', () async {
       await addExpense(5000, '2026-05-10');
       await db.accountsDao.saveAccount(
         draft: const AccountDraft(

@@ -43,7 +43,6 @@ Result:
 Not routed yet:
 - `/stats/yearly`
 - `/settings/theme`
-- Settings data management route, if a separate route is later desired.
 
 ## Screen Status
 
@@ -54,7 +53,7 @@ Not routed yet:
 | budget | `/budget` | CRUD_INCOMPLETE | Partial | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation, fixed/percentage editing, account-linked TODO edit state, and row delete. Category add/remove editing remains. |
 | stats | `/stats` | READ_ONLY | No | Monthly category breakdown and 12-month trend table. Yearly stats deferred. |
 | investments | `/investments` | CRUD_INCOMPLETE | Partial | Monthly rows, summary, account banner, holdings snapshot with inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. |
-| settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; theme and backup/data management are TODO. |
+| settings | `/settings` | CRUD_INCOMPLETE | Partial | Main settings cards exist. Categories/tags/recurring have CRUD; data backup/restore has a first-pass screen; theme is TODO. |
 
 ## Detailed TODO
 
@@ -164,12 +163,14 @@ Currently input-capable:
 - Categories CRUD/reorder/archive/delete/restore.
 - Tags CRUD/delete.
 - Recurring transactions CRUD/toggle/delete.
+- Export all app data to a JSON backup file.
+- Import a validated JSON backup file with full replacement after confirmation.
 
 TODO:
 - Add `/settings/theme` route and `ThemeScreen`.
 - Wire theme UI to existing theme notifier.
-- Add data backup/export/import/reset UI.
-- Define provider invalidation for import/reset.
+- Add reset UI only if the destructive flow gets separate UX and tests.
+- Add focused widget/integration coverage for data export/import UI.
 - Keep settings subroutes stable while extending main settings.
 - Add settings smoke/widget tests.
 
@@ -191,4 +192,4 @@ Shortest path to a usable MVP:
 1. Complete budget category add/remove editing.
 2. Add stats yearly route/screen.
 3. Add settings theme.
-4. Add settings data management only after invalidation is explicit and tested.
+4. Add optional settings reset UI only after invalidation is explicit and tested.

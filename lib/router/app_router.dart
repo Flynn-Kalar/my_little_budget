@@ -9,6 +9,7 @@ import '../shell/sidebar_shell.dart';
 import '../ui/desktop/accounts/account_detail_screen.dart';
 import '../ui/desktop/accounts/accounts_screen.dart';
 import '../ui/desktop/settings/categories_screen.dart';
+import '../ui/desktop/settings/data_management_screen.dart';
 import '../ui/desktop/settings/recurring_screen.dart';
 import '../ui/desktop/settings/tags_screen.dart';
 import '../ui/desktop/transactions/transactions_screen.dart';
@@ -64,6 +65,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'recurring',
                 builder: (context, state) => const RecurringScreen(),
+              ),
+              GoRoute(
+                path: 'data',
+                builder: (context, state) => const DataManagementScreen(),
               ),
             ],
           ),

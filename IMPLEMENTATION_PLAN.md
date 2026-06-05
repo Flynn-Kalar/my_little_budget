@@ -33,6 +33,7 @@ Active routes:
 - `/settings/categories` -> `lib/ui/desktop/settings/categories_screen.dart`
 - `/settings/tags` -> `lib/ui/desktop/settings/tags_screen.dart`
 - `/settings/recurring` -> `lib/ui/desktop/settings/recurring_screen.dart`
+- `/settings/data` -> `lib/ui/desktop/settings/data_management_screen.dart`
 
 No active route currently points to `lib/ui/desktop/settings/settings_screen.dart`.
 
@@ -55,13 +56,22 @@ Current status:
   - `/settings/categories`
   - `/settings/tags`
   - `/settings/recurring`
+  - `/settings/data`
 - Theme settings is represented as a disabled/TODO card.
-- Data backup/restore is represented as a disabled/connection-planned card.
+- Data backup/restore is connected to a first-pass data management screen.
 - Settings sub-screens remain under `lib/ui/desktop/settings/`.
+- The data management screen supports:
+  - export to a single JSON backup file
+  - filename format `my_little_budget-backup-yyyyMMdd-HHmmss.json`
+  - JSON backup file selection
+  - parse/structure validation with the existing backup parser
+  - required destructive import confirmation
+  - full replacement import through `BackupDao.importBackup`
+  - broad provider invalidation after import so visible data refreshes without app restart
 
 Remaining settings work:
 - Add a real `/settings/theme` route and screen.
-- Add data management UI for export/import/reset only after provider invalidation can be handled carefully.
+- Add optional reset UI only after provider invalidation and destructive UX are tested carefully.
 
 ### Budget Editing Step 1
 
@@ -270,8 +280,9 @@ Current main page is complete as a navigation/status surface.
 Next steps:
 1. Add `/settings/theme` route.
 2. Implement `ThemeScreen` using existing theme notifier/code.
-3. Add backup/export/import/reset UI only after deciding provider invalidation scope.
-4. Keep existing `/settings/categories`, `/settings/tags`, and `/settings/recurring` routes intact.
+3. Add optional reset UI only after deciding provider invalidation scope and destructive confirmation UX.
+4. Add focused widget/integration coverage for `/settings/data`.
+5. Keep existing `/settings/categories`, `/settings/tags`, `/settings/recurring`, and `/settings/data` routes intact.
 
 ## Next Implementation Order
 
@@ -281,13 +292,13 @@ Recommended order from the current code state:
 2. Stats category detail panel
 3. Stats yearly screen
 4. Settings theme screen
-5. Settings data management
+5. Optional settings reset UI
 
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
 - Budget is the next largest CRUD gap because category add/remove editing is still missing, and account-linked edit support is intentionally limited by the current DAO.
-- Settings data management has broad invalidation impact and should remain late.
+- Settings data export/import is now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
 
 ## Verification Strategy
 
