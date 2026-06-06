@@ -146,6 +146,112 @@ void main() {
     expect(find.text('Stats lunch'), findsNothing);
   });
 
+  testWidgets('Transactions search debounces and can be cleared', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await _seedTransactionSearch(db);
+
+    await tester.binding.setSurfaceSize(const Size(1400, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    GoRouter.of(
+      tester.element(find.text('my_little_budget')),
+    ).go('/transactions');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('필터').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('transactions-search-field')),
+      'Alpha',
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Alpha memo target'), findsOneWidget);
+    expect(find.textContaining('Beta memo hidden'), findsNothing);
+    expect(find.textContaining('검색 중'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('transactions-search-clear')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Alpha memo target'), findsOneWidget);
+    expect(find.textContaining('Beta memo hidden'), findsOneWidget);
+  });
+
+  testWidgets('Investments ticker filter keeps state and shows empty result', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await _seedInvestments(db);
+
+    await tester.binding.setSurfaceSize(const Size(1400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    GoRouter.of(
+      tester.element(find.text('my_little_budget')),
+    ).go('/investments');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('investment-ticker-filter')),
+      'NOPE',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('필터 결과가 없습니다.'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'NOPE'), findsOneWidget);
+  });
+
+  testWidgets('Account detail filters transactions by category and tag', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final seeded = await _seedAccountDetailFilters(db);
+
+    await tester.binding.setSurfaceSize(const Size(1400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    GoRouter.of(
+      tester.element(find.text('my_little_budget')),
+    ).go('/accounts/${seeded.accountId}');
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(ValueKey('account-category-filter-${seeded.categoryId}')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(ValueKey('account-tag-filter-${seeded.tagId}')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Account filter target'), findsOneWidget);
+    expect(find.textContaining('Account filter other'), findsNothing);
+  });
+
   testWidgets('Settings MVP renders theme and backup surfaces', (tester) async {
     await pumpAppAt(tester, '/settings/theme');
 
@@ -218,6 +324,75 @@ Future<({String categoryName, String accountName})> _seedStats(
   );
 
   return (categoryName: category.name, accountName: account.name);
+}
+
+Future<void> _seedTransactionSearch(AppDatabase db) async {
+  final month = currentMonthKey();
+  final account = (await db.accountsDao.getActiveAccounts()).first;
+  final category = (await db.categoriesDao.getActiveCategories(
+    'expense',
+  )).first;
+
+  await db.transactionsDao.saveTransaction(
+    draft: TransactionDraft(
+      type: 'expense',
+      amount: 1111,
+      occurredOn: '$month-01',
+      occurredTime: '09:00',
+      accountId: account.id,
+      categoryId: category.id,
+      memo: 'Alpha memo target',
+    ),
+  );
+  await db.transactionsDao.saveTransaction(
+    draft: TransactionDraft(
+      type: 'expense',
+      amount: 2222,
+      occurredOn: '$month-02',
+      occurredTime: '10:00',
+      accountId: account.id,
+      categoryId: category.id,
+      memo: 'Beta memo hidden',
+    ),
+  );
+}
+
+Future<({int accountId, int categoryId, int tagId})> _seedAccountDetailFilters(
+  AppDatabase db,
+) async {
+  final month = currentMonthKey();
+  final account = (await db.accountsDao.getActiveAccounts()).first;
+  final categories = await db.categoriesDao.getActiveCategories('expense');
+
+  await db.transactionsDao.saveTransaction(
+    draft: TransactionDraft(
+      type: 'expense',
+      amount: 3333,
+      occurredOn: '$month-01',
+      occurredTime: '09:00',
+      accountId: account.id,
+      categoryId: categories[0].id,
+      memo: 'Account filter target',
+    ),
+    tagNames: const ['account-filter-tag'],
+  );
+  await db.transactionsDao.saveTransaction(
+    draft: TransactionDraft(
+      type: 'expense',
+      amount: 4444,
+      occurredOn: '$month-02',
+      occurredTime: '10:00',
+      accountId: account.id,
+      categoryId: categories[1].id,
+      memo: 'Account filter other',
+    ),
+    tagNames: const ['account-other-tag'],
+  );
+
+  final tag = (await db.tagsDao.getTags()).firstWhere(
+    (tag) => tag.name == 'account-filter-tag',
+  );
+  return (accountId: account.id, categoryId: categories[0].id, tagId: tag.id);
 }
 
 Future<void> _seedBudget(AppDatabase db) async {

@@ -22,6 +22,18 @@ final searchFilterProvider = StateProvider<TransactionFilter>(
   (ref) => const TransactionFilter(),
 );
 
+bool hasActiveTransactionFilter(TransactionFilter filter) {
+  return (filter.q?.trim().isNotEmpty ?? false) ||
+      filter.minAmount != null ||
+      filter.maxAmount != null ||
+      filter.accountId != null ||
+      (filter.categoryIds?.isNotEmpty ?? false) ||
+      (filter.tagIds?.isNotEmpty ?? false) ||
+      filter.untaggedOnly ||
+      filter.fromDate != null ||
+      filter.toDate != null;
+}
+
 /// SPEC §4.1 — 진입 시 이번 달 말일까지 반복거래 backfill (1회, 캐시).
 final _recurringBackfillProvider = FutureProvider<int>((ref) async {
   final dao = ref.read(recurringDaoProvider);

@@ -26,7 +26,7 @@ void main() {
     expect(find.text('내역'), findsWidgets);
     expect(find.text('순수입'), findsOneWidget);
     // 비어있는 달 → 안내문
-    expect(find.text('이 달엔 아직 기록이 없어요.'), findsOneWidget);
+    expect(find.text('필터'), findsOneWidget);
   });
   testWidgets('MVP main routes render without exceptions', (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());

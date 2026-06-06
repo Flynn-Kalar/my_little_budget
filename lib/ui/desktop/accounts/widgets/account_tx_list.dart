@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/date.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
@@ -35,66 +36,237 @@ class AccountTxList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(accountTransactionsProvider(accountId));
-    return async.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.all(40),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.all(40),
-        child: Center(child: Text('불러오기 오류: $e')),
-      ),
-      data: (rows) {
-        if (rows.isEmpty) {
-          return Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 48),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppTokens.sidebarBorder),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  '거래 내역이 없습니다.',
-                  style: TextStyle(color: AppTokens.muted),
-                ),
-              ),
-              const SizedBox(height: 20),
-              _InitialBalanceRow(initialBalance: initialBalance),
-            ],
-          );
-        }
-
-        // 날짜별 그룹
-        final groups = <String, List<TransactionRow>>{};
-        for (final r in rows) {
-          (groups[r.occurredOn] ??= []).add(r);
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final entry in groups.entries) ...[
-              Padding(
-                padding: const EdgeInsets.only(top: 16, bottom: 6),
-                child: Text(
-                  _dateHeader(entry.key),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTokens.muted,
+    final filter = ref.watch(accountDetailFilterProvider(accountId));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _AccountDetailFilterBar(accountId: accountId),
+        const SizedBox(height: 12),
+        async.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(40),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(40),
+            child: Center(child: Text('불러오기 오류: $e')),
+          ),
+          data: (rows) {
+            if (rows.isEmpty) {
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppTokens.sidebarBorder),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      filter.isActive ? '필터 결과가 없습니다.' : '거래 내역이 없습니다.',
+                      style: const TextStyle(color: AppTokens.muted),
+                    ),
                   ),
-                ),
-              ),
-              for (final row in entry.value)
-                _TxRowItem(row: row, accountId: accountId),
-            ],
-            const SizedBox(height: 20),
-            _InitialBalanceRow(initialBalance: initialBalance),
-          ],
+                  const SizedBox(height: 20),
+                  _InitialBalanceRow(initialBalance: initialBalance),
+                ],
+              );
+            }
+
+            // 날짜별 그룹
+            final groups = <String, List<TransactionRow>>{};
+            for (final r in rows) {
+              (groups[r.occurredOn] ??= []).add(r);
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final entry in groups.entries) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 6),
+                    child: Text(
+                      _dateHeader(entry.key),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTokens.muted,
+                      ),
+                    ),
+                  ),
+                  for (final row in entry.value)
+                    _TxRowItem(row: row, accountId: accountId),
+                ],
+                const SizedBox(height: 20),
+                _InitialBalanceRow(initialBalance: initialBalance),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AccountDetailFilterBar extends ConsumerWidget {
+  const _AccountDetailFilterBar({required this.accountId});
+
+  final int accountId;
+
+  Future<void> _pickDate(
+    BuildContext context,
+    WidgetRef ref,
+    AccountDetailFilter filter,
+    bool isFrom,
+  ) async {
+    final initialKey = isFrom ? filter.fromDate : filter.toDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialKey == null
+          ? DateTime.now()
+          : DateTime.parse(initialKey),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    ref.read(accountDetailFilterProvider(accountId).notifier).state = filter
+        .copyWith(
+          fromDate: isFrom ? toDateKey(picked) : filter.fromDate,
+          toDate: isFrom ? filter.toDate : toDateKey(picked),
         );
-      },
+  }
+
+  void _toggleCategory(
+    WidgetRef ref,
+    AccountDetailFilter filter,
+    int categoryId,
+    bool selected,
+  ) {
+    final next = {...filter.categoryIds};
+    selected ? next.add(categoryId) : next.remove(categoryId);
+    ref.read(accountDetailFilterProvider(accountId).notifier).state = filter
+        .copyWith(categoryIds: next);
+  }
+
+  void _toggleTag(
+    WidgetRef ref,
+    AccountDetailFilter filter,
+    int tagId,
+    bool selected,
+  ) {
+    final next = {...filter.tagIds};
+    selected ? next.add(tagId) : next.remove(tagId);
+    ref.read(accountDetailFilterProvider(accountId).notifier).state = filter
+        .copyWith(tagIds: next);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filter = ref.watch(accountDetailFilterProvider(accountId));
+    final categories =
+        ref.watch(accountDetailCategoriesProvider).asData?.value ?? const [];
+    final tags = ref.watch(accountDetailTagsProvider).asData?.value ?? const [];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTokens.surface,
+        border: Border.all(color: AppTokens.sidebarBorder),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                key: const ValueKey('account-detail-from-filter'),
+                onPressed: () => _pickDate(context, ref, filter, true),
+                icon: const Icon(Icons.calendar_today, size: 14),
+                label: Text(filter.fromDate ?? '시작일'),
+              ),
+              OutlinedButton.icon(
+                key: const ValueKey('account-detail-to-filter'),
+                onPressed: () => _pickDate(context, ref, filter, false),
+                icon: const Icon(Icons.calendar_today, size: 14),
+                label: Text(filter.toDate ?? '종료일'),
+              ),
+              TextButton.icon(
+                key: const ValueKey('account-detail-filter-reset'),
+                onPressed: filter.isActive
+                    ? () {
+                        ref
+                                .read(
+                                  accountDetailFilterProvider(
+                                    accountId,
+                                  ).notifier,
+                                )
+                                .state =
+                            const AccountDetailFilter();
+                      }
+                    : null,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('초기화'),
+              ),
+            ],
+          ),
+          if (categories.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text(
+              '카테고리',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTokens.muted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final category in categories)
+                  FilterChip(
+                    key: ValueKey('account-category-filter-${category.id}'),
+                    label: Text(category.name),
+                    selected: filter.categoryIds.contains(category.id),
+                    onSelected: (selected) =>
+                        _toggleCategory(ref, filter, category.id, selected),
+                  ),
+              ],
+            ),
+          ],
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Text(
+              '태그',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTokens.muted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final tag in tags)
+                  FilterChip(
+                    key: ValueKey('account-tag-filter-${tag.id}'),
+                    label: Text('#${tag.name}'),
+                    selected: filter.tagIds.contains(tag.id),
+                    onSelected: (selected) =>
+                        _toggleTag(ref, filter, tag.id, selected),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

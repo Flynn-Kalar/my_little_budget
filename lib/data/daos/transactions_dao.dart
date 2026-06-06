@@ -158,7 +158,16 @@ class MonthlySummary {
   int get net => income - expense;
 }
 
-@DriftAccessor(tables: [Transactions, Accounts, Categories, Tags, TransactionTags, Investments])
+@DriftAccessor(
+  tables: [
+    Transactions,
+    Accounts,
+    Categories,
+    Tags,
+    TransactionTags,
+    Investments,
+  ],
+)
 class TransactionsDao extends DatabaseAccessor<AppDatabase>
     with _$TransactionsDaoMixin {
   TransactionsDao(super.db);
@@ -170,7 +179,8 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }) async {
     final bounds = monthRange(month);
     final hasDate = filter.fromDate != null || filter.toDate != null;
-    final hasSearch = filter.q != null ||
+    final hasSearch =
+        filter.q != null ||
         filter.minAmount != null ||
         filter.maxAmount != null ||
         filter.accountId != null ||
@@ -212,7 +222,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     }
 
     if (filter.accountId != null) {
-      where.add('(t.account_id = ? OR t.from_account_id = ? OR t.to_account_id = ?)');
+      where.add(
+        '(t.account_id = ? OR t.from_account_id = ? OR t.to_account_id = ?)',
+      );
       vars.addAll(List.filled(3, Variable<int>(filter.accountId!)));
     }
 
@@ -228,8 +240,10 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     } else {
       final tagIds = filter.tagIds;
       if (tagIds != null && tagIds.isNotEmpty) {
-        where.add('t.id IN (SELECT transaction_id FROM transaction_tags '
-            'WHERE tag_id IN (${_placeholders(tagIds.length)}))');
+        where.add(
+          't.id IN (SELECT transaction_id FROM transaction_tags '
+          'WHERE tag_id IN (${_placeholders(tagIds.length)}))',
+        );
         vars.addAll(tagIds.map(Variable<int>.new));
       }
     }
@@ -237,9 +251,14 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     final q = filter.q?.trim();
     if (q != null && q.isNotEmpty) {
       final needle = '%$q%';
-      where.add('(t.memo LIKE ? OR c.name LIKE ? OR a.name LIKE ? '
-          'OR fa.name LIKE ? OR ta.name LIKE ?)');
-      vars.addAll(List.filled(5, Variable<String>(needle)));
+      where.add(
+        '(t.memo LIKE ? OR c.name LIKE ? OR a.name LIKE ? '
+        'OR fa.name LIKE ? OR ta.name LIKE ? '
+        "OR CASE t.type WHEN 'transfer' THEN '이체' "
+        "WHEN 'income' THEN '수입' WHEN 'expense' THEN '지출' "
+        'ELSE t.type END LIKE ?)',
+      );
+      vars.addAll(List.filled(6, Variable<String>(needle)));
     }
 
     final rows = await customSelect(
@@ -306,12 +325,14 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       readsFrom: {transactions, categories},
     ).get();
     return rows
-        .map((r) => CategoryBreakdownRow(
-              categoryId: r.readNullable<int>('id') ?? 0,
-              categoryName: r.readNullable<String>('name') ?? '미분류',
-              categoryColor: r.readNullable<String>('color') ?? '#94a3b8',
-              total: r.read<int>('total'),
-            ))
+        .map(
+          (r) => CategoryBreakdownRow(
+            categoryId: r.readNullable<int>('id') ?? 0,
+            categoryName: r.readNullable<String>('name') ?? '미분류',
+            categoryColor: r.readNullable<String>('color') ?? '#94a3b8',
+            total: r.read<int>('total'),
+          ),
+        )
         .toList();
   }
 
@@ -357,7 +378,10 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// SPEC §4.6 — 연간 카테고리 × 월 피벗. 사용 내역 없는 카테고리는 제외, 총액 내림차순.
-  Future<List<YearlyPivotRow>> yearlyCategoryPivot(int year, String type) async {
+  Future<List<YearlyPivotRow>> yearlyCategoryPivot(
+    int year,
+    String type,
+  ) async {
     final start = '$year-01-01';
     final end = '$year-12-31';
     final rows = await customSelect(
@@ -456,14 +480,17 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       readsFrom: {transactions, accounts, categories},
     ).get();
 
-    final tagMap =
-        await _tagsFor(baseRows.map((r) => r.read<int>('id')).toList());
+    final tagMap = await _tagsFor(
+      baseRows.map((r) => r.read<int>('id')).toList(),
+    );
     final txRows = baseRows.map((r) => _rowFromQuery(r, tagMap)).toList();
 
     // 투자 가상 행
     final allInv = await select(investments).get();
-    final events =
-        eventsForAccount(allInv.map(toInvestmentEntry).toList(), accountId);
+    final events = eventsForAccount(
+      allInv.map(toInvestmentEntry).toList(),
+      accountId,
+    );
 
     const sideColor = {
       InvestmentSide.buy: '#94a3b8',
@@ -477,24 +504,26 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     };
 
     final invVirtual = events
-        .map((e) => TransactionRow(
-              id: e.id,
-              // 잔액 영향 기준 표시 색: +→income, −→expense, 0(매수)→expense 스타일
-              type: e.balanceImpact > 0 ? 'income' : 'expense',
-              occurredOn: e.occurredOn,
-              occurredTime: e.occurredTime,
-              amount: e.balanceImpact.abs(),
-              accountId: accountId,
-              categoryName: '${sideLabel[e.side]} · ${e.ticker}',
-              categoryColor: sideColor[e.side],
-              source: 'investment',
-              investmentSide: e.side.name,
-              ticker: e.ticker,
-              quantity: e.quantity,
-              originalAmount: e.originalAmount,
-              costBasis: e.costBasis,
-              balanceImpact: e.balanceImpact,
-            ))
+        .map(
+          (e) => TransactionRow(
+            id: e.id,
+            // 잔액 영향 기준 표시 색: +→income, −→expense, 0(매수)→expense 스타일
+            type: e.balanceImpact > 0 ? 'income' : 'expense',
+            occurredOn: e.occurredOn,
+            occurredTime: e.occurredTime,
+            amount: e.balanceImpact.abs(),
+            accountId: accountId,
+            categoryName: '${sideLabel[e.side]} · ${e.ticker}',
+            categoryColor: sideColor[e.side],
+            source: 'investment',
+            investmentSide: e.side.name,
+            ticker: e.ticker,
+            quantity: e.quantity,
+            originalAmount: e.originalAmount,
+            costBasis: e.costBasis,
+            balanceImpact: e.balanceImpact,
+          ),
+        )
         .toList();
 
     final merged = [...txRows, ...invVirtual]
@@ -561,11 +590,12 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 
   /// SPEC §4.1 — 메모 자동완성용. 최근 거래의 distinct(trim) memo, limit 개까지.
   Future<List<String>> getRecentMemos({int limit = 300}) async {
-    final rows = await (select(transactions)
-          ..where((t) => t.memo.isNotNull())
-          ..orderBy([(t) => OrderingTerm.desc(t.id)])
-          ..limit(limit * 4))
-        .get();
+    final rows =
+        await (select(transactions)
+              ..where((t) => t.memo.isNotNull())
+              ..orderBy([(t) => OrderingTerm.desc(t.id)])
+              ..limit(limit * 4))
+            .get();
     final seen = <String>{};
     final result = <String>[];
     for (final r in rows) {
@@ -591,19 +621,23 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 
     final ids = <int>[];
     for (final name in cleaned) {
-      final existing =
-          await (select(tags)..where((t) => t.name.equals(name))).getSingleOrNull();
+      final existing = await (select(
+        tags,
+      )..where((t) => t.name.equals(name))).getSingleOrNull();
       if (existing != null) {
         ids.add(existing.id);
       } else {
-        ids.add(await into(tags).insert(
-          TagsCompanion.insert(name: name, color: Value(randomColor())),
-        ));
+        ids.add(
+          await into(tags).insert(
+            TagsCompanion.insert(name: name, color: Value(randomColor())),
+          ),
+        );
       }
     }
 
-    await (delete(transactionTags)..where((tt) => tt.transactionId.equals(txId)))
-        .go();
+    await (delete(
+      transactionTags,
+    )..where((tt) => tt.transactionId.equals(txId))).go();
     for (final tagId in ids) {
       await into(transactionTags).insert(
         TransactionTagsCompanion.insert(transactionId: txId, tagId: tagId),
@@ -626,11 +660,13 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 
     final map = <int, List<TransactionTagInfo>>{};
     for (final r in rows) {
-      (map[r.read<int>('tx')] ??= []).add(TransactionTagInfo(
-        id: r.read<int>('id'),
-        name: r.read<String>('name'),
-        color: r.read<String>('color'),
-      ));
+      (map[r.read<int>('tx')] ??= []).add(
+        TransactionTagInfo(
+          id: r.read<int>('id'),
+          name: r.read<String>('name'),
+          color: r.read<String>('color'),
+        ),
+      );
     }
     return map;
   }

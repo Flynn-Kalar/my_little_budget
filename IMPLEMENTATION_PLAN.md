@@ -56,9 +56,37 @@ Placeholder audit:
 - Focused MVP widget coverage is added in `test/ui/mvp_stabilization_test.dart` for:
   - Budget group rendering, expected income display, group mode display, and expected-income mutation refresh
   - Investment BUY/SELL/DIVIDEND rendering, holdings inline expansion, quantity precision display, and realized PnL rendering
+  - Transaction debounced search, investment ticker filter empty state, and account detail category/tag filtering
   - Settings theme controls, backup/export import entry buttons, and destructive import confirmation copy
 
 ## Completed
+
+### Search And Filter UX Step 1
+
+Active files:
+- `lib/ui/desktop/transactions/widgets/filter_panel.dart`
+- `lib/ui/desktop/transactions/widgets/transaction_list.dart`
+- `lib/ui/desktop/transactions/providers.dart`
+- `lib/ui/desktop/accounts/widgets/account_tx_list.dart`
+- `lib/ui/desktop/accounts/providers.dart`
+- `lib/ui/desktop/investments/investments_screen.dart`
+- `lib/ui/desktop/investments/providers.dart`
+
+Current status:
+- `/transactions` search now debounces text input and keeps the existing detailed filter panel flow.
+- Transaction search state is visible in the filter panel, and search can be cleared directly.
+- Transaction empty states distinguish no monthly data, no search result, and no filter result.
+- `/investments` monthly transaction rows can be filtered by:
+  - BUY/SELL/DIVIDEND side
+  - account
+  - ticker
+  - date range
+- `/accounts/:id` detail transactions can be filtered by:
+  - date range
+  - category
+  - tag
+- Filter state is held in Riverpod state providers and survives screen rebuilds within the running app session.
+- No DB schema, backup format, route, or search-index changes were introduced.
 
 ### Settings Main Page
 
@@ -212,7 +240,7 @@ Current status:
   - investment account status banner
   - monthly buy/sell/dividend/net summary
   - current holdings snapshot
-  - current-month investment transaction list
+  - current-month investment transaction list with side/account/ticker/date filters
   - current-month realized PnL read-only section
 - Investment transaction creation is implemented for BUY, SELL, and DIVIDEND.
 - BUY fields:

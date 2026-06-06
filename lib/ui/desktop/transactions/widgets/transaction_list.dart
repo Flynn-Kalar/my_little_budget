@@ -22,6 +22,8 @@ class TransactionList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(transactionsListProvider);
+    final filter = ref.watch(searchFilterProvider);
+    final type = ref.watch(typeFilterProvider);
 
     return async.when(
       loading: () => const Padding(
@@ -34,6 +36,13 @@ class TransactionList extends ConsumerWidget {
       ),
       data: (rows) {
         if (rows.isEmpty) {
+          final hasSearch = filter.q?.trim().isNotEmpty ?? false;
+          final hasFilter = type != null || hasActiveTransactionFilter(filter);
+          final message = hasSearch
+              ? '검색 결과가 없습니다.'
+              : hasFilter
+              ? '필터 결과가 없습니다.'
+              : '이번 달엔 아직 기록이 없어요.';
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 48),
             alignment: Alignment.center,
@@ -41,8 +50,10 @@ class TransactionList extends ConsumerWidget {
               border: Border.all(color: AppTokens.sidebarBorder),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('이 달엔 아직 기록이 없어요.',
-                style: TextStyle(color: AppTokens.muted)),
+            child: Text(
+              message,
+              style: const TextStyle(color: AppTokens.muted),
+            ),
           );
         }
 
@@ -121,8 +132,8 @@ class _Row extends StatelessWidget {
     final amountColor = isTransfer
         ? Colors.black87
         : isIncome
-            ? AppTokens.income
-            : AppTokens.expense;
+        ? AppTokens.income
+        : AppTokens.expense;
     final sign = isTransfer ? '' : (isIncome ? '+' : '-');
 
     return Padding(
@@ -150,18 +161,23 @@ class _Row extends StatelessWidget {
                       Row(
                         children: [
                           Flexible(
-                            child: Text(title,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500)),
+                            child: Text(
+                              title,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                           if (row.tags.isNotEmpty) ...[
                             const SizedBox(width: 8),
-                            ...row.tags.map((t) => Padding(
-                                  padding: const EdgeInsets.only(right: 4),
-                                  child:
-                                      _TagChip(name: t.name, color: t.color),
-                                )),
+                            ...row.tags.map(
+                              (t) => Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: _TagChip(name: t.name, color: t.color),
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -171,7 +187,9 @@ class _Row extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 12, color: AppTokens.muted),
+                            fontSize: 12,
+                            color: AppTokens.muted,
+                          ),
                         ),
                     ],
                   ),

@@ -44,6 +44,8 @@ class InvestmentsScreen extends ConsumerWidget {
                 const _AddInvestmentButton(),
               ],
             ),
+            const SizedBox(height: 12),
+            const _InvestmentFilterBar(),
             const SizedBox(height: 16),
             account.when(
               data: (value) => _InvestmentAccountBanner(account: value),
@@ -70,7 +72,10 @@ class InvestmentsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             rows.when(
-              data: (value) => _InvestmentRowsCard(rows: value),
+              data: (value) => _InvestmentRowsCard(
+                rows: value,
+                filterActive: ref.watch(investmentFilterProvider).isActive,
+              ),
               loading: () => const _InvestmentCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
@@ -105,6 +110,146 @@ class _AddInvestmentButton extends StatelessWidget {
       ),
       icon: const Icon(Icons.add, size: 18),
       label: const Text('투자 거래 추가'),
+    );
+  }
+}
+
+class _InvestmentFilterBar extends ConsumerStatefulWidget {
+  const _InvestmentFilterBar();
+
+  @override
+  ConsumerState<_InvestmentFilterBar> createState() =>
+      _InvestmentFilterBarState();
+}
+
+class _InvestmentFilterBarState extends ConsumerState<_InvestmentFilterBar> {
+  final _tickerCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _tickerCtrl.text = ref.read(investmentFilterProvider).ticker ?? '';
+  }
+
+  @override
+  void dispose() {
+    _tickerCtrl.dispose();
+    super.dispose();
+  }
+
+  void _setFilter(InvestmentFilter filter) {
+    ref.read(investmentFilterProvider.notifier).state = filter;
+  }
+
+  Future<void> _pickDate(bool isFrom) async {
+    final filter = ref.read(investmentFilterProvider);
+    final initialKey = isFrom ? filter.fromDate : filter.toDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialKey == null
+          ? DateTime.now()
+          : DateTime.parse(initialKey),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    _setFilter(
+      filter.copyWith(
+        fromDate: isFrom ? toDateKey(picked) : filter.fromDate,
+        toDate: isFrom ? filter.toDate : toDateKey(picked),
+      ),
+    );
+  }
+
+  void _reset() {
+    _tickerCtrl.clear();
+    _setFilter(const InvestmentFilter());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filter = ref.watch(investmentFilterProvider);
+    final accounts =
+        ref.watch(investmentFilterAccountsProvider).asData?.value ?? const [];
+
+    return _InvestmentCard(
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          SegmentedButton<String>(
+            key: const ValueKey('investment-side-filter'),
+            segments: const [
+              ButtonSegment(value: 'all', label: Text('전체')),
+              ButtonSegment(value: 'buy', label: Text('BUY')),
+              ButtonSegment(value: 'sell', label: Text('SELL')),
+              ButtonSegment(value: 'dividend', label: Text('DIVIDEND')),
+            ],
+            selected: {filter.side ?? 'all'},
+            emptySelectionAllowed: false,
+            onSelectionChanged: (values) {
+              final side = values.first == 'all' ? null : values.first;
+              _setFilter(filter.copyWith(side: side));
+            },
+          ),
+          SizedBox(
+            width: 240,
+            child: DropdownButtonFormField<int>(
+              key: const ValueKey('investment-account-filter'),
+              initialValue: filter.accountId ?? -1,
+              decoration: const InputDecoration(
+                labelText: '계좌',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem(value: -1, child: Text('전체 계좌')),
+                for (final account in accounts)
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(account.name),
+                  ),
+              ],
+              onChanged: (value) => _setFilter(
+                filter.copyWith(accountId: value == -1 ? null : value),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 160,
+            child: TextField(
+              key: const ValueKey('investment-ticker-filter'),
+              controller: _tickerCtrl,
+              decoration: const InputDecoration(
+                labelText: '종목',
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) =>
+                  _setFilter(filter.copyWith(ticker: value.trim())),
+            ),
+          ),
+          OutlinedButton.icon(
+            key: const ValueKey('investment-from-filter'),
+            onPressed: () => _pickDate(true),
+            icon: const Icon(Icons.calendar_today, size: 14),
+            label: Text(filter.fromDate ?? '시작일'),
+          ),
+          OutlinedButton.icon(
+            key: const ValueKey('investment-to-filter'),
+            onPressed: () => _pickDate(false),
+            icon: const Icon(Icons.calendar_today, size: 14),
+            label: Text(filter.toDate ?? '종료일'),
+          ),
+          TextButton.icon(
+            key: const ValueKey('investment-filter-reset'),
+            onPressed: filter.isActive ? _reset : null,
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('초기화'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -720,9 +865,10 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
 }
 
 class _InvestmentRowsCard extends StatelessWidget {
-  const _InvestmentRowsCard({required this.rows});
+  const _InvestmentRowsCard({required this.rows, required this.filterActive});
 
   final List<Investment> rows;
+  final bool filterActive;
 
   @override
   Widget build(BuildContext context) {
@@ -736,7 +882,9 @@ class _InvestmentRowsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (rows.isEmpty)
-            const _EmptyState(message: '이번 달 투자 거래가 없습니다.')
+            _EmptyState(
+              message: filterActive ? '필터 결과가 없습니다.' : '이번 달 투자 거래가 없습니다.',
+            )
           else
             Column(
               children: [

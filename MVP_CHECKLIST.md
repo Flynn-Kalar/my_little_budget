@@ -1,6 +1,6 @@
 # MVP CHECKLIST
 
-Last audit: 2026-06-05
+Last audit: 2026-06-06
 
 Scope:
 - transactions
@@ -52,11 +52,11 @@ Not routed yet:
 
 | Area | Route(s) | Status | Input? | Notes |
 | --- | --- | --- | --- | --- |
-| transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
-| accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
+| transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, debounced title/memo search, filters, month nav. |
+| accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list with date/category/tag filters, adjustment edit. |
 | budget | `/budget` | PARTIAL | Yes | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation/editing, category add/remove, account-linked account editing, and row delete are implemented. Remaining work is test/UX hardening. |
 | stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown with selectable category detail, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
-| investments | `/investments` | PARTIAL | Yes | Monthly rows, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. Remaining work is test/UX hardening. |
+| investments | `/investments` | PARTIAL | Yes | Monthly rows with side/account/ticker/date filters, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. Remaining work is UX hardening. |
 | settings | `/settings`, `/settings/theme`, `/settings/backup` | PARTIAL | Yes | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore have first-pass screens. |
 
 ## Detailed TODO
@@ -71,10 +71,15 @@ Currently input-capable:
 - Edit transaction from list row.
 - Duplicate transaction.
 - Delete transaction.
-- Filter/search transaction list.
+- Filter transaction list.
+- Debounced search across displayed title context and memo.
+- Show search/filter status and separate empty states for no data, no search result, and no filter result.
 
 TODO:
 - Add broader widget coverage around transfer/adjustment/tag edge cases.
+
+Test coverage:
+- `test/ui/mvp_stabilization_test.dart` covers debounced transaction search, search status display, and search clearing.
 
 ### accounts
 
@@ -87,10 +92,14 @@ Currently input-capable:
 - Reorder accounts.
 - Open account detail.
 - Edit/delete adjustment rows from account detail.
+- Filter account detail transactions by date, category, and tag.
 
 TODO:
 - Add widget coverage for archive/restore/delete guard behavior.
-- Confirm investment virtual rows in account detail remain clear after investments mutations are added.
+- Confirm investment virtual rows in account detail remain clear as account-detail filters get broader coverage.
+
+Test coverage:
+- `test/ui/mvp_stabilization_test.dart` covers account detail category and tag filtering.
 
 ### budget
 
@@ -145,6 +154,7 @@ Currently input-capable:
 - Create DIVIDEND investment transaction from an expanded holding row with automatic ticker selection.
 - Edit BUY/SELL/DIVIDEND investment transactions from monthly rows.
 - Delete investment transactions from monthly rows after confirmation.
+- Filter monthly investment transactions by side, account, ticker, and date range.
 - Quantity precision policy is active for BUY/SELL:
   - quantity is rounded to 4 decimal places before storage/calculation
   - holdings, average cost, realized PnL, and account virtual rows display quantity with 4 decimal places
@@ -155,7 +165,7 @@ TODO:
 - Add deeper widget tests for investment edit/delete edge cases.
 
 Test coverage:
-- `test/ui/mvp_stabilization_test.dart` covers BUY/SELL/DIVIDEND row rendering, holdings inline expansion, 4-decimal quantity display, and realized PnL rendering.
+- `test/ui/mvp_stabilization_test.dart` covers BUY/SELL/DIVIDEND row rendering, holdings inline expansion, 4-decimal quantity display, realized PnL rendering, and first-pass ticker filter empty state.
 
 ### settings
 
@@ -189,7 +199,7 @@ Items:
 - Permanent MVP route smoke coverage remains in `test/widget_test.dart`.
 - Core MVP screen widget coverage is added in `test/ui/mvp_stabilization_test.dart`.
 - Mojibake audit completed for Dart/Markdown files; remaining known UI-facing artifact was corrected.
-- Expand widget tests for the new read-only budget/stats/investments screens.
+- Expand widget tests for account archive/restore guards, investment edit/delete edge cases, and `/stats/yearly`.
 - Keep DB schema unchanged until a specific DAO/schema gap is proven.
 
 ## MVP Recommendation

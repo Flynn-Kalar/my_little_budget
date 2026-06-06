@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,9 +28,28 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
   bool _untaggedOnly = false;
   DateTime? _fromDate;
   DateTime? _toDate;
+  Timer? _searchDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    final filter = ref.read(searchFilterProvider);
+    _qCtrl.text = filter.q ?? '';
+    _minCtrl.text = filter.minAmount == null ? '' : '${filter.minAmount}';
+    _maxCtrl.text = filter.maxAmount == null ? '' : '${filter.maxAmount}';
+    _accountId = filter.accountId;
+    _categoryIds.addAll(filter.categoryIds ?? const []);
+    _tagIds.addAll(filter.tagIds ?? const []);
+    _untaggedOnly = filter.untaggedOnly;
+    _fromDate = filter.fromDate == null
+        ? null
+        : DateTime.parse(filter.fromDate!);
+    _toDate = filter.toDate == null ? null : DateTime.parse(filter.toDate!);
+  }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _qCtrl.dispose();
     _minCtrl.dispose();
     _maxCtrl.dispose();
@@ -51,7 +72,19 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
     );
   }
 
+  void _scheduleSearchApply() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), _apply);
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    setState(_qCtrl.clear);
+    _apply();
+  }
+
   void _reset() {
+    _searchDebounce?.cancel();
     setState(() {
       _qCtrl.clear();
       _minCtrl.clear();
@@ -80,10 +113,19 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = ref.watch(activeAccountsProvider).asData?.value ?? const [];
+    final accounts =
+        ref.watch(activeAccountsProvider).asData?.value ?? const [];
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
     final tags = ref.watch(allTagsProvider).asData?.value ?? const [];
+    final filter = ref.watch(searchFilterProvider);
+    final hasFilter = hasActiveTransactionFilter(filter);
+    final query = filter.q?.trim();
+    final statusText = query != null && query.isNotEmpty
+        ? '검색 중: "$query"'
+        : hasFilter
+        ? '필터 적용 중'
+        : '필터 없음';
 
     return Card(
       elevation: 0,
@@ -95,6 +137,13 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
       child: ExpansionTile(
         leading: const Icon(Icons.filter_list, size: 20),
         title: const Text('필터', style: TextStyle(fontSize: 14)),
+        subtitle: Text(
+          statusText,
+          style: TextStyle(
+            fontSize: 12,
+            color: hasFilter ? AppTokens.income : AppTokens.muted,
+          ),
+        ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           Wrap(
@@ -105,15 +154,30 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
               SizedBox(
                 width: 220,
                 child: TextField(
+                  key: const ValueKey('transactions-search-field'),
                   controller: _qCtrl,
                   decoration: const InputDecoration(
-                    labelText: '검색 (메모·카테고리·자산)',
+                    labelText: '검색(제목/메모)',
                     isDense: true,
                     border: OutlineInputBorder(),
                   ),
-                  onSubmitted: (_) => _apply(),
+                  onChanged: (_) {
+                    setState(() {});
+                    _scheduleSearchApply();
+                  },
+                  onSubmitted: (_) {
+                    _searchDebounce?.cancel();
+                    _apply();
+                  },
                 ),
               ),
+              if (_qCtrl.text.isNotEmpty)
+                IconButton(
+                  key: const ValueKey('transactions-search-clear'),
+                  tooltip: '검색 초기화',
+                  onPressed: _clearSearch,
+                  icon: const Icon(Icons.clear, size: 18),
+                ),
               SizedBox(
                 width: 110,
                 child: TextField(
@@ -172,13 +236,15 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
               spacing: 6,
               runSpacing: 6,
               children: categories
-                  .map((c) => FilterChip(
-                        label: Text(c.name),
-                        selected: _categoryIds.contains(c.id),
-                        onSelected: (s) => setState(() {
-                          s ? _categoryIds.add(c.id) : _categoryIds.remove(c.id);
-                        }),
-                      ))
+                  .map(
+                    (c) => FilterChip(
+                      label: Text(c.name),
+                      selected: _categoryIds.contains(c.id),
+                      onSelected: (s) => setState(() {
+                        s ? _categoryIds.add(c.id) : _categoryIds.remove(c.id);
+                      }),
+                    ),
+                  )
                   .toList(),
             ),
           ],
@@ -187,8 +253,10 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
             children: [
               const _SectionLabel('태그'),
               const Spacer(),
-              const Text('태그 없는 거래만',
-                  style: TextStyle(fontSize: 12, color: AppTokens.muted)),
+              const Text(
+                '태그 없는 거래만',
+                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+              ),
               Switch(
                 value: _untaggedOnly,
                 onChanged: (v) => setState(() => _untaggedOnly = v),
@@ -200,13 +268,15 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
               spacing: 6,
               runSpacing: 6,
               children: tags
-                  .map((t) => FilterChip(
-                        label: Text('#${t.name}'),
-                        selected: _tagIds.contains(t.id),
-                        onSelected: (s) => setState(() {
-                          s ? _tagIds.add(t.id) : _tagIds.remove(t.id);
-                        }),
-                      ))
+                  .map(
+                    (t) => FilterChip(
+                      label: Text('#${t.name}'),
+                      selected: _tagIds.contains(t.id),
+                      onSelected: (s) => setState(() {
+                        s ? _tagIds.add(t.id) : _tagIds.remove(t.id);
+                      }),
+                    ),
+                  )
                   .toList(),
             ),
           const SizedBox(height: 16),
@@ -229,8 +299,11 @@ class _SectionLabel extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(
-            fontSize: 12, fontWeight: FontWeight.w600, color: AppTokens.muted),
-      );
+    text,
+    style: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: AppTokens.muted,
+    ),
+  );
 }
