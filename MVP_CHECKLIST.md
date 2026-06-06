@@ -75,7 +75,6 @@ Currently input-capable:
 
 TODO:
 - Add broader widget coverage around transfer/adjustment/tag edge cases.
-- Review text encoding artifacts in labels/comments as `TECH_DEBT`.
 
 ### accounts
 
@@ -92,7 +91,6 @@ Currently input-capable:
 TODO:
 - Add widget coverage for archive/restore/delete guard behavior.
 - Confirm investment virtual rows in account detail remain clear after investments mutations are added.
-- Review text encoding artifacts in labels/comments as `TECH_DEBT`.
 
 ### budget
 
@@ -188,7 +186,7 @@ Items:
 - Cross-screen provider invalidation was tightened for transaction, settings, account metadata, and account adjustment mutations.
 - Permanent MVP route smoke coverage remains in `test/widget_test.dart`.
 - Core MVP screen widget coverage is added in `test/ui/mvp_stabilization_test.dart`.
-- Several existing Korean strings/comments appear mojibake-encoded in source files; fix as a separate text cleanup pass to avoid mixing with feature work.
+- Mojibake audit completed for Dart/Markdown files; remaining known UI-facing artifact was corrected.
 - Expand widget tests for the new read-only budget/stats/investments screens.
 - Keep DB schema unchanged until a specific DAO/schema gap is proven.
 

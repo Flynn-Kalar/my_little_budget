@@ -91,7 +91,7 @@ String? checkTradableTicker({
   if (heldTickers.contains(ticker)) return null;
   return side == 'sell'
       ? '보유하지 않은 종목은 매도할 수 없습니다.'
-      : '보유하지 않은 종목은 배당(諛곕떦)을 입력할 수 없습니다.';
+      : '보유하지 않은 종목은 배당을 입력할 수 없습니다.';
 }
 
 String? checkSellQuantity({
