@@ -1601,11 +1601,6 @@ class _InvestmentCreateDialogState
                 maxLines: 4,
                 decoration: const InputDecoration(labelText: '메모'),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'PnL 탭과 거래 수정/삭제는 다음 단계에서 구현합니다.',
-                style: TextStyle(color: AppTokens.muted, fontSize: 12),
-              ),
             ],
           ),
         ),

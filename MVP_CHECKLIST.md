@@ -54,12 +54,12 @@ Not routed yet:
 | --- | --- | --- | --- | --- |
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, debounced title/memo search, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list with date/category/tag filters, adjustment edit. |
-| budget | `/budget` | PARTIAL | Yes | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation/editing, category add/remove, account-linked account editing, and row delete are implemented. Remaining work is test/UX hardening. |
+| budget | `/budget` | DONE | Yes | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation/editing, category add/remove, account-linked account editing, and row delete are implemented. |
 | stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown with selectable category detail, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
-| investments | `/investments` | PARTIAL | Yes | Monthly rows with side/account/ticker/date filters, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. Remaining work is UX hardening. |
+| investments | `/investments` | PARTIAL | Yes | Monthly rows with side/account/ticker/date filters, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. Follow-up is UX hardening. |
 | settings | `/settings`, `/settings/theme`, `/settings/backup` | PARTIAL | Yes | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore have first-pass screens. |
 
-## Detailed TODO
+## Detailed Status
 
 ### transactions
 
@@ -75,7 +75,7 @@ Currently input-capable:
 - Debounced search across displayed title context and memo.
 - Show search/filter status and separate empty states for no data, no search result, and no filter result.
 
-TODO:
+FOLLOW-UP:
 - Add broader widget coverage around transfer/adjustment/tag edge cases.
 
 Test coverage:
@@ -94,7 +94,7 @@ Currently input-capable:
 - Edit/delete adjustment rows from account detail.
 - Filter account detail transactions by date, category, and tag.
 
-TODO:
+FOLLOW-UP:
 - Confirm investment virtual rows in account detail remain clear as account-detail filters get broader coverage.
 
 Test coverage:
@@ -104,7 +104,7 @@ Test coverage:
 ### budget
 
 Status:
-- `PARTIAL`
+- `DONE`
 
 Currently input-capable:
 - Edit monthly expected income.
@@ -121,9 +121,9 @@ Currently input-capable:
 - Copy previous month budget groups into the selected month.
 - Month navigation.
 
-TODO:
-- Keep invalidating `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider` after budget mutations.
-- Add deeper widget tests for budget create/copy/edit/delete edge cases.
+TECH_DEBT:
+- Keep budget mutation tests focused on provider refresh for `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider`.
+- Add deeper widget tests for budget create/copy/edit/delete edge cases when UI flows need more regression coverage.
 
 Test coverage:
 - `test/ui/mvp_stabilization_test.dart` covers budget group list rendering, expected income display, fixed/percentage/account-linked group display, and expected-income mutation refresh.
@@ -136,7 +136,7 @@ Status:
 Currently input-capable:
 - None, except month/year navigation and read-only category selection.
 
-TODO:
+FOLLOW-UP:
 - Consider `fl_chart` visuals after table/list data surface is stable.
 
 Test coverage:
@@ -160,7 +160,7 @@ Currently input-capable:
   - holdings, average cost, realized PnL, and account virtual rows display quantity with 4 decimal places
 - Month navigation.
 
-TODO:
+FOLLOW-UP:
 - Consider a dedicated PnL tab only if the read-only monthly section becomes too dense.
 
 Test coverage:
@@ -181,7 +181,7 @@ Currently input-capable:
 - Export all app data to a JSON backup file.
 - Import a validated JSON backup file with full replacement after confirmation.
 
-TODO:
+FOLLOW-UP:
 - Add reset UI only if the destructive flow gets separate UX and tests.
 - Add full export/import integration coverage with file picker abstraction or platform integration harness.
 - Keep settings subroutes stable while extending main settings.
@@ -198,7 +198,7 @@ Items:
 - Cross-screen provider invalidation was tightened for transaction, settings, account metadata, and account adjustment mutations.
 - Permanent MVP route smoke coverage remains in `test/widget_test.dart`.
 - Core MVP screen widget coverage is added in `test/ui/mvp_stabilization_test.dart`.
-- Mojibake audit completed for Dart/Markdown files; remaining known UI-facing artifact was corrected.
+- Mojibake audit completed for Dart/Markdown files; the previously known UI-facing artifact was corrected.
 - Core MVP edge case widget tests now cover account archive/restore/delete guards, investment edit/delete refresh, and `/stats/yearly`.
 - Keep DB schema unchanged until a specific DAO/schema gap is proven.
 

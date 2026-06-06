@@ -1,6 +1,6 @@
 # IMPLEMENTATION PLAN
 
-Scope: track the remaining screen implementations against `SPEC.md` and the current Flutter file structure.
+Scope: track screen implementation status against `SPEC.md` and the current Flutter file structure.
 
 Constraints:
 - Use `SPEC.md` as the single behavioral source of truth.
@@ -122,7 +122,7 @@ Current status:
   - full replacement import through `BackupDao.importBackup`
   - broad provider invalidation after import so visible data refreshes without app restart
 
-Remaining settings work:
+Settings follow-up:
 - Add optional reset UI only after provider invalidation and destructive UX are tested carefully.
 
 ### Budget Editing Step 1
@@ -305,41 +305,39 @@ Current status:
   - empty state when the selected month has no realized PnL rows
 - `refreshInvestments(ref, accountId: ...)` invalidates investment providers, `realizedPnlProvider`, and account balance/detail providers when possible.
 
-## Remaining Placeholder
+## Placeholder Audit
 
-There are no remaining top-level `PlaceholderScaffold` screens in the current route set.
+There are no top-level `PlaceholderScaffold` screens in the current route set.
 
 The legacy placeholder scaffold file has been deleted.
 
 Note:
-- Investments PnL is represented by a read-only monthly realized PnL section; a separate tab is still deferred.
+- Investments PnL is represented by a read-only monthly realized PnL section. A separate tab is optional, not required for MVP.
 
-## Investments Remaining Work
+## Investments Follow-Up
 
 Current read-only base, BUY/SELL/DIVIDEND creation, monthly realized PnL section, and investment edit/delete are complete.
 
 Next steps:
 1. Consider a dedicated PnL tab only if the monthly read-only section needs more filtering or historical range controls.
-2. Add focused widget tests for investment mutations and realized PnL rendering.
-3. Revisit account detail virtual investment rows after more manual QA.
+2. Revisit account detail virtual investment rows only if future manual QA shows the current read-only representation is unclear.
 
-## Stats Remaining Work
+## Stats Follow-Up
 
 Current monthly read-only base, selected category detail panel, and yearly read-only screen are complete.
 
 Next steps:
-1. Consider replacing list/table visuals with `fl_chart` after the read-only data surface is stable.
-2. Consider chart visualization only after table/list surfaces need it.
+1. Consider replacing list/table visuals with `fl_chart` only if table/list surfaces need visual summaries.
 
-## Budget Remaining Work
+## Budget Follow-Up
 
-Current read-only base, first edit step, previous-month copy, fixed/percentage/account-linked creation, fixed/percentage editing, category add/remove editing, account-linked account editing, and row delete are complete. Continue only after preserving the existing provider shape and refresh behavior.
+Current read-only base, expected-income editing, previous-month copy, fixed/percentage/account-linked creation, fixed/percentage editing, category add/remove editing, account-linked account editing, and row delete are complete.
 
 Next steps:
-1. Keep invalidating budget rows, expected income, and `overBudgetCountProvider` after mutations.
-2. Add focused widget tests for create/copy/edit/delete flows.
+1. Preserve invalidation for budget rows, expected income, and `overBudgetCountProvider` when touching budget mutations.
+2. Add focused widget tests for create/copy/edit/delete flows only when those UI paths need deeper regression coverage.
 
-## Settings Remaining Work
+## Settings Follow-Up
 
 Current main page is complete as a navigation/status surface.
 
@@ -370,8 +368,8 @@ Recommended order from the current code state:
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL and edge-case edit/delete widget coverage.
-- Budget CRUD is now mostly covered; remaining budget work is focused widget coverage and manual UX QA.
-- Stats monthly and yearly read-only surfaces are complete; remaining stats work is optional visualization.
+- Budget CRUD is complete for the current MVP route.
+- Stats monthly and yearly read-only surfaces are complete; optional stats work is visualization.
 - Settings theme and data export/import are now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
 
 ## Verification Strategy
@@ -391,4 +389,4 @@ Do not:
 - Change DB schema for these screen steps.
 - Touch settings sub-screens while implementing unrelated screens.
 - Combine unrelated screen implementations in one pass.
-- Refactor transactions/accounts UI while implementing these remaining enhancements.
+- Refactor transactions/accounts UI while implementing unrelated enhancements.

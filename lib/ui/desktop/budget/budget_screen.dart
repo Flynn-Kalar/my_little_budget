@@ -736,7 +736,7 @@ class _BudgetGroupCreateDialogState
               ),
               const SizedBox(height: 12),
               const Text(
-                'percentage/account-linked mode와 카테고리 편집은 다음 단계에서 다룹니다.',
+                '고정 예산 그룹은 선택한 지출 카테고리의 사용액을 합산해 예산 대비 사용액을 계산합니다.',
                 style: TextStyle(color: AppTokens.muted, fontSize: 12),
               ),
             ],
@@ -984,7 +984,7 @@ class _BudgetGroupModeDialogState
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '카테고리 add/remove 편집은 다음 단계 TODO로 유지합니다.',
+                  '선택한 지출 카테고리의 사용액이 이 예산 그룹에 합산됩니다. 최소 1개 이상 선택해야 합니다.',
                   style: TextStyle(color: AppTokens.muted, fontSize: 12),
                 ),
               ],
@@ -1597,7 +1597,7 @@ class _BudgetGroupEditDialogState
                   : null,
               contentPadding: EdgeInsets.zero,
               title: const Text('잔액 이월'),
-              subtitle: const Text('삭제 기능은 다음 단계에서 구현합니다.'),
+              subtitle: const Text('남은 예산을 다음 달 조정액으로 이월합니다.'),
             ),
           ],
         ),
