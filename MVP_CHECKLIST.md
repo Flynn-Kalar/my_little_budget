@@ -56,8 +56,8 @@ Not routed yet:
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list with date/category/tag filters, adjustment edit. |
 | budget | `/budget` | DONE | Yes | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation/editing, category add/remove, account-linked account editing, and row delete are implemented. |
 | stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown with selectable category detail, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
-| investments | `/investments` | PARTIAL | Yes | Monthly rows with side/account/ticker/date filters, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. Follow-up is UX hardening. |
-| settings | `/settings`, `/settings/theme`, `/settings/backup` | PARTIAL | Yes | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore have first-pass screens. |
+| investments | `/investments` | DONE | Yes | Monthly rows with side/account/ticker/date filters, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete, and first-pass UX hardening. |
+| settings | `/settings`, `/settings/theme`, `/settings/backup` | DONE | Yes | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore are implemented. Optional reset UI remains post-MVP polish. |
 
 ## Detailed Status
 
@@ -146,7 +146,7 @@ Test coverage:
 ### investments
 
 Status:
-- `PARTIAL`
+- `DONE`
 
 Currently input-capable:
 - Create BUY investment transaction.
@@ -163,6 +163,12 @@ Currently input-capable:
 FOLLOW-UP:
 - Consider a dedicated PnL tab only if the read-only monthly section becomes too dense.
 
+UX hardening:
+- Holdings inline SELL/DIVIDEND forms support cleaner focus and keyboard submit flow.
+- Long tickers are truncated with tooltip fallback.
+- Holdings rows adapt to compact widths with stacked metrics.
+- Empty states and validation SnackBars use more consistent wording.
+
 Test coverage:
 - `test/ui/mvp_stabilization_test.dart` covers BUY/SELL/DIVIDEND row rendering, holdings inline expansion, 4-decimal quantity display, realized PnL rendering, and first-pass ticker filter empty state.
 - `test/ui/mvp_stabilization_test.dart` covers BUY/SELL/DIVIDEND edit dialog prefills, edit save refresh, delete confirmation, and delete refresh across list/summary/PnL.
@@ -170,7 +176,7 @@ Test coverage:
 ### settings
 
 Status:
-- `PARTIAL`
+- `DONE`
 
 Currently input-capable:
 - Categories CRUD/reorder/archive/delete/restore.
@@ -181,8 +187,11 @@ Currently input-capable:
 - Export all app data to a JSON backup file.
 - Import a validated JSON backup file with full replacement after confirmation.
 
-FOLLOW-UP:
-- Add reset UI only if the destructive flow gets separate UX and tests.
+MVP decision:
+- Settings MVP scope is complete because the active routes cover category/tag/recurring management, persisted theme settings, and JSON backup export/import.
+- Optional reset UI is not an MVP blocker; it remains post-MVP polish because it needs a separate destructive confirmation and invalidation review.
+
+TECH_DEBT:
 - Add full export/import integration coverage with file picker abstraction or platform integration harness.
 - Keep settings subroutes stable while extending main settings.
 
@@ -204,5 +213,6 @@ Items:
 
 ## MVP Recommendation
 
-Shortest path to a usable MVP:
-1. Add optional settings reset UI only after invalidation is explicit and tested.
+Current MVP status:
+- Routed MVP surfaces are complete and aligned with the current code.
+- Optional settings reset UI and deeper platform file-picker coverage can remain post-MVP work.

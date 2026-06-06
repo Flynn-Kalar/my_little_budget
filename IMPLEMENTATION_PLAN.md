@@ -105,8 +105,8 @@ Current status:
   - `/settings/recurring`
   - `/settings/theme`
   - `/settings/backup`
-- Theme settings is connected to a first-pass theme screen.
-- Data backup/restore is connected to a first-pass data management screen.
+- Theme settings is connected to an implemented theme screen.
+- Data backup/restore is connected to an implemented data management screen.
 - Settings sub-screens remain under `lib/ui/desktop/settings/`.
 - The theme screen supports:
   - system/light/dark mode selection
@@ -122,8 +122,9 @@ Current status:
   - full replacement import through `BackupDao.importBackup`
   - broad provider invalidation after import so visible data refreshes without app restart
 
-Settings follow-up:
-- Add optional reset UI only after provider invalidation and destructive UX are tested carefully.
+Settings MVP decision:
+- Settings is complete for MVP because categories, tags, recurring transactions, theme settings, and backup/restore are all available through active routes.
+- Optional reset UI remains post-MVP polish and should only be added after provider invalidation and destructive UX are reviewed carefully.
 
 ### Budget Editing Step 1
 
@@ -339,11 +340,11 @@ Next steps:
 
 ## Settings Follow-Up
 
-Current main page is complete as a navigation/status surface.
+Current settings scope is complete for MVP.
 
 Next steps:
-1. Add optional reset UI only after deciding provider invalidation scope and destructive confirmation UX.
-2. Add focused widget/integration coverage for `/settings/theme` and `/settings/backup`.
+1. Treat optional reset UI as post-MVP polish because theme and backup/restore already cover the required settings MVP flows.
+2. Add deeper platform/file-picker integration coverage for `/settings/backup` when a suitable harness exists.
 3. Keep existing `/settings/categories`, `/settings/tags`, `/settings/recurring`, `/settings/theme`, and `/settings/backup` routes intact.
 
 ## Stabilization Notes
@@ -363,14 +364,14 @@ Current pass:
 
 Recommended order from the current code state:
 
-1. Optional settings reset UI
+1. Post-MVP polish and integration QA as needed
 
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL and edge-case edit/delete widget coverage.
 - Budget CRUD is complete for the current MVP route.
 - Stats monthly and yearly read-only surfaces are complete; optional stats work is visualization.
-- Settings theme and data export/import are now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
+- Settings categories, tags, recurring transactions, theme, and backup/restore are complete for MVP; optional reset UI still has broad invalidation/destructive UX impact and should remain post-MVP.
 
 ## Verification Strategy
 

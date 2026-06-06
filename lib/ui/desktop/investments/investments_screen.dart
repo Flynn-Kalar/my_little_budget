@@ -469,31 +469,38 @@ class _HoldingsCardState extends ConsumerState<_HoldingsCard> {
           ),
           const SizedBox(height: 12),
           if (holdings.isEmpty)
-            const _EmptyState(message: '현재 보유 중인 종목이 없습니다.')
+            const _EmptyState(message: '보유 종목이 없습니다. BUY 거래를 추가하면 여기에 표시됩니다.')
           else
-            Column(
-              children: [
-                const _HoldingsHeader(),
-                const Divider(height: 1),
-                for (final holding in holdings) ...[
-                  _HoldingRow(
-                    holding: holding,
-                    expanded: _expandedTicker == holding.ticker,
-                    onTap: () {
-                      setState(() {
-                        _expandedTicker = _expandedTicker == holding.ticker
-                            ? null
-                            : holding.ticker;
-                      });
-                    },
-                  ),
-                  if (_expandedTicker == holding.ticker)
-                    _HoldingInlineActions(
-                      holding: holding,
-                      onSaved: () => setState(() => _expandedTicker = null),
-                    ),
-                ],
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 560;
+                return Column(
+                  children: [
+                    _HoldingsHeader(compact: compact),
+                    if (!compact) const Divider(height: 1),
+                    for (final holding in holdings) ...[
+                      _HoldingRow(
+                        holding: holding,
+                        expanded: _expandedTicker == holding.ticker,
+                        compact: compact,
+                        onTap: () {
+                          setState(() {
+                            _expandedTicker = _expandedTicker == holding.ticker
+                                ? null
+                                : holding.ticker;
+                          });
+                        },
+                      ),
+                      if (_expandedTicker == holding.ticker)
+                        _HoldingInlineActions(
+                          holding: holding,
+                          compact: compact,
+                          onSaved: () => setState(() => _expandedTicker = null),
+                        ),
+                    ],
+                  ],
+                );
+              },
             ),
         ],
       ),
@@ -502,10 +509,13 @@ class _HoldingsCardState extends ConsumerState<_HoldingsCard> {
 }
 
 class _HoldingsHeader extends StatelessWidget {
-  const _HoldingsHeader();
+  const _HoldingsHeader({required this.compact});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) return const SizedBox.shrink();
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -524,15 +534,72 @@ class _HoldingRow extends StatelessWidget {
   const _HoldingRow({
     required this.holding,
     required this.expanded,
+    required this.compact,
     required this.onTap,
   });
 
   final CurrentHolding holding;
   final bool expanded;
+  final bool compact;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final title = Row(
+      children: [
+        Icon(
+          expanded ? Icons.expand_less : Icons.expand_more,
+          size: 18,
+          color: AppTokens.muted,
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Tooltip(
+            message: holding.ticker,
+            waitDuration: const Duration(milliseconds: 500),
+            child: Text(
+              holding.ticker,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    if (compact) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              title,
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 14,
+                runSpacing: 4,
+                children: [
+                  _MiniMetric(
+                    label: '수량',
+                    value: _formatQuantity(holding.quantity),
+                  ),
+                  _MiniMetric(
+                    label: '평단',
+                    value: formatKRW(holding.avgCost.round()),
+                  ),
+                  _MiniMetric(label: '원가', value: formatKRW(holding.totalCost)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
@@ -540,26 +607,7 @@ class _HoldingRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           children: [
-            Expanded(
-              flex: 3,
-              child: Row(
-                children: [
-                  Icon(
-                    expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: AppTokens.muted,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      holding.ticker,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            Expanded(flex: 3, child: title),
             Expanded(
               flex: 2,
               child: Text(
@@ -589,15 +637,20 @@ class _HoldingRow extends StatelessWidget {
 }
 
 class _HoldingInlineActions extends StatelessWidget {
-  const _HoldingInlineActions({required this.holding, required this.onSaved});
+  const _HoldingInlineActions({
+    required this.holding,
+    required this.compact,
+    required this.onSaved,
+  });
 
   final CurrentHolding holding;
+  final bool compact;
   final VoidCallback onSaved;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 4, 0, 12),
+      padding: EdgeInsets.fromLTRB(compact ? 0 : 22, 4, 0, 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppTokens.sidebarActive,
@@ -611,6 +664,8 @@ class _HoldingInlineActions extends StatelessWidget {
             children: [
               Text(
                 '${holding.ticker} · ${_formatQuantity(holding.quantity)} 보유',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 12),
@@ -656,6 +711,36 @@ class _HoldingInlineActions extends StatelessWidget {
   }
 }
 
+class _MiniMetric extends StatelessWidget {
+  const _MiniMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 180),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label ',
+            style: const TextStyle(fontSize: 12, color: AppTokens.muted),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HoldingInlineForm extends ConsumerStatefulWidget {
   const _HoldingInlineForm({
     required this.side,
@@ -677,6 +762,10 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
   final _totalAmount = TextEditingController();
   final _fee = TextEditingController(text: '0');
   final _memo = TextEditingController();
+  final _quantityFocus = FocusNode();
+  final _totalAmountFocus = FocusNode();
+  final _feeFocus = FocusNode();
+  final _memoFocus = FocusNode();
   bool _busy = false;
 
   bool get _isSell => widget.side == 'sell';
@@ -688,6 +777,10 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
     _totalAmount.dispose();
     _fee.dispose();
     _memo.dispose();
+    _quantityFocus.dispose();
+    _totalAmountFocus.dispose();
+    _feeFocus.dispose();
+    _memoFocus.dispose();
     super.dispose();
   }
 
@@ -702,6 +795,7 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
     setState(() => _busy = true);
     try {
       final rawQuantity = double.tryParse(_quantity.text.trim());
@@ -723,7 +817,7 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
         memo: _memo.text,
       );
       if (result.isFail) {
-        _showSnack(result.errors.values.first);
+        _showValidationSnack(result.errors.values.first);
         return;
       }
 
@@ -734,7 +828,7 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
         heldQuantities: {widget.holding.ticker: widget.holding.quantity},
       );
       if (quantityError != null) {
-        _showSnack(quantityError);
+        _showValidationSnack(quantityError);
         return;
       }
 
@@ -759,6 +853,10 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showValidationSnack(String message) {
+    _showSnack('입력값을 확인해 주세요. $message');
   }
 
   @override
@@ -802,12 +900,22 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
             ),
             const SizedBox(height: 10),
             if (_isSell) ...[
-              _QuantityField(controller: _quantity, label: '매도 수량'),
+              _QuantityField(
+                controller: _quantity,
+                focusNode: _quantityFocus,
+                label: '매도 수량',
+                enabled: !_busy,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _totalAmountFocus.requestFocus(),
+              ),
               const SizedBox(height: 10),
               TextField(
                 controller: _totalAmount,
+                focusNode: _totalAmountFocus,
                 enabled: !_busy,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _feeFocus.requestFocus(),
                 decoration: const InputDecoration(
                   labelText: '총 매도금액',
                   suffixText: '원',
@@ -816,8 +924,11 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
               const SizedBox(height: 10),
               TextField(
                 controller: _fee,
+                focusNode: _feeFocus,
                 enabled: !_busy,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _memoFocus.requestFocus(),
                 decoration: const InputDecoration(
                   labelText: '수수료',
                   suffixText: '원',
@@ -826,8 +937,11 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
             ] else ...[
               TextField(
                 controller: _totalAmount,
+                focusNode: _totalAmountFocus,
                 enabled: !_busy,
                 keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) => _memoFocus.requestFocus(),
                 decoration: const InputDecoration(
                   labelText: '배당금 총액',
                   suffixText: '원',
@@ -837,9 +951,12 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
             const SizedBox(height: 10),
             TextField(
               controller: _memo,
+              focusNode: _memoFocus,
               enabled: !_busy,
               minLines: 2,
               maxLines: 3,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _busy ? null : _save(),
               decoration: const InputDecoration(labelText: '메모'),
             ),
             const SizedBox(height: 10),
@@ -1314,6 +1431,13 @@ class _InvestmentCreateDialogState
   final _totalAmount = TextEditingController();
   final _fee = TextEditingController(text: '0');
   final _memo = TextEditingController();
+  final _tickerFocus = FocusNode();
+  final _nameFocus = FocusNode();
+  final _quantityFocus = FocusNode();
+  final _unitPriceFocus = FocusNode();
+  final _totalAmountFocus = FocusNode();
+  final _feeFocus = FocusNode();
+  final _memoFocus = FocusNode();
   bool _busy = false;
 
   @override
@@ -1353,6 +1477,13 @@ class _InvestmentCreateDialogState
     _totalAmount.dispose();
     _fee.dispose();
     _memo.dispose();
+    _tickerFocus.dispose();
+    _nameFocus.dispose();
+    _quantityFocus.dispose();
+    _unitPriceFocus.dispose();
+    _totalAmountFocus.dispose();
+    _feeFocus.dispose();
+    _memoFocus.dispose();
     super.dispose();
   }
 
@@ -1367,6 +1498,7 @@ class _InvestmentCreateDialogState
   }
 
   Future<void> _save() async {
+    FocusScope.of(context).unfocus();
     setState(() => _busy = true);
     try {
       final rawQuantity = double.tryParse(_quantity.text.trim());
@@ -1392,7 +1524,7 @@ class _InvestmentCreateDialogState
       );
 
       if (result.isFail) {
-        _showSnack(result.errors.values.first);
+        _showValidationSnack(result.errors.values.first);
         return;
       }
 
@@ -1413,7 +1545,7 @@ class _InvestmentCreateDialogState
         existingTicker: widget.investment?.ticker,
       );
       if (tickerError != null) {
-        _showSnack(tickerError);
+        _showValidationSnack(tickerError);
         return;
       }
       final quantityError = checkSellQuantity(
@@ -1423,7 +1555,7 @@ class _InvestmentCreateDialogState
         heldQuantities: heldQuantities,
       );
       if (quantityError != null) {
-        _showSnack(quantityError);
+        _showValidationSnack(quantityError);
         return;
       }
 
@@ -1460,6 +1592,10 @@ class _InvestmentCreateDialogState
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _showValidationSnack(String message) {
+    _showSnack('입력값을 확인해 주세요. $message');
+  }
+
   @override
   Widget build(BuildContext context) {
     final account = ref.watch(investmentAccountProvider);
@@ -1467,8 +1603,10 @@ class _InvestmentCreateDialogState
     return AlertDialog(
       key: const ValueKey('investment-dialog'),
       title: const Text('투자 거래 추가'),
-      content: SizedBox(
-        width: 540,
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: (MediaQuery.sizeOf(context).width - 48).clamp(280.0, 540.0),
+        ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1506,8 +1644,19 @@ class _InvestmentCreateDialogState
               TextField(
                 key: const ValueKey('investment-ticker-field'),
                 controller: _ticker,
+                focusNode: _tickerFocus,
                 enabled: !_busy,
                 textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) {
+                  if (_side == 'buy') {
+                    _nameFocus.requestFocus();
+                  } else if (_side == 'sell') {
+                    _quantityFocus.requestFocus();
+                  } else {
+                    _totalAmountFocus.requestFocus();
+                  }
+                },
                 decoration: const InputDecoration(labelText: 'ticker'),
               ),
               const SizedBox(height: 12),
@@ -1515,7 +1664,10 @@ class _InvestmentCreateDialogState
                 TextField(
                   key: const ValueKey('investment-name-field'),
                   controller: _name,
+                  focusNode: _nameFocus,
                   enabled: !_busy,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _quantityFocus.requestFocus(),
                   decoration: const InputDecoration(
                     labelText: '종목명 / name',
                     helperText: '현재 DB에는 별도 종목명 컬럼이 없어 메모에 함께 저장됩니다.',
@@ -1524,14 +1676,25 @@ class _InvestmentCreateDialogState
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _QuantityField(controller: _quantity)),
+                    Expanded(
+                      child: _QuantityField(
+                        controller: _quantity,
+                        focusNode: _quantityFocus,
+                        enabled: !_busy,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => _unitPriceFocus.requestFocus(),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
                         key: const ValueKey('investment-unit-price-field'),
                         controller: _unitPrice,
+                        focusNode: _unitPriceFocus,
                         enabled: !_busy,
                         keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        onSubmitted: (_) => _feeFocus.requestFocus(),
                         decoration: const InputDecoration(
                           labelText: '단가',
                           suffixText: '원',
@@ -1542,13 +1705,23 @@ class _InvestmentCreateDialogState
                 ),
                 const SizedBox(height: 12),
               ] else if (_side == 'sell') ...[
-                _QuantityField(controller: _quantity, label: '매도 수량'),
+                _QuantityField(
+                  controller: _quantity,
+                  focusNode: _quantityFocus,
+                  label: '매도 수량',
+                  enabled: !_busy,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _totalAmountFocus.requestFocus(),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   key: const ValueKey('investment-total-amount-field'),
                   controller: _totalAmount,
+                  focusNode: _totalAmountFocus,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _feeFocus.requestFocus(),
                   decoration: const InputDecoration(
                     labelText: '총 매도금액',
                     suffixText: '원',
@@ -1559,8 +1732,11 @@ class _InvestmentCreateDialogState
                 TextField(
                   key: const ValueKey('investment-total-amount-field'),
                   controller: _totalAmount,
+                  focusNode: _totalAmountFocus,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _memoFocus.requestFocus(),
                   decoration: const InputDecoration(
                     labelText: '배당금 총액',
                     suffixText: '원',
@@ -1572,8 +1748,11 @@ class _InvestmentCreateDialogState
                 TextField(
                   key: const ValueKey('investment-fee-field'),
                   controller: _fee,
+                  focusNode: _feeFocus,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _memoFocus.requestFocus(),
                   decoration: const InputDecoration(
                     labelText: '수수료',
                     suffixText: '원',
@@ -1596,9 +1775,12 @@ class _InvestmentCreateDialogState
               TextField(
                 key: const ValueKey('investment-memo-field'),
                 controller: _memo,
+                focusNode: _memoFocus,
                 enabled: !_busy,
                 minLines: 2,
                 maxLines: 4,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _busy ? null : _save(),
                 decoration: const InputDecoration(labelText: '메모'),
               ),
             ],
@@ -1622,17 +1804,32 @@ class _InvestmentCreateDialogState
 }
 
 class _QuantityField extends StatelessWidget {
-  const _QuantityField({required this.controller, this.label = '수량'});
+  const _QuantityField({
+    required this.controller,
+    this.focusNode,
+    this.label = '수량',
+    this.enabled = true,
+    this.textInputAction,
+    this.onSubmitted,
+  });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String label;
+  final bool enabled;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       key: const ValueKey('investment-quantity-field'),
       controller: controller,
+      focusNode: focusNode,
+      enabled: enabled,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textInputAction: textInputAction,
+      onSubmitted: onSubmitted,
       decoration: InputDecoration(labelText: label),
     );
   }
@@ -1648,7 +1845,18 @@ class _EmptyState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Center(
-        child: Text(message, style: const TextStyle(color: AppTokens.muted)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.inbox_outlined, color: AppTokens.muted, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTokens.muted),
+            ),
+          ],
+        ),
       ),
     );
   }
