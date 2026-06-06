@@ -72,9 +72,10 @@ Android manifest/package/app label 점검:
 - [x] Namespace: `com.dijung.my_little_budget`
 - [x] Application ID: `com.dijung.my_little_budget`
 - [x] Main activity: `com.dijung.my_little_budget.MainActivity`
-- [x] App label: `my_little_budget`
-- [ ] Play 배포용 app label을 `My Little Budget` 또는 한국어 표기로 바꿀지 최종 결정 필요
-- [ ] Release signing은 현재 debug signing config이므로 Play 배포 전 정식 signing config 필요
+- [x] App label: `My Little Budget`
+- [x] Release build no longer uses debug signing config.
+- [x] Release signing is configured through `android/key.properties` when building a Play release.
+- [x] `android/key.properties` and keystore files are ignored by `android/.gitignore`.
 
 Android 수동/환경 조치 필요:
 
@@ -84,6 +85,26 @@ Android 수동/환경 조치 필요:
 - [ ] `flutter doctor -v`에서 Android toolchain이 통과하는지 확인한다.
 - [ ] `flutter build appbundle --release`를 다시 실행한다.
 - [ ] `build\app\outputs\bundle\release\app-release.aab` 산출물을 확인한다.
+
+Google Play 업로드 전 필수 항목:
+
+- [ ] Play Console 앱 등록용 package name이 `com.dijung.my_little_budget`로 확정되어 있는지 확인한다. 이 값은 업로드 후 변경할 수 없다.
+- [ ] `android/key.properties`를 로컬에 생성한다. 이 파일은 git에 포함하지 않는다.
+- [ ] `android/key.properties`에 아래 키만 로컬 비밀값으로 채운다.
+
+```properties
+storePassword=<release-keystore-password>
+keyPassword=<release-key-password>
+keyAlias=<release-key-alias>
+storeFile=<relative-or-absolute-keystore-path>
+```
+
+- [ ] `storeFile`이 가리키는 keystore 파일을 안전한 위치에 보관하고 git에 포함하지 않는다.
+- [ ] `flutter build appbundle --release`가 release signing으로 성공하는지 확인한다.
+- [ ] AAB 산출물을 확인한다: `build\app\outputs\bundle\release\app-release.aab`
+- [ ] Play Console Internal testing 트랙에 AAB를 업로드한다.
+- [ ] Internal testing 설치 후 앱 최초 실행, 주요 route 진입, 앱 재시작 후 설정 유지, 백업 export/import를 실기기에서 확인한다.
+- [ ] Play Console pre-launch report 결과를 확인한다.
 
 Android release 설치 후 수동 확인:
 
@@ -150,6 +171,7 @@ build\app\outputs\bundle\release\app-release.aab
 - [ ] AAB 설치 경로를 통해 앱을 기기에 설치할 수 있다. build 완료 후 수동 확인 필요.
 - [ ] 설치 후 앱이 crash 없이 실행된다.
 - [ ] 앱 재시작 후 데이터와 테마 설정이 유지된다.
+- [ ] Play Console Internal testing 트랙에서 설치 및 실행을 확인한다.
 
 ## 3. 필수 검증
 
