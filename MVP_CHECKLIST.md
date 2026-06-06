@@ -55,7 +55,7 @@ Not routed yet:
 | transactions | `/transactions` | DONE | Yes | Inline entry, edit dialog, duplicate, delete, filters, month nav. |
 | accounts | `/accounts`, `/accounts/:id` | DONE | Yes | Account create/edit/archive/restore/delete, reorder, detail transaction list, adjustment edit. |
 | budget | `/budget` | PARTIAL | Yes | Expected income editing, previous-month copy, fixed/percentage/account-linked group creation/editing, category add/remove, account-linked account editing, and row delete are implemented. Remaining work is test/UX hardening. |
-| stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
+| stats | `/stats`, `/stats/yearly` | READ_ONLY | No | Monthly category breakdown with selectable category detail, 12-month trend table, and yearly income/expense/net plus category annual expense totals. |
 | investments | `/investments` | PARTIAL | Yes | Monthly rows, summary, account banner, holdings inline SELL/DIVIDEND entry, realized PnL read-only section, BUY creation, edit/delete. Remaining work is test/UX hardening. |
 | settings | `/settings`, `/settings/theme`, `/settings/backup` | PARTIAL | Yes | Main settings cards exist. Categories/tags/recurring have CRUD; theme settings and data backup/restore have first-pass screens. |
 
@@ -125,12 +125,14 @@ Status:
 - `READ_ONLY`
 
 Currently input-capable:
-- None, except month/year navigation.
+- None, except month/year navigation and read-only category selection.
 
 TODO:
-- Add selected category detail panel.
 - Consider `fl_chart` visuals after table/list data surface is stable.
-- Add focused widget tests for `/stats` and `/stats/yearly`.
+- Add focused widget tests for `/stats/yearly`.
+
+Test coverage:
+- `test/ui/mvp_stabilization_test.dart` covers monthly category selection, category transaction detail rendering, tag display, and selection clearing.
 
 ### investments
 

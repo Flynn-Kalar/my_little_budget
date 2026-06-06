@@ -174,6 +174,8 @@ Current status:
 - Read-only screen is implemented with:
   - current-month navigation
   - current-month expense category breakdown
+  - selectable category breakdown rows
+  - selected category transaction detail panel
   - recent 12-month income/expense/net trend table
   - recent 12-month income/expense/net totals
   - `/stats/yearly` entry button
@@ -186,8 +188,10 @@ Current status:
 - Stats providers are implemented:
   - `statsMonthProvider`
   - `statsYearProvider`
+  - `statsSelectedCategoryProvider`
   - `statsExpenseBreakdownProvider`
   - `statsMonthlyTrendProvider`
+  - `statsCategoryTransactionsProvider`
   - `availableStatsYearsProvider`
   - `yearlyMonthlyTrendProvider`
   - `yearlyExpenseByCategoryProvider`
@@ -290,12 +294,11 @@ Next steps:
 
 ## Stats Remaining Work
 
-Current monthly read-only base and yearly read-only screen are complete.
+Current monthly read-only base, selected category detail panel, and yearly read-only screen are complete.
 
 Next steps:
-1. Add selected category state and category transaction detail panel.
-2. Consider replacing list/table visuals with `fl_chart` after the read-only data surface is stable.
-3. Add focused widget tests for `/stats` and `/stats/yearly`.
+1. Consider replacing list/table visuals with `fl_chart` after the read-only data surface is stable.
+2. Add focused widget tests for `/stats/yearly`.
 
 ## Budget Remaining Work
 
@@ -325,19 +328,19 @@ Current pass:
   - account metadata changes
   - account adjustment transaction mutations
 - DB schema and backup JSON format were not changed.
-- Widget tests now cover the highest-risk MVP surfaces called out in `MVP_CHECKLIST.md`.
+- Widget tests now cover the highest-risk MVP surfaces called out in `MVP_CHECKLIST.md`, including monthly stats category detail.
 
 ## Next Implementation Order
 
 Recommended order from the current code state:
 
-1. Stats category detail panel
-2. Optional settings reset UI
+1. Optional settings reset UI
 
 Rationale:
 - The top-level placeholder pass is complete.
 - Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
 - Budget CRUD is now mostly covered; remaining budget work is focused widget coverage and manual UX QA.
+- Stats monthly and yearly read-only surfaces are complete; remaining stats work is optional visualization/test depth.
 - Settings theme and data export/import are now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
 
 ## Verification Strategy

@@ -113,6 +113,39 @@ void main() {
     },
   );
 
+  testWidgets('Stats monthly category detail panel renders transactions', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final seeded = await _seedStats(db);
+
+    await tester.binding.setSurfaceSize(const Size(1400, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    GoRouter.of(tester.element(find.text('my_little_budget'))).go('/stats');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(seeded.categoryName).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stats lunch'), findsOneWidget);
+    expect(find.text(seeded.accountName), findsWidgets);
+    expect(find.text('#stats-tag'), findsOneWidget);
+    expect(find.text(formatKRW(12345)), findsWidgets);
+
+    await tester.tap(find.byIcon(Icons.close).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stats lunch'), findsNothing);
+  });
+
   testWidgets('Settings MVP renders theme and backup surfaces', (tester) async {
     await pumpAppAt(tester, '/settings/theme');
 
@@ -159,6 +192,32 @@ void main() {
     );
     expect(find.text('복원'), findsOneWidget);
   });
+}
+
+Future<({String categoryName, String accountName})> _seedStats(
+  AppDatabase db,
+) async {
+  final month = currentMonthKey();
+  final day = '$month-01';
+  final account = (await db.accountsDao.getActiveAccounts()).first;
+  final category = (await db.categoriesDao.getActiveCategories(
+    'expense',
+  )).first;
+
+  await db.transactionsDao.saveTransaction(
+    draft: TransactionDraft(
+      type: 'expense',
+      amount: 12345,
+      occurredOn: day,
+      occurredTime: '12:30',
+      accountId: account.id,
+      categoryId: category.id,
+      memo: 'Stats lunch',
+    ),
+    tagNames: const ['stats-tag'],
+  );
+
+  return (categoryName: category.name, accountName: account.name);
 }
 
 Future<void> _seedBudget(AppDatabase db) async {

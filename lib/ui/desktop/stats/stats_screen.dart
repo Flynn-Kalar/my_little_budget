@@ -16,6 +16,8 @@ class StatsScreen extends ConsumerWidget {
     final month = ref.watch(statsMonthProvider);
     final breakdown = ref.watch(statsExpenseBreakdownProvider);
     final trend = ref.watch(statsMonthlyTrendProvider);
+    final selectedCategory = ref.watch(statsSelectedCategoryProvider);
+    final selectedTransactions = ref.watch(statsCategoryTransactionsProvider);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 1100),
@@ -31,12 +33,29 @@ class StatsScreen extends ConsumerWidget {
             _StatsMonthNav(month: month),
             const SizedBox(height: 16),
             breakdown.when(
-              data: (rows) => _ExpenseBreakdownCard(rows: rows),
+              data: (rows) => _ExpenseBreakdownCard(
+                rows: rows,
+                selectedCategoryId: selectedCategory?.categoryId,
+              ),
               loading: () => const _StatsCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
+            if (selectedCategory != null) ...[
+              const SizedBox(height: 16),
+              selectedTransactions.when(
+                data: (rows) => _CategoryDetailCard(
+                  category: selectedCategory,
+                  rows: rows,
+                  month: month,
+                ),
+                loading: () => const _StatsCard(
+                  child: LinearProgressIndicator(minHeight: 3),
+                ),
+                error: (error, _) => _ErrorCard(message: error.toString()),
+              ),
+            ],
             const SizedBox(height: 16),
             trend.when(
               data: (rows) => _TrendCard(rows: rows),
@@ -66,6 +85,7 @@ class _StatsMonthNav extends ConsumerWidget {
 
     void shift(int delta) {
       ref.read(statsMonthProvider.notifier).state = shiftMonth(month, delta);
+      ref.read(statsSelectedCategoryProvider.notifier).state = null;
     }
 
     return Row(
@@ -79,6 +99,7 @@ class _StatsMonthNav extends ConsumerWidget {
         OutlinedButton.icon(
           onPressed: () {
             ref.read(statsMonthProvider.notifier).state = currentMonthKey();
+            ref.read(statsSelectedCategoryProvider.notifier).state = null;
           },
           icon: const Icon(Icons.calendar_month, size: 18),
           label: Text('${d.year}년 ${d.month}월'),
@@ -93,13 +114,17 @@ class _StatsMonthNav extends ConsumerWidget {
   }
 }
 
-class _ExpenseBreakdownCard extends StatelessWidget {
-  const _ExpenseBreakdownCard({required this.rows});
+class _ExpenseBreakdownCard extends ConsumerWidget {
+  const _ExpenseBreakdownCard({
+    required this.rows,
+    required this.selectedCategoryId,
+  });
 
   final List<CategoryBreakdownRow> rows;
+  final int? selectedCategoryId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final total = rows.fold<int>(0, (sum, row) => sum + row.total);
 
     return _StatsCard(
@@ -130,7 +155,17 @@ class _ExpenseBreakdownCard extends StatelessWidget {
           else
             Column(
               children: [
-                for (final row in rows) _BreakdownRow(row: row, total: total),
+                for (final row in rows)
+                  _BreakdownRow(
+                    row: row,
+                    total: total,
+                    selected: selectedCategoryId == row.categoryId,
+                    onTap: () {
+                      final current = ref.read(statsSelectedCategoryProvider);
+                      ref.read(statsSelectedCategoryProvider.notifier).state =
+                          current?.categoryId == row.categoryId ? null : row;
+                    },
+                  ),
               ],
             ),
         ],
@@ -140,54 +175,205 @@ class _ExpenseBreakdownCard extends StatelessWidget {
 }
 
 class _BreakdownRow extends StatelessWidget {
-  const _BreakdownRow({required this.row, required this.total});
+  const _BreakdownRow({
+    required this.row,
+    required this.total,
+    required this.selected,
+    required this.onTap,
+  });
 
   final CategoryBreakdownRow row;
   final int total;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final percent = total == 0 ? 0 : (row.total * 100 / total).round();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: selected ? AppTokens.sidebarActive : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _ColorDot(color: _parseColor(row.categoryColor)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        row.categoryName,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '$percent%',
+                      style: const TextStyle(color: AppTokens.muted),
+                    ),
+                    const SizedBox(width: 16),
+                    SizedBox(
+                      width: 120,
+                      child: Text(
+                        formatKRW(row.total),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: total == 0 ? 0 : row.total / total,
+                    minHeight: 6,
+                    backgroundColor: AppTokens.sidebarBorder,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _parseColor(row.categoryColor),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryDetailCard extends ConsumerWidget {
+  const _CategoryDetailCard({
+    required this.category,
+    required this.rows,
+    required this.month,
+  });
+
+  final CategoryBreakdownRow category;
+  final List<TransactionRow> rows;
+  final String month;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final d = parseMonthKey(month);
+    return _StatsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _ColorDot(color: _parseColor(row.categoryColor)),
+              _ColorDot(color: _parseColor(category.categoryColor)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  row.categoryName,
+                  '${d.year}년 ${d.month}월 ${category.categoryName} 상세',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Text('$percent%', style: const TextStyle(color: AppTokens.muted)),
-              const SizedBox(width: 16),
-              SizedBox(
-                width: 120,
-                child: Text(
-                  formatKRW(row.total),
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+              IconButton(
+                tooltip: '선택 해제',
+                onPressed: () =>
+                    ref.read(statsSelectedCategoryProvider.notifier).state =
+                        null,
+                icon: const Icon(Icons.close),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: total == 0 ? 0 : row.total / total,
-              minHeight: 6,
-              backgroundColor: AppTokens.sidebarBorder,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                _parseColor(row.categoryColor),
+          const SizedBox(height: 12),
+          if (rows.isEmpty)
+            const _EmptyState(message: '선택한 카테고리의 거래가 없습니다.')
+          else
+            Column(
+              children: [
+                const _CategoryDetailHeader(),
+                const Divider(height: 1),
+                for (final row in rows) _CategoryDetailRow(row: row),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryDetailHeader extends StatelessWidget {
+  const _CategoryDetailHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(flex: 2, child: Text('날짜')),
+          Expanded(flex: 4, child: Text('거래명/메모')),
+          Expanded(flex: 3, child: Text('계좌')),
+          Expanded(flex: 3, child: Text('태그')),
+          Expanded(flex: 3, child: Text('금액', textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryDetailRow extends StatelessWidget {
+  const _CategoryDetailRow({required this.row});
+
+  final TransactionRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = row.memo?.trim().isNotEmpty == true
+        ? row.memo!.trim()
+        : row.categoryName ?? '거래';
+    final tags = row.tags.map((tag) => '#${tag.name}').join(' ');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        children: [
+          Expanded(flex: 2, child: Text(row.occurredOn)),
+          Expanded(
+            flex: 4,
+            child: Text(title, overflow: TextOverflow.ellipsis),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              row.accountName ?? '-',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              tags.isEmpty ? '-' : tags,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              formatKRW(row.amount),
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: AppTokens.expense,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

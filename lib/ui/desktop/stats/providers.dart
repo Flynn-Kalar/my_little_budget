@@ -7,6 +7,9 @@ import '../../../data/providers.dart';
 
 final statsMonthProvider = StateProvider<String>((ref) => currentMonthKey());
 final statsYearProvider = StateProvider<int>((ref) => DateTime.now().year);
+final statsSelectedCategoryProvider = StateProvider<CategoryBreakdownRow?>(
+  (ref) => null,
+);
 
 final statsExpenseBreakdownProvider =
     FutureProvider.autoDispose<List<CategoryBreakdownRow>>((ref) async {
@@ -20,6 +23,21 @@ final statsMonthlyTrendProvider =
       final month = ref.watch(statsMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
       return dao.monthlyTrend(12, month);
+    });
+
+final statsCategoryTransactionsProvider =
+    FutureProvider.autoDispose<List<TransactionRow>>((ref) async {
+      final selected = ref.watch(statsSelectedCategoryProvider);
+      if (selected == null) return const [];
+      final month = ref.watch(statsMonthProvider);
+      final dao = ref.watch(transactionsDaoProvider);
+      return dao.listTransactionsByMonth(
+        month,
+        filter: TransactionFilter(
+          type: 'expense',
+          categoryIds: [selected.categoryId],
+        ),
+      );
     });
 
 final availableStatsYearsProvider = FutureProvider.autoDispose<List<int>>((
