@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -32,15 +33,15 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     try {
       final backup = await ref.read(backupDaoProvider).exportBackup();
       final filename = buildBackupFilename();
+      final json = backup.toJsonString();
       final path = await FilePicker.saveFile(
         dialogTitle: 'Save backup file',
         fileName: filename,
         type: FileType.custom,
         allowedExtensions: const ['json'],
+        bytes: utf8.encode(json),
       );
       if (path == null) return;
-
-      await File(path).writeAsString(backup.toJsonString());
       if (!mounted) return;
       _showSnack('Backup file created: $filename');
     } catch (e) {

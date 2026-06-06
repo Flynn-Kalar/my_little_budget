@@ -5,7 +5,7 @@
 Current release candidate:
 
 - Version: `1.0.0-rc.1+1`
-- Target: Windows desktop MVP
+- Target: Windows desktop MVP, Android release candidate
 - Last automated check: 2026-06-06
 
 ## 0. 자동 검증 결과
@@ -36,6 +36,65 @@ build\windows\x64\runner\Release
 
 - [ ] 위 경로의 release build 산출물 확인 필요
 - [ ] `my_little_budget.exe` 실행 확인 필요
+
+## 0-A. Android 자동 검증 결과
+
+완료:
+
+- [x] `flutter analyze` 통과: No issues found.
+- [x] `flutter test` 통과: 134 tests passed.
+- [x] Android backup export 경로 점검: `file_picker` Android/iOS `saveFile` 요구사항에 맞춰 JSON bytes를 직접 전달한다.
+- [x] Theme/settings persistence 경로 점검: theme mode와 theme colors는 `SharedPreferences` 기반이며 release/profile 조건 분기가 없다.
+- [x] DB 초기화 경로 점검: `drift_flutter`의 `driftDatabase(name: 'budget')`를 사용하며 Android 앱 문서 영역에 DB를 생성하는 구조다.
+
+미완료:
+
+- [ ] `flutter build appbundle --release` 통과
+  - 현재 결과: 실패
+  - 원인: 로컬 환경에서 Android SDK를 찾지 못함
+  - 현재 `android/local.properties`의 `sdk.dir`: `C:\Users\di020\AppData\Local\Android\sdk`
+  - `flutter doctor -v` 결과: `Android toolchain - develop for Android devices` 실패
+
+Android release 산출물 경로:
+
+```text
+build\app\outputs\bundle\release\app-release.aab
+```
+
+현재 상태:
+
+- [ ] 위 경로의 AAB 산출물 확인 필요
+- [ ] AAB에서 APK를 생성하거나 Play/Internal testing 경로로 설치 확인 필요
+- [ ] 설치 후 앱 실행 확인 필요
+
+Android manifest/package/app label 점검:
+
+- [x] Namespace: `com.dijung.my_little_budget`
+- [x] Application ID: `com.dijung.my_little_budget`
+- [x] Main activity: `com.dijung.my_little_budget.MainActivity`
+- [x] App label: `my_little_budget`
+- [ ] Play 배포용 app label을 `My Little Budget` 또는 한국어 표기로 바꿀지 최종 결정 필요
+- [ ] Release signing은 현재 debug signing config이므로 Play 배포 전 정식 signing config 필요
+
+Android 수동/환경 조치 필요:
+
+- [ ] Android Studio 또는 Android command-line tools로 Android SDK를 설치한다.
+- [ ] `ANDROID_HOME` 또는 `flutter config --android-sdk`로 SDK 경로를 설정한다.
+- [ ] Android licenses를 승인한다.
+- [ ] `flutter doctor -v`에서 Android toolchain이 통과하는지 확인한다.
+- [ ] `flutter build appbundle --release`를 다시 실행한다.
+- [ ] `build\app\outputs\bundle\release\app-release.aab` 산출물을 확인한다.
+
+Android release 설치 후 수동 확인:
+
+- [ ] 앱 최초 실행이 crash 없이 완료된다.
+- [ ] 주요 route에 진입할 수 있다: transactions, accounts, budget, stats, stats/yearly, investments, settings.
+- [ ] 앱 재시작 후 theme mode와 theme color 설정이 유지된다.
+- [ ] 앱 재시작 후 DB 데이터가 유지된다.
+- [ ] `/settings/backup`에서 JSON export가 Android 파일 저장 플로우와 충돌하지 않는다.
+- [ ] `/settings/backup`에서 JSON import가 Android 파일 선택 플로우와 충돌하지 않는다.
+- [ ] import confirmation 문구가 표시되고, 복원 후 앱 재시작 없이 주요 화면 데이터가 갱신된다.
+- [ ] 잘못된 JSON/import 실패 후 기존 데이터가 유지된다.
 
 ## 1. 릴리즈 범위 확인
 
@@ -73,6 +132,25 @@ build\windows\x64\runner\Release\my_little_budget.exe
 - [ ] 최초 실행 시 기본 자산/카테고리 seed가 생성된다.
 - [ ] 앱 재시작 후 데이터와 테마 설정이 유지된다.
 
+Android release build:
+
+```powershell
+flutter build appbundle --release
+```
+
+예상 산출물:
+
+```text
+build\app\outputs\bundle\release\app-release.aab
+```
+
+확인 항목:
+
+- [ ] Android AAB release build가 생성된다. 현재 로컬 환경에서는 Android SDK 부재로 미완료.
+- [ ] AAB 설치 경로를 통해 앱을 기기에 설치할 수 있다. build 완료 후 수동 확인 필요.
+- [ ] 설치 후 앱이 crash 없이 실행된다.
+- [ ] 앱 재시작 후 데이터와 테마 설정이 유지된다.
+
 ## 3. 필수 검증
 
 ```powershell
@@ -92,6 +170,8 @@ flutter test
 - [ ] `flutter doctor -v`에서 Visual Studio 항목이 Windows desktop build 가능 상태인지 확인한다.
 - [ ] `flutter build windows --release`를 다시 실행한다.
 - [ ] `build\windows\x64\runner\Release` 산출물을 확인한다.
+- [ ] Android SDK를 설치/설정하고 `flutter build appbundle --release`를 다시 실행한다.
+- [ ] `build\app\outputs\bundle\release\app-release.aab` 산출물을 확인한다.
 
 ## 4. 주요 화면 스모크 테스트
 
