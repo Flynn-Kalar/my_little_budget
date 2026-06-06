@@ -116,7 +116,10 @@ Currently input-capable:
 
 TODO:
 - Keep invalidating `budgetRowsProvider`, `monthlyExpectedIncomeProvider`, and `overBudgetCountProvider` after budget mutations.
-- Add focused widget tests for budget rendering and mutations.
+- Add deeper widget tests for budget create/copy/edit/delete edge cases.
+
+Test coverage:
+- `test/ui/mvp_stabilization_test.dart` covers budget group list rendering, expected income display, fixed/percentage/account-linked group display, and expected-income mutation refresh.
 
 ### stats
 
@@ -149,7 +152,10 @@ Currently input-capable:
 
 TODO:
 - Consider a dedicated PnL tab only if the read-only monthly section becomes too dense.
-- Add focused widget tests for read-only rendering, mutations, and realized PnL.
+- Add deeper widget tests for investment edit/delete edge cases.
+
+Test coverage:
+- `test/ui/mvp_stabilization_test.dart` covers BUY/SELL/DIVIDEND row rendering, holdings inline expansion, 4-decimal quantity display, and realized PnL rendering.
 
 ### settings
 
@@ -167,10 +173,11 @@ Currently input-capable:
 
 TODO:
 - Add reset UI only if the destructive flow gets separate UX and tests.
-- Add focused widget coverage for theme settings.
-- Add focused widget/integration coverage for data export/import UI.
+- Add full export/import integration coverage with file picker abstraction or platform integration harness.
 - Keep settings subroutes stable while extending main settings.
-- Add settings smoke/widget tests.
+
+Test coverage:
+- `test/ui/mvp_stabilization_test.dart` covers `/settings/theme` mode controls, `/settings/backup` export/import buttons, and the destructive import confirmation message.
 
 ## Technical Debt
 
@@ -179,6 +186,8 @@ Status:
 
 Items:
 - Cross-screen provider invalidation was tightened for transaction, settings, account metadata, and account adjustment mutations.
+- Permanent MVP route smoke coverage remains in `test/widget_test.dart`.
+- Core MVP screen widget coverage is added in `test/ui/mvp_stabilization_test.dart`.
 - Several existing Korean strings/comments appear mojibake-encoded in source files; fix as a separate text cleanup pass to avoid mixing with feature work.
 - Expand widget tests for the new read-only budget/stats/investments screens.
 - Keep DB schema unchanged until a specific DAO/schema gap is proven.

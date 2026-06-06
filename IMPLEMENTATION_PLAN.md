@@ -53,6 +53,10 @@ Placeholder audit:
   - `/settings`
   - `/settings/theme`
   - `/settings/backup`
+- Focused MVP widget coverage is added in `test/ui/mvp_stabilization_test.dart` for:
+  - Budget group rendering, expected income display, group mode display, and expected-income mutation refresh
+  - Investment BUY/SELL/DIVIDEND rendering, holdings inline expansion, quantity precision display, and realized PnL rendering
+  - Settings theme controls, backup/export import entry buttons, and destructive import confirmation copy
 
 ## Completed
 
@@ -321,6 +325,7 @@ Current pass:
   - account metadata changes
   - account adjustment transaction mutations
 - DB schema and backup JSON format were not changed.
+- Widget tests now cover the highest-risk MVP surfaces called out in `MVP_CHECKLIST.md`.
 
 ## Next Implementation Order
 
@@ -339,6 +344,8 @@ Rationale:
 
 After each small step:
 - Run `flutter analyze`.
+- Run focused MVP widget tests:
+  - `flutter test test/ui/mvp_stabilization_test.dart`
 - Run focused tests first:
   - Budget: `test/features/budget`, `test/data/budget_dao_test.dart`
   - Investments: `test/features/investments`, `test/data/investments_dao_test.dart`, `test/data/investments_yearly_test.dart`

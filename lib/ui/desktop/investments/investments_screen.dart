@@ -813,7 +813,7 @@ class _InvestmentRow extends ConsumerWidget {
             ),
           ),
           SizedBox(
-            width: 88,
+            width: 104,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -895,20 +895,24 @@ class _SidePill extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(_sideIcon(side), size: 12, color: _sideColor(side)),
-              const SizedBox(width: 4),
-              Text(
-                _sideLabel(side),
-                style: TextStyle(
-                  color: _sideColor(side),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(_sideIcon(side), size: 12, color: _sideColor(side)),
+                const SizedBox(width: 4),
+                Text(
+                  _sideLabel(side),
+                  style: TextStyle(
+                    color: _sideColor(side),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
