@@ -2,13 +2,48 @@
 
 릴리즈 후보를 만들기 전에 아래 항목을 확인한다. 이 문서는 현재 Flutter MVP 상태를 기준으로 하며, DB schema와 백업 JSON 포맷은 릴리즈 직전에 임의 변경하지 않는다.
 
+Current release candidate:
+
+- Version: `1.0.0-rc.1+1`
+- Target: Windows desktop MVP
+- Last automated check: 2026-06-06
+
+## 0. 자동 검증 결과
+
+완료:
+
+- [x] `flutter analyze` 통과: No issues found.
+- [x] `flutter test` 통과: 134 tests passed.
+
+미완료:
+
+- [ ] `flutter build windows --release` 통과
+  - 현재 결과: 실패
+  - 원인: 로컬 Visual Studio Windows 빌드 툴체인에 필요한 C++ 컴포넌트가 없음
+  - `flutter doctor -v` 요구 컴포넌트:
+    - Desktop development with C++ workload
+    - MSVC v142 - VS 2019 C++ x64/x86 build tools 또는 사용 가능한 최신 MSVC 빌드 도구
+    - C++ CMake tools for Windows
+    - Windows 10 SDK
+
+Windows release build 산출물 경로:
+
+```text
+build\windows\x64\runner\Release
+```
+
+현재 상태:
+
+- [ ] 위 경로의 release build 산출물 확인 필요
+- [ ] `my_little_budget.exe` 실행 확인 필요
+
 ## 1. 릴리즈 범위 확인
 
 - [ ] `MVP_CHECKLIST.md`의 DONE/READ_ONLY/TECH_DEBT 상태가 현재 코드와 일치한다.
 - [ ] `IMPLEMENTATION_PLAN.md`의 active route 목록이 `lib/router/app_router.dart`와 일치한다.
 - [ ] `PlaceholderScaffold` 또는 legacy placeholder 화면이 active route에서 사용되지 않는다.
 - [ ] 새 기능이 릴리즈 범위에 끼어들지 않았는지 확인한다.
-- [ ] `pubspec.yaml`의 `version` 값을 이번 릴리즈 번호로 확정한다.
+- [x] `pubspec.yaml`의 `version` 값을 MVP 릴리즈 후보 번호 `1.0.0-rc.1+1`로 확정한다.
 
 ## 2. 설치 및 실행 확인
 
@@ -25,10 +60,16 @@ flutter run -d windows
 flutter build windows --release
 ```
 
+예상 산출물:
+
+```text
+build\windows\x64\runner\Release\my_little_budget.exe
+```
+
 확인 항목:
 
-- [ ] Windows release build가 생성된다.
-- [ ] release build에서 앱이 실행된다.
+- [ ] Windows release build가 생성된다. 현재 로컬 환경에서는 Visual Studio C++ 컴포넌트 부족으로 미완료.
+- [ ] release build에서 앱이 실행된다. build 완료 후 수동 확인 필요.
 - [ ] 최초 실행 시 기본 자산/카테고리 seed가 생성된다.
 - [ ] 앱 재시작 후 데이터와 테마 설정이 유지된다.
 
@@ -39,13 +80,22 @@ flutter analyze
 flutter test
 ```
 
-- [ ] `flutter analyze` 통과
-- [ ] `flutter test` 통과
-- [ ] route smoke test 통과
-- [ ] backup DAO round-trip test 통과
-- [ ] MVP stabilization widget test 통과
+- [x] `flutter analyze` 통과
+- [x] `flutter test` 통과
+- [x] route smoke test 통과
+- [x] backup DAO round-trip test 통과
+- [x] MVP stabilization widget test 통과
+
+수동/환경 조치 필요:
+
+- [ ] Visual Studio Build Tools에 Windows desktop C++ 빌드 필수 컴포넌트를 설치한다.
+- [ ] `flutter doctor -v`에서 Visual Studio 항목이 Windows desktop build 가능 상태인지 확인한다.
+- [ ] `flutter build windows --release`를 다시 실행한다.
+- [ ] `build\windows\x64\runner\Release` 산출물을 확인한다.
 
 ## 4. 주요 화면 스모크 테스트
+
+아래 항목은 release build 생성 후 수동 확인한다.
 
 - [ ] `/transactions`: 거래 생성, 검색, 필터, 수정, 삭제
 - [ ] `/accounts`: 자산 생성, 수정, 보관, 복원, 상세 거래 필터

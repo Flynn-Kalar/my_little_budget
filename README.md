@@ -45,6 +45,14 @@ flutter run -d windows
 flutter build windows --release
 ```
 
+Windows release build 산출물 기본 경로:
+
+```text
+build\windows\x64\runner\Release
+```
+
+이 폴더 안의 `my_little_budget.exe`와 함께 생성된 DLL/data 파일을 같은 폴더 구조로 배포합니다.
+
 검증:
 
 ```powershell
