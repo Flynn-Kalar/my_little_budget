@@ -56,7 +56,10 @@ Placeholder audit:
 - Focused MVP widget coverage is added in `test/ui/mvp_stabilization_test.dart` for:
   - Budget group rendering, expected income display, group mode display, and expected-income mutation refresh
   - Investment BUY/SELL/DIVIDEND rendering, holdings inline expansion, quantity precision display, and realized PnL rendering
+  - Investment BUY/SELL/DIVIDEND edit dialog prefills, edit save refresh, delete confirmation, and delete refresh
   - Transaction debounced search, investment ticker filter empty state, and account detail category/tag filtering
+  - Account archive confirmation, archived restore, archived delete guard, and investment virtual-row filtering in account detail
+  - `/stats/yearly` year selector, monthly income/expense/net table, annual category expense totals, and no-data empty states
   - Settings theme controls, backup/export import entry buttons, and destructive import confirmation copy
 
 ## Completed
@@ -326,7 +329,7 @@ Current monthly read-only base, selected category detail panel, and yearly read-
 
 Next steps:
 1. Consider replacing list/table visuals with `fl_chart` after the read-only data surface is stable.
-2. Add focused widget tests for `/stats/yearly`.
+2. Consider chart visualization only after table/list surfaces need it.
 
 ## Budget Remaining Work
 
@@ -366,9 +369,9 @@ Recommended order from the current code state:
 
 Rationale:
 - The top-level placeholder pass is complete.
-- Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL.
+- Investments now has create/edit/delete coverage at the UI layer, plus read-only realized PnL and edge-case edit/delete widget coverage.
 - Budget CRUD is now mostly covered; remaining budget work is focused widget coverage and manual UX QA.
-- Stats monthly and yearly read-only surfaces are complete; remaining stats work is optional visualization/test depth.
+- Stats monthly and yearly read-only surfaces are complete; remaining stats work is optional visualization.
 - Settings theme and data export/import are now implemented; optional reset UI still has broad invalidation/destructive UX impact and should remain late.
 
 ## Verification Strategy

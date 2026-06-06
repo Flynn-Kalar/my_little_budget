@@ -35,6 +35,7 @@ class _State extends ConsumerState<ArchivedAccounts> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        key: const ValueKey('account-delete-confirm-dialog'),
         title: const Text('영구 삭제'),
         content: Text("'$name' 자산을 완전히 삭제합니다. 되돌릴 수 없습니다."),
         actions: [
@@ -43,6 +44,7 @@ class _State extends ConsumerState<ArchivedAccounts> {
             child: const Text('취소'),
           ),
           FilledButton(
+            key: const ValueKey('account-delete-confirm-button'),
             style: FilledButton.styleFrom(backgroundColor: AppTokens.warning),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('삭제'),
@@ -147,6 +149,7 @@ class _State extends ConsumerState<ArchivedAccounts> {
                       ),
                       const SizedBox(width: 4),
                       TextButton.icon(
+                        key: ValueKey('account-restore-${a.id}'),
                         onPressed: _busyId == a.id
                             ? null
                             : () => _restore(a.id),
@@ -157,6 +160,7 @@ class _State extends ConsumerState<ArchivedAccounts> {
                         ),
                       ),
                       TextButton.icon(
+                        key: ValueKey('account-delete-${a.id}'),
                         onPressed: _busyId == a.id
                             ? null
                             : () => _delete(a.id, a.name),

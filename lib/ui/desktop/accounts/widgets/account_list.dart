@@ -227,6 +227,7 @@ class _DisplayRow extends StatelessWidget {
                 width: 32,
                 child: showEditIcon
                     ? IconButton(
+                        key: ValueKey('account-edit-${account.accountId}'),
                         icon: const Icon(Icons.edit_outlined, size: 16),
                         color: AppTokens.muted,
                         tooltip: '편집',

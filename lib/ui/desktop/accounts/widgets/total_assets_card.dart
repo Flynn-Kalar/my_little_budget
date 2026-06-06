@@ -14,7 +14,8 @@ class TotalAssetsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final balances = ref.watch(accountBalancesProvider).asData?.value ?? const [];
+    final balances =
+        ref.watch(accountBalancesProvider).asData?.value ?? const [];
     final included = balances.where((a) => !a.excludeFromTotal).toList();
     final total = included.fold<int>(0, (s, a) => s + a.balance);
 
@@ -31,13 +32,10 @@ class TotalAssetsCard extends ConsumerWidget {
     final groupRows = [
       for (final g in accountGroupOrder)
         if (byGroup.containsKey(g))
-          (
-            group: g,
-            sum: byGroup[g]!.fold<int>(0, (s, a) => s + a.balance),
-          ),
+          (group: g, sum: byGroup[g]!.fold<int>(0, (s, a) => s + a.balance)),
     ];
     final positiveTotal = groupRows
-        .where((g) => g.group != AccountGroup.debt)
+        .where((g) => g.group != AccountGroup.debt && g.sum > 0)
         .fold<int>(0, (s, g) => s + g.sum);
 
     return Container(
@@ -50,8 +48,10 @@ class TotalAssetsCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('총 순자산',
-              style: TextStyle(fontSize: 12, color: AppTokens.muted)),
+          const Text(
+            '총 순자산',
+            style: TextStyle(fontSize: 12, color: AppTokens.muted),
+          ),
           const SizedBox(height: 6),
           Text(
             formatKRW(total),
@@ -108,7 +108,7 @@ class _GroupBar extends StatelessWidget {
     final abs = r.sum.abs();
     final denom = positiveTotal + (r.group == AccountGroup.debt ? abs : 0);
     // flex 는 int 비례. 정확도 위해 ×1000.
-    if (denom == 0) return 1;
+    if (denom <= 0) return 1;
     final w = (abs / denom * 1000).round();
     return w == 0 ? 1 : w;
   }
@@ -133,8 +133,10 @@ class _GroupLegend extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text(group.label,
-            style: const TextStyle(fontSize: 12, color: AppTokens.muted)),
+        Text(
+          group.label,
+          style: const TextStyle(fontSize: 12, color: AppTokens.muted),
+        ),
         const SizedBox(width: 4),
         Text(
           formatKRW(sum),

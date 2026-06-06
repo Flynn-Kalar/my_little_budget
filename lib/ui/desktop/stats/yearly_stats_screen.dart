@@ -87,6 +87,7 @@ class _YearSelector extends ConsumerWidget {
             child: Text('조회 연도', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
           DropdownButton<int>(
+            key: const ValueKey('yearly-stats-year-dropdown'),
             value: year,
             items: [
               for (final item in options)
@@ -155,9 +156,15 @@ class _YearlyMonthlyCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (!hasData)
-            const _EmptyState(message: '선택한 연도에 거래 내역이 없습니다.')
+            const _EmptyState(
+              key: ValueKey('yearly-monthly-empty'),
+              message: '선택한 연도에 거래 내역이 없습니다.',
+            )
           else
-            _MonthlyTable(rows: rows),
+            _MonthlyTable(
+              key: const ValueKey('yearly-monthly-table'),
+              rows: rows,
+            ),
         ],
       ),
     );
@@ -165,7 +172,7 @@ class _YearlyMonthlyCard extends StatelessWidget {
 }
 
 class _MonthlyTable extends StatelessWidget {
-  const _MonthlyTable({required this.rows});
+  const _MonthlyTable({super.key, required this.rows});
 
   final List<MonthlyTrendRow> rows;
 
@@ -270,9 +277,13 @@ class _YearlyCategoryCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (rows.isEmpty)
-            const _EmptyState(message: '선택한 연도에 지출 내역이 없습니다.')
+            const _EmptyState(
+              key: ValueKey('yearly-category-empty'),
+              message: '선택한 연도에 지출 내역이 없습니다.',
+            )
           else
             Column(
+              key: const ValueKey('yearly-category-list'),
               children: [
                 for (final row in rows) _CategoryRow(row: row, total: total),
               ],
@@ -367,7 +378,7 @@ class _SummaryTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.message});
+  const _EmptyState({super.key, required this.message});
 
   final String message;
 

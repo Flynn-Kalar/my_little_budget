@@ -95,11 +95,11 @@ Currently input-capable:
 - Filter account detail transactions by date, category, and tag.
 
 TODO:
-- Add widget coverage for archive/restore/delete guard behavior.
 - Confirm investment virtual rows in account detail remain clear as account-detail filters get broader coverage.
 
 Test coverage:
 - `test/ui/mvp_stabilization_test.dart` covers account detail category and tag filtering.
+- `test/ui/mvp_stabilization_test.dart` covers account archive confirmation, archived restore, archived delete guard, and investment virtual-row filtering in account detail.
 
 ### budget
 
@@ -138,10 +138,10 @@ Currently input-capable:
 
 TODO:
 - Consider `fl_chart` visuals after table/list data surface is stable.
-- Add focused widget tests for `/stats/yearly`.
 
 Test coverage:
 - `test/ui/mvp_stabilization_test.dart` covers monthly category selection, category transaction detail rendering, tag display, and selection clearing.
+- `test/ui/mvp_stabilization_test.dart` covers `/stats/yearly` entry rendering, year selector rendering, monthly income/expense/net table, annual category expense totals, and no-data empty states.
 
 ### investments
 
@@ -162,10 +162,10 @@ Currently input-capable:
 
 TODO:
 - Consider a dedicated PnL tab only if the read-only monthly section becomes too dense.
-- Add deeper widget tests for investment edit/delete edge cases.
 
 Test coverage:
 - `test/ui/mvp_stabilization_test.dart` covers BUY/SELL/DIVIDEND row rendering, holdings inline expansion, 4-decimal quantity display, realized PnL rendering, and first-pass ticker filter empty state.
+- `test/ui/mvp_stabilization_test.dart` covers BUY/SELL/DIVIDEND edit dialog prefills, edit save refresh, delete confirmation, and delete refresh across list/summary/PnL.
 
 ### settings
 
@@ -199,7 +199,7 @@ Items:
 - Permanent MVP route smoke coverage remains in `test/widget_test.dart`.
 - Core MVP screen widget coverage is added in `test/ui/mvp_stabilization_test.dart`.
 - Mojibake audit completed for Dart/Markdown files; remaining known UI-facing artifact was corrected.
-- Expand widget tests for account archive/restore guards, investment edit/delete edge cases, and `/stats/yearly`.
+- Core MVP edge case widget tests now cover account archive/restore/delete guards, investment edit/delete refresh, and `/stats/yearly`.
 - Keep DB schema unchanged until a specific DAO/schema gap is proven.
 
 ## MVP Recommendation

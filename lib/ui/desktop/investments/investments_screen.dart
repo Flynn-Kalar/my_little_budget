@@ -966,12 +966,14 @@ class _InvestmentRow extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
+                  key: ValueKey('investment-edit-${row.id}'),
                   tooltip: '수정',
                   onPressed: () =>
                       _InvestmentCreateDialog.show(context, investment: row),
                   icon: const Icon(Icons.edit_outlined, size: 18),
                 ),
                 IconButton(
+                  key: ValueKey('investment-delete-${row.id}'),
                   tooltip: '삭제',
                   onPressed: () => _confirmDeleteInvestment(context, ref, row),
                   icon: const Icon(Icons.delete_outline, size: 18),
@@ -994,6 +996,7 @@ Future<void> _confirmDeleteInvestment(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
+      key: const ValueKey('investment-delete-confirm-dialog'),
       title: const Text('투자 거래 삭제'),
       content: Text('${row.ticker} ${_sideLabel(row.side)} 거래를 삭제할까요?'),
       actions: [
@@ -1002,6 +1005,7 @@ Future<void> _confirmDeleteInvestment(
           child: const Text('취소'),
         ),
         FilledButton(
+          key: const ValueKey('investment-delete-confirm-button'),
           onPressed: () => Navigator.pop(dialogContext, true),
           child: const Text('삭제'),
         ),
@@ -1461,6 +1465,7 @@ class _InvestmentCreateDialogState
     final account = ref.watch(investmentAccountProvider);
 
     return AlertDialog(
+      key: const ValueKey('investment-dialog'),
       title: const Text('투자 거래 추가'),
       content: SizedBox(
         width: 540,
@@ -1473,6 +1478,7 @@ class _InvestmentCreateDialogState
                 _SidePill(side: _side)
               else
                 SegmentedButton<String>(
+                  key: const ValueKey('investment-dialog-side'),
                   segments: const [
                     ButtonSegment(value: 'buy', label: Text('BUY')),
                     ButtonSegment(value: 'sell', label: Text('SELL')),
@@ -1485,6 +1491,7 @@ class _InvestmentCreateDialogState
                 ),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('investment-date-field'),
                 controller: _date,
                 readOnly: true,
                 decoration: InputDecoration(
@@ -1497,6 +1504,7 @@ class _InvestmentCreateDialogState
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('investment-ticker-field'),
                 controller: _ticker,
                 enabled: !_busy,
                 textCapitalization: TextCapitalization.characters,
@@ -1505,6 +1513,7 @@ class _InvestmentCreateDialogState
               const SizedBox(height: 12),
               if (_side == 'buy') ...[
                 TextField(
+                  key: const ValueKey('investment-name-field'),
                   controller: _name,
                   enabled: !_busy,
                   decoration: const InputDecoration(
@@ -1519,6 +1528,7 @@ class _InvestmentCreateDialogState
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
+                        key: const ValueKey('investment-unit-price-field'),
                         controller: _unitPrice,
                         enabled: !_busy,
                         keyboardType: TextInputType.number,
@@ -1535,6 +1545,7 @@ class _InvestmentCreateDialogState
                 _QuantityField(controller: _quantity, label: '매도 수량'),
                 const SizedBox(height: 12),
                 TextField(
+                  key: const ValueKey('investment-total-amount-field'),
                   controller: _totalAmount,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
@@ -1546,6 +1557,7 @@ class _InvestmentCreateDialogState
                 const SizedBox(height: 12),
               ] else ...[
                 TextField(
+                  key: const ValueKey('investment-total-amount-field'),
                   controller: _totalAmount,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
@@ -1558,6 +1570,7 @@ class _InvestmentCreateDialogState
               ],
               if (_side != 'dividend') ...[
                 TextField(
+                  key: const ValueKey('investment-fee-field'),
                   controller: _fee,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
@@ -1581,6 +1594,7 @@ class _InvestmentCreateDialogState
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const ValueKey('investment-memo-field'),
                 controller: _memo,
                 enabled: !_busy,
                 minLines: 2,
@@ -1598,10 +1612,15 @@ class _InvestmentCreateDialogState
       ),
       actions: [
         TextButton(
+          key: const ValueKey('investment-cancel-button'),
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('취소'),
         ),
-        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+        FilledButton(
+          key: const ValueKey('investment-save-button'),
+          onPressed: _busy ? null : _save,
+          child: const Text('저장'),
+        ),
       ],
     );
   }
@@ -1616,6 +1635,7 @@ class _QuantityField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      key: const ValueKey('investment-quantity-field'),
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(labelText: label),

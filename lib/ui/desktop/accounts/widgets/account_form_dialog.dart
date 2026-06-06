@@ -87,6 +87,26 @@ class _State extends ConsumerState<AccountFormDialog> {
   Future<void> _archive() async {
     final acc = widget.account;
     if (acc == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const ValueKey('account-archive-confirm-dialog'),
+        title: const Text('자산 보관'),
+        content: Text("'${acc.name}' 자산을 보관할까요?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            key: const ValueKey('account-archive-confirm-button'),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('보관'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
     setState(() => _busy = true);
     try {
       await ref.read(accountsDaoProvider).archiveAccount(acc.accountId);
@@ -100,6 +120,7 @@ class _State extends ConsumerState<AccountFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      key: const ValueKey('account-form-dialog'),
       title: Text(_isEditing ? '자산 편집' : '자산 추가'),
       content: SizedBox(
         width: 380,
@@ -178,6 +199,7 @@ class _State extends ConsumerState<AccountFormDialog> {
       actions: [
         if (_isEditing)
           TextButton(
+            key: const ValueKey('account-archive-button'),
             onPressed: _busy ? null : _archive,
             style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
             child: const Text('보관'),
