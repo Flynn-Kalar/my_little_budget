@@ -1,0 +1,13 @@
+# Copy this file to android/key.properties for local Google Play builds.
+# Do not commit android/key.properties or any keystore file.
+#
+# Example:
+# storeFile=C:\\Users\\you\\secure\\upload-keystore.jks
+# keyAlias=my-little-budget-upload
+# storePassword=replace-with-local-secret
+# keyPassword=replace-with-local-secret
+
+storeFile=<absolute-or-relative-path-to-upload-keystore.jks>
+keyAlias=<upload-key-alias>
+storePassword=<upload-keystore-password>
+keyPassword=<upload-key-password>

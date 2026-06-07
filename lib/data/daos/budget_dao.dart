@@ -228,6 +228,20 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   Future<void> updateBudgetGroupAccount(int groupId, int accountId) =>
       _patch(groupId, BudgetGroupsCompanion(accountId: Value(accountId)));
 
+  Future<void> updateBudgetGroupAccountLink(int groupId, int? accountId) =>
+      _patch(
+        groupId,
+        BudgetGroupsCompanion(
+          accountId: Value(accountId),
+          carryForward: accountId == null
+              ? const Value.absent()
+              : const Value(false),
+          percentage: accountId == null
+              ? const Value.absent()
+              : const Value(null),
+        ),
+      );
+
   Future<void> updateBudgetGroupCarryForward(int groupId, bool carryForward) =>
       _patch(groupId, BudgetGroupsCompanion(carryForward: Value(carryForward)));
 

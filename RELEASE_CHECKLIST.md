@@ -72,13 +72,20 @@ Android manifest/package/app label 점검:
 - [x] Namespace: `com.dijung.my_little_budget`
 - [x] Application ID: `com.dijung.my_little_budget`
 - [x] Main activity: `com.dijung.my_little_budget.MainActivity`
-- [x] App label: `My Little Budget`
+- [x] App label: `나만의 작은 가계부`
+- [x] Android launcher icon uses `assets/app_icon/app-icon.png`, generated from the existing Tauri `src-tauri/app-icon.png` reference.
+- [x] Android adaptive icon resources are configured through `mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml`.
 - [x] Release build no longer uses debug signing config.
 - [x] Release signing is configured through `android/key.properties` when building a Play release.
+- [x] Missing `android/key.properties` fails Play release tasks: `assembleRelease`, `bundleRelease`.
+- [x] Local test build type exists: `localRelease`, using debug signing for local APK testing only.
+- [x] `android/key.properties.example` exists and contains placeholders only.
 - [x] `android/key.properties` and keystore files are ignored by `android/.gitignore`.
+- [x] Root `.gitignore` also ignores `android/key.properties`, `.jks`, and `.keystore` files.
 
 Android 수동/환경 조치 필요:
 
+- [ ] JDK를 설치하고 `JAVA_HOME`을 설정한다.
 - [ ] Android Studio 또는 Android command-line tools로 Android SDK를 설치한다.
 - [ ] `ANDROID_HOME` 또는 `flutter config --android-sdk`로 SDK 경로를 설정한다.
 - [ ] Android licenses를 승인한다.
@@ -89,7 +96,10 @@ Android 수동/환경 조치 필요:
 Google Play 업로드 전 필수 항목:
 
 - [ ] Play Console 앱 등록용 package name이 `com.dijung.my_little_budget`로 확정되어 있는지 확인한다. 이 값은 업로드 후 변경할 수 없다.
+- [ ] 본인 Google 계정을 Internal testing 테스터로 등록할 준비가 되어 있다.
+- [ ] upload keystore를 로컬 보안 위치에 준비한다. 실제 keystore는 저장소에 포함하지 않는다.
 - [ ] `android/key.properties`를 로컬에 생성한다. 이 파일은 git에 포함하지 않는다.
+- [ ] `android/key.properties.example`을 참고하되, example 파일에는 실제 비밀값을 쓰지 않는다.
 - [ ] `android/key.properties`에 아래 키만 로컬 비밀값으로 채운다.
 
 ```properties
@@ -101,8 +111,11 @@ storeFile=<relative-or-absolute-keystore-path>
 
 - [ ] `storeFile`이 가리키는 keystore 파일을 안전한 위치에 보관하고 git에 포함하지 않는다.
 - [ ] `flutter build appbundle --release`가 release signing으로 성공하는지 확인한다.
-- [ ] AAB 산출물을 확인한다: `build\app\outputs\bundle\release\app-release.aab`
+- [ ] AAB 산출물을 확인한다: `build/app/outputs/bundle/release/app-release.aab`
+- [ ] debug-signed local APK 산출물은 Play Console에 업로드하지 않는다.
 - [ ] Play Console Internal testing 트랙에 AAB를 업로드한다.
+- [ ] 본인 Google 계정을 테스터로 등록한다.
+- [ ] Play 설치 링크가 열리고 본인 계정으로 설치 가능한지 확인한다.
 - [ ] Internal testing 설치 후 앱 최초 실행, 주요 route 진입, 앱 재시작 후 설정 유지, 백업 export/import를 실기기에서 확인한다.
 - [ ] Play Console pre-launch report 결과를 확인한다.
 
@@ -173,6 +186,28 @@ build\app\outputs\bundle\release\app-release.aab
 - [ ] 앱 재시작 후 데이터와 테마 설정이 유지된다.
 - [ ] Play Console Internal testing 트랙에서 설치 및 실행을 확인한다.
 
+Android local test APK:
+
+```powershell
+flutter build apk --debug
+cd android
+.\gradlew assembleLocalRelease
+```
+
+예상 산출물:
+
+```text
+build\app\outputs\flutter-apk\app-debug.apk
+android\app\build\outputs\apk\localRelease\app-localRelease.apk
+```
+
+확인 항목:
+
+- [ ] `app-debug.apk`는 개발/디버깅용으로만 사용한다.
+- [ ] `app-localRelease.apk`는 release-like 로컬 테스트용으로만 사용한다.
+- [ ] `localRelease`는 debug signing을 사용하므로 Play Console 업로드 금지.
+- [ ] Play 업로드용 산출물은 오직 release keystore로 서명된 `app-release.aab`를 사용한다.
+
 ## 3. 필수 검증
 
 ```powershell
@@ -193,6 +228,7 @@ flutter test
 - [ ] `flutter build windows --release`를 다시 실행한다.
 - [ ] `build\windows\x64\runner\Release` 산출물을 확인한다.
 - [ ] Android SDK를 설치/설정하고 `flutter build appbundle --release`를 다시 실행한다.
+- [ ] JDK/JAVA_HOME을 설정하고 `cd android && .\gradlew assembleLocalRelease`를 확인한다.
 - [ ] `build\app\outputs\bundle\release\app-release.aab` 산출물을 확인한다.
 
 ## 4. 주요 화면 스모크 테스트

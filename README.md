@@ -53,6 +53,54 @@ build\windows\x64\runner\Release
 
 이 폴더 안의 `my_little_budget.exe`와 함께 생성된 DLL/data 파일을 같은 폴더 구조로 배포합니다.
 
+Android 로컬 테스트 APK:
+
+```powershell
+flutter build apk --debug
+cd android
+.\gradlew assembleLocalRelease
+```
+
+`assembleLocalRelease`는 로컬 테스트 전용 debug-signed release-like APK입니다. Google Play 업로드용 AAB는 반드시 `android/key.properties` 기반 release signing으로 `flutter build appbundle --release`를 사용합니다.
+
+### Android Internal Testing
+
+Google Play Internal testing으로 본인 계정만 설치할 때도 Play 업로드용 AAB는 release/upload key로 서명해야 합니다. Debug APK 또는 `localRelease` APK는 Play Console에 업로드하지 않습니다.
+
+1. Android SDK와 JDK를 설치하고 `flutter doctor -v`에서 Android toolchain을 통과시킵니다.
+2. upload keystore를 안전한 로컬 위치에 준비합니다.
+3. [android/key.properties.example](android/key.properties.example)을 `android/key.properties`로 복사합니다.
+4. `android/key.properties`에 로컬 비밀값을 채웁니다.
+
+```properties
+storeFile=<absolute-or-relative-path-to-upload-keystore.jks>
+keyAlias=<upload-key-alias>
+storePassword=<upload-keystore-password>
+keyPassword=<upload-key-password>
+```
+
+5. AAB를 빌드합니다.
+
+```powershell
+flutter build appbundle --release
+```
+
+AAB 산출물:
+
+```text
+build/app/outputs/bundle/release/app-release.aab
+```
+
+6. Play Console의 Internal testing 트랙에 AAB를 업로드합니다.
+7. 본인 Google 계정을 테스터로 등록하고 설치 링크로 설치합니다.
+8. 실기기에서 앱 실행, 주요 화면 진입, 앱 재시작 후 설정 유지, 백업 export/import를 확인합니다.
+
+민감정보 주의:
+
+- `android/key.properties`는 git에 포함하지 않습니다.
+- `.jks`, `.keystore` 파일은 git에 포함하지 않습니다.
+- 실제 비밀번호나 key alias를 문서나 코드에 하드코딩하지 않습니다.
+
 검증:
 
 ```powershell

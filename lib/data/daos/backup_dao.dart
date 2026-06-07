@@ -14,23 +14,24 @@ import '../tables/transactions.dart';
 
 part 'backup_dao.g.dart';
 
-/// SPEC §4.8.5 / §5.2 — 전체 백업 export / import + 전체 초기화.
-@DriftAccessor(tables: [
-  Accounts,
-  Categories,
-  BudgetGroups,
-  BudgetGroupCategories,
-  MonthlyIncome,
-  Transactions,
-  Investments,
-  RecurringTransactions,
-  Tags,
-  TransactionTags,
-])
+/// 전체 백업 export/import 및 데이터 초기화.
+@DriftAccessor(
+  tables: [
+    Accounts,
+    Categories,
+    BudgetGroups,
+    BudgetGroupCategories,
+    MonthlyIncome,
+    Transactions,
+    Investments,
+    RecurringTransactions,
+    Tags,
+    TransactionTags,
+  ],
+)
 class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
   BackupDao(super.db);
 
-  /// 모든 테이블 덤프 → Backup 구조체.
   Future<Backup> exportBackup() async {
     return Backup(
       exportedAt: DateTime.now().toUtc().toIso8601String(),
@@ -47,23 +48,12 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
     );
   }
 
-  /// 백업 복원. 한 트랜잭션 안에서 모든 테이블 비우고 그대로 다시 삽입.
-  /// FK 순서대로 delete → insert. id 포함하여 그대로 (외래키 관계 보존).
   Future<void> importBackup(Backup b) async {
     await transaction(() async {
-      // FK 의존 역순으로 delete
-      await delete(transactionTags).go();
-      await delete(tags).go();
-      await delete(investments).go();
-      await delete(recurringTransactions).go();
-      await delete(transactions).go();
-      await delete(monthlyIncome).go();
-      await delete(budgetGroupCategories).go();
-      await delete(budgetGroups).go();
+      await _deleteUserData();
       await delete(categories).go();
       await delete(accounts).go();
 
-      // 의존 순서대로 insert
       await batch((batch) {
         if (b.accounts.isNotEmpty) batch.insertAll(accounts, b.accounts);
         if (b.categories.isNotEmpty) batch.insertAll(categories, b.categories);
@@ -93,21 +83,13 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
     });
   }
 
-  /// SPEC §4.8.5 — 전체 초기화.
-  ///   - 거래·태그·투자·예산 전부 wipe
-  ///   - 카테고리는 기본 시드로 복구
-  ///   - 기본 자산 5개는 유지(초기잔액 0 으로 reset), 사용자 추가 자산은 삭제
+  /// 전체 초기화.
+  ///
+  /// 사용자 데이터는 모두 삭제하고 기본 카테고리/기본 자산은 초기 상태로 복구한다.
   Future<void> resetAllData() async {
     await transaction(() async {
-      await delete(transactionTags).go();
-      await delete(tags).go();
-      await delete(investments).go();
-      await delete(transactions).go();
-      await delete(budgetGroupCategories).go();
-      await delete(budgetGroups).go();
-      await delete(monthlyIncome).go();
+      await _deleteUserData();
 
-      // 카테고리: 비우고 기본값으로 재생성
       await delete(categories).go();
       await batch((batch) {
         var i = 0;
@@ -136,7 +118,6 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
         }
       });
 
-      // 자산: 기본값 외 삭제, 기본 5개는 upsert (initial=0, 보관 해제).
       final defaultNames = defaultAccounts.map((a) => a.name).toList();
       await (delete(accounts)..where((a) => a.name.isNotIn(defaultNames))).go();
       for (var i = 0; i < defaultAccounts.length; i++) {
@@ -164,5 +145,16 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
         );
       }
     });
+  }
+
+  Future<void> _deleteUserData() async {
+    await delete(transactionTags).go();
+    await delete(budgetGroupCategories).go();
+    await delete(investments).go();
+    await delete(transactions).go();
+    await delete(recurringTransactions).go();
+    await delete(budgetGroups).go();
+    await delete(tags).go();
+    await delete(monthlyIncome).go();
   }
 }

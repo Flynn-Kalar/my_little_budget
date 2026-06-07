@@ -15,8 +15,17 @@ if (hasReleaseKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val playReleaseTaskNames = setOf("assembleRelease", "bundleRelease")
+gradle.taskGraph.whenReady {
+    if (!hasReleaseKeystore && allTasks.any { it.name in playReleaseTaskNames }) {
+        throw GradleException(
+            "Missing android/key.properties. Create it from the release checklist before building a Play release."
+        )
+    }
+}
+
 android {
-    namespace = "com.dijung.my_little_budget"
+    namespace = "com.my_little_budget"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +39,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.dijung.my_little_budget"
+        applicationId = "com.my_little_budget"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -50,12 +59,15 @@ android {
 
     buildTypes {
         release {
-            if (!hasReleaseKeystore) {
-                throw GradleException(
-                    "Missing android/key.properties. Create it from the release checklist before building a Play release."
-                )
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
             }
-            signingConfig = signingConfigs.getByName("release")
+        }
+
+        create("localRelease") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }

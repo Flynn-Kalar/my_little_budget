@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_little_budget/data/backup.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/features/accounts/validation.dart';
+import 'package:my_little_budget/features/recurring/validation.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
 
 void main() {
@@ -41,18 +42,15 @@ void main() {
       await addExpense(5000, '2026-05-10', memo: '점심');
       await addExpense(3000, '2026-05-15', memo: '카페');
 
-      // export
       final original = await db.backupDao.exportBackup();
       expect(original.transactions.length, 2);
       expect(original.accounts.length, 5);
       expect(original.categories.length, 14);
 
-      // JSON 라운드트립
       final json = original.toJsonString();
       final parsed = parseBackup(json);
       expect(parsed.isOk, true, reason: parsed.error);
 
-      // 새 DB 에 import
       final db2 = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db2.close);
       await db2.backupDao.importBackup(parsed.backup!);
@@ -105,8 +103,45 @@ void main() {
   });
 
   group('resetAllData (SPEC §4.8.5)', () {
-    test('거래 wipe, 카테고리 기본값 복구, 기본 자산 유지(초기잔액 0), 사용자 추가 자산 삭제', () async {
+    test('참조 테이블을 먼저 지우고 기본 자산/카테고리를 복구한다', () async {
       await addExpense(5000, '2026-05-10');
+
+      final accId = (await db.accountsDao.getActiveAccounts()).first.id;
+      final catId = (await db.categoriesDao.getActiveCategories(
+        'expense',
+      )).first.id;
+
+      await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'expense',
+          amount: 7000,
+          occurredOn: '2026-05-11',
+          occurredTime: '08:30',
+          accountId: accId,
+          categoryId: catId,
+        ),
+        tagNames: const ['고정'],
+      );
+      await db.budgetDao.createBudgetGroup(
+        name: '생활비',
+        month: '2026-05',
+        amount: 300000,
+        categoryIds: [catId],
+      );
+      await db.recurringDao.saveRecurring(
+        draft: RecurringDraft(
+          name: '월세',
+          type: 'expense',
+          amount: 500000,
+          frequency: 'monthly',
+          occurredTime: '09:00',
+          startDate: '2026-05-01',
+          dayOfMonth: 1,
+          accountId: accId,
+          categoryId: catId,
+          tagNames: const ['고정'],
+        ),
+      );
       await db.accountsDao.saveAccount(
         draft: const AccountDraft(
           name: '사용자추가자산',
@@ -122,19 +157,21 @@ void main() {
 
       await db.backupDao.resetAllData();
 
-      // 자산: 기본 5개만, 초기잔액 0
       final accts = await db.accountsDao.getActiveAccounts();
       expect(accts.length, 5);
       expect(accts.every((a) => a.initialBalance == 0), true);
       expect(accts.any((a) => a.name == '사용자추가자산'), false);
 
-      // 카테고리: 14개 기본
       final cats = await db.categoriesDao.getAllCategories();
       expect(cats.length, 14);
 
-      // 거래: 0개
-      final rows = await db.transactionsDao.listTransactionsByMonth('2026-05');
-      expect(rows.length, 0);
+      expect(
+        await db.transactionsDao.listTransactionsByMonth('2026-05'),
+        isEmpty,
+      );
+      expect(await db.budgetDao.listBudgetGroups('2026-05'), isEmpty);
+      expect(await db.recurringDao.listRecurringTransactions(), isEmpty);
+      expect(await db.tagsDao.getTags(), isEmpty);
     });
   });
 }

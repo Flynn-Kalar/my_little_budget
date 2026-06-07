@@ -54,21 +54,27 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-        },
-        beforeOpen: (details) async {
-          // SPEC §3 의 외래키 제약을 실제 SQLite 에서 강제하려면 PRAGMA 필요.
-          await customStatement('PRAGMA foreign_keys = ON');
-          // SPEC §5.3 — 첫 생성 시 기본 자산·카테고리 시드.
-          if (details.wasCreated) {
-            await seedDefaults(this);
-          }
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    beforeOpen: (details) async {
+      // SPEC §3 의 외래키 제약을 실제 SQLite 에서 강제하려면 PRAGMA 필요.
+      await customStatement('PRAGMA foreign_keys = ON');
+      // SPEC §5.3 — 첫 생성 시 기본 자산·카테고리 시드.
+      if (details.wasCreated) {
+        await seedDefaults(this);
+      }
+    },
+  );
 
   static QueryExecutor _openConnection() {
     // 모바일·데스크톱 모두: path_provider 의 application documents directory 에 budget.db
-    return driftDatabase(name: 'budget');
+    return driftDatabase(
+      name: 'budget',
+      web: DriftWebOptions(
+        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
+      ),
+    );
   }
 }

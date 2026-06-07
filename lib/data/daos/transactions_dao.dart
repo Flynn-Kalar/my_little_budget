@@ -248,8 +248,27 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       }
     }
 
-    final q = filter.q?.trim();
-    if (q != null && q.isNotEmpty) {
+    final rawQ = filter.q?.trim();
+    final tagNamesFromQuery = _tagNamesFromSearch(rawQ);
+    final q = _plainSearchText(rawQ);
+
+    if (tagNamesFromQuery.isNotEmpty) {
+      final found = await (select(
+        tags,
+      )..where((t) => t.name.isIn(tagNamesFromQuery))).get();
+      final foundIds = found.map((t) => t.id).toList();
+      if (foundIds.isEmpty) {
+        where.add('0 = 1');
+      } else {
+        where.add(
+          't.id IN (SELECT transaction_id FROM transaction_tags '
+          'WHERE tag_id IN (${_placeholders(foundIds.length)}))',
+        );
+        vars.addAll(foundIds.map(Variable<int>.new));
+      }
+    }
+
+    if (q.isNotEmpty) {
       final needle = '%$q%';
       where.add(
         '(t.memo LIKE ? OR c.name LIKE ? OR a.name LIKE ? '
@@ -698,3 +717,19 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 }
 
 String _placeholders(int n) => List.filled(n, '?').join(', ');
+
+List<String> _tagNamesFromSearch(String? raw) {
+  if (raw == null || raw.isEmpty) return const [];
+  final names = RegExp(r'#([^\s#]+)')
+      .allMatches(raw)
+      .map((m) => m.group(1)!.trim())
+      .where((name) => name.isNotEmpty)
+      .toSet()
+      .toList();
+  return names;
+}
+
+String _plainSearchText(String? raw) {
+  if (raw == null || raw.isEmpty) return '';
+  return raw.replaceAll(RegExp(r'#[^\s#]+'), ' ').trim();
+}
