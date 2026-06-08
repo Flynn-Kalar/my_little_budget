@@ -113,7 +113,9 @@ BackupParseResult parseBackup(String jsonString) {
         investments: _list(
           data['investments'],
         ).map(Investment.fromJson).toList(),
-        tags: _list(data['tags']).map(Tag.fromJson).toList(),
+        tags: _list(
+          data['tags'],
+        ).map((j) => Tag.fromJson(_tagJson(j))).toList(),
         transactionTags: _list(
           data['transactionTags'],
         ).map(TransactionTagLink.fromJson).toList(),
@@ -151,4 +153,10 @@ Map<String, Object?> _bools(Map<String, dynamic> m, List<String> keys) {
     if (v is int) m[k] = v != 0;
   }
   return m;
+}
+
+Map<String, Object?> _tagJson(Map<String, dynamic> m) {
+  m['usageCount'] ??= 0;
+  m['isPinned'] ??= false;
+  return _bools(m, const ['isPinned']);
 }

@@ -482,8 +482,10 @@ class _SummaryCard extends StatelessWidget {
           AmountLine(label: '배당금', value: formatKRW(summary.dividend)),
           AmountLine(
             label: '실현손익',
-            value: formatKRW(summary.net),
-            valueColor: summary.net < 0 ? AppTokens.expense : AppTokens.income,
+            value: formatKRW(summary.realizedPnl),
+            valueColor: summary.realizedPnl < 0
+                ? AppTokens.expense
+                : AppTokens.income,
           ),
         ],
       ),
@@ -539,9 +541,8 @@ class _HoldingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final returnRate = holding.totalCost == 0
-        ? 0.0
-        : (realized + dividends) / holding.totalCost;
+    const unrealizedPnl = 0;
+    const returnRate = 0.0;
 
     return InkWell(
       onTap: () => _HoldingActionsSheet.show(context, holding),
@@ -568,6 +569,7 @@ class _HoldingTile extends StatelessWidget {
               value: formatKRW(holding.avgCost.round()),
             ),
             AmountLine(label: '평가금액', value: formatKRW(holding.totalCost)),
+            AmountLine(label: '평가손익', value: formatKRW(unrealizedPnl)),
             AmountLine(
               label: '실현손익',
               value: formatKRW(realized),

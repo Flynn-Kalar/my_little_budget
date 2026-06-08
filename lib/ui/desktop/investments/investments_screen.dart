@@ -377,10 +377,12 @@ class _InvestmentSummaryCard extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: _SummaryTile(
-            label: '순현금흐름',
-            amount: summary.net,
+            label: '실현손익',
+            amount: summary.realizedPnl,
             icon: Icons.swap_vert,
-            color: summary.net < 0 ? AppTokens.expense : AppTokens.accent,
+            color: summary.realizedPnl < 0
+                ? AppTokens.expense
+                : AppTokens.accent,
           ),
         ),
       ],

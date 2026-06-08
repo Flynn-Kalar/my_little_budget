@@ -11,6 +11,10 @@ import '../../../features/transactions/validation.dart';
 import '../../desktop/transactions/providers.dart';
 import '../mobile_widgets.dart';
 
+final _quickInputTagsProvider = FutureProvider.autoDispose<List<Tag>>(
+  (ref) => ref.watch(tagsDaoProvider).getRecommendedTags(limit: 8),
+);
+
 class MobileTransactionsScreen extends ConsumerWidget {
   const MobileTransactionsScreen({super.key});
 
@@ -324,6 +328,32 @@ class _TransactionCard extends StatelessWidget {
                   formatKRW(row.amount),
                   style: TextStyle(color: color, fontWeight: FontWeight.w800),
                 ),
+                PopupMenuButton<String>(
+                  tooltip: '거래 메뉴',
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _TransactionSheet.show(context, row: row);
+                    } else if (value == 'copy') {
+                      _TransactionSheet.showDuplicate(context, row);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('수정'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'copy',
+                      child: ListTile(
+                        leading: Icon(Icons.copy_outlined),
+                        title: Text('복사'),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -361,9 +391,10 @@ class _TransactionCard extends StatelessWidget {
 }
 
 class _TransactionSheet extends ConsumerStatefulWidget {
-  const _TransactionSheet({this.row});
+  const _TransactionSheet({this.row, this.duplicate = false});
 
   final TransactionRow? row;
+  final bool duplicate;
 
   static Future<void> show(BuildContext context, {TransactionRow? row}) {
     return showModalBottomSheet<void>(
@@ -371,6 +402,15 @@ class _TransactionSheet extends ConsumerStatefulWidget {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _TransactionSheet(row: row),
+    );
+  }
+
+  static Future<void> showDuplicate(BuildContext context, TransactionRow row) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _TransactionSheet(row: row, duplicate: true),
     );
   }
 
@@ -398,7 +438,8 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
       widget.row?.tags.map((tag) => tag.name).toSet() ?? <String>{};
   bool _busy = false;
 
-  bool get _isEdit => widget.row != null;
+  bool get _isEdit => widget.row != null && !widget.duplicate;
+  bool get _isDuplicate => widget.row != null && widget.duplicate;
 
   @override
   void dispose() {
@@ -444,12 +485,13 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
       await ref
           .read(transactionsDaoProvider)
           .saveTransaction(
-            id: widget.row?.id,
+            id: _isEdit ? widget.row?.id : null,
             draft: result.value!,
             tagNames: _tagNames.toList(),
           );
       if (!mounted) return;
       refreshTransactions(ref);
+      ref.invalidate(_quickInputTagsProvider);
       Navigator.pop(context);
       _showSnack(_isEdit ? '거래를 수정했습니다.' : '거래를 추가했습니다.');
     } catch (e) {
@@ -506,6 +548,9 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
     final tags = ref.watch(allTagsProvider).asData?.value ?? const <Tag>[];
+    final quickTags =
+        ref.watch(_quickInputTagsProvider).asData?.value ??
+        tags.take(8).toList();
     final visibleCategories = categories
         .where(
           (category) =>
@@ -526,7 +571,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              _isEdit ? '거래 수정' : '거래 추가',
+              _isDuplicate ? '거래 복사' : (_isEdit ? '거래 수정' : '거래 추가'),
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -616,6 +661,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
             const SizedBox(height: 12),
             _TagNameSelector(
               tags: tags,
+              quickTags: quickTags,
               selectedNames: _tagNames,
               enabled: !_busy,
               onChanged: () => setState(() {}),
@@ -857,8 +903,110 @@ class _AdvancedFilterSheetState extends ConsumerState<_AdvancedFilterSheet> {
   }
 }
 
-class _TagNameSelector extends StatelessWidget {
+class _TagNameSelector extends StatefulWidget {
   const _TagNameSelector({
+    required this.tags,
+    required this.quickTags,
+    required this.selectedNames,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final List<Tag> tags;
+  final List<Tag> quickTags;
+  final Set<String> selectedNames;
+  final bool enabled;
+  final VoidCallback onChanged;
+
+  @override
+  State<_TagNameSelector> createState() => _TagNameSelectorState();
+}
+
+class _TagNameSelectorState extends State<_TagNameSelector> {
+  bool _showAll = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final featured = <Tag>[];
+    final featuredNames = <String>{};
+    for (final tag in widget.quickTags) {
+      if (featuredNames.add(tag.name)) featured.add(tag);
+    }
+    for (final tag in widget.tags) {
+      if (widget.selectedNames.contains(tag.name) &&
+          featuredNames.add(tag.name)) {
+        featured.add(tag);
+      }
+    }
+    final remaining = [
+      for (final tag in widget.tags)
+        if (!featuredNames.contains(tag.name)) tag,
+    ];
+    final visibleRemaining = _showAll ? remaining : remaining.take(12).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('태그', style: TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        if (widget.tags.isEmpty)
+          Text(
+            '등록된 태그가 없습니다.',
+            style: TextStyle(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.75),
+            ),
+          )
+        else ...[
+          _TagChipGroup(
+            tags: featured,
+            selectedNames: widget.selectedNames,
+            enabled: widget.enabled,
+            onChanged: widget.onChanged,
+          ),
+          if (remaining.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Divider(color: Theme.of(context).dividerColor),
+            const SizedBox(height: 8),
+            const Text('전체 태그', style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            _TagChipGroup(
+              tags: visibleRemaining,
+              selectedNames: widget.selectedNames,
+              enabled: widget.enabled,
+              onChanged: widget.onChanged,
+            ),
+            if (remaining.length > visibleRemaining.length) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _showAll = true),
+                  icon: const Icon(Icons.expand_more, size: 18),
+                  label: Text('전체보기 (${remaining.length})'),
+                ),
+              ),
+            ] else if (_showAll && remaining.length > 12) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _showAll = false),
+                  icon: const Icon(Icons.expand_less, size: 18),
+                  label: const Text('접기'),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _TagChipGroup extends StatelessWidget {
+  const _TagChipGroup({
     required this.tags,
     required this.selectedNames,
     required this.enabled,
@@ -872,41 +1020,27 @@ class _TagNameSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        const Text('태그', style: TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        if (tags.isEmpty)
-          Text(
-            '등록된 태그가 없습니다.',
-            style: TextStyle(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.75),
-            ),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final tag in tags)
-                FilterChip(
-                  label: Text('#${tag.name}'),
-                  selected: selectedNames.contains(tag.name),
-                  onSelected: enabled
-                      ? (selected) {
-                          if (selected) {
-                            selectedNames.add(tag.name);
-                          } else {
-                            selectedNames.remove(tag.name);
-                          }
-                          onChanged();
-                        }
-                      : null,
-                ),
-            ],
+        for (final tag in tags)
+          FilterChip(
+            label: Text('#${tag.name}'),
+            selected: selectedNames.contains(tag.name),
+            avatar: tag.isPinned
+                ? const Icon(Icons.star_rounded, size: 16)
+                : null,
+            onSelected: enabled
+                ? (selected) {
+                    if (selected) {
+                      selectedNames.add(tag.name);
+                    } else {
+                      selectedNames.remove(tag.name);
+                    }
+                    onChanged();
+                  }
+                : null,
           ),
       ],
     );

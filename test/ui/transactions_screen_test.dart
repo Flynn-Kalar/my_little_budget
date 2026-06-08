@@ -50,14 +50,15 @@ void main() {
     expect(find.text('#테스트태그'), findsWidgets);
 
     // 행 클릭 → 편집 다이얼로그 (카테고리명의 InkWell 조상을 탭)
-    final rowInk =
-        find.ancestor(of: find.text(cat.name), matching: find.byType(InkWell)).first;
+    final rowInk = find
+        .ancestor(of: find.text(cat.name), matching: find.byType(InkWell))
+        .first;
     await tester.ensureVisible(rowInk);
     await tester.pumpAndSettle();
     await tester.tap(rowInk);
     await tester.pumpAndSettle();
     expect(find.text('거래 편집'), findsOneWidget);
-    expect(find.text('복제'), findsOneWidget);
+    expect(find.text('복사'), findsOneWidget);
     expect(find.text('저장'), findsOneWidget);
   });
 }

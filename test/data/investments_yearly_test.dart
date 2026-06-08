@@ -11,23 +11,38 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> setInvestmentAccount() async {
-    final inv = (await db.accountsDao.getActiveAccounts())
-        .firstWhere((a) => a.name == '투자');
+    final inv = (await db.accountsDao.getActiveAccounts()).firstWhere(
+      (a) => a.name == '투자',
+    );
     await db.accountsDao.saveAccount(
       id: inv.id,
       draft: AccountDraft(
-        name: inv.name, kind: inv.kind, initialBalance: 0, color: inv.color,
-        excludeFromTotal: false, isInvestment: true,
+        name: inv.name,
+        kind: inv.kind,
+        initialBalance: 0,
+        color: inv.color,
+        excludeFromTotal: false,
+        isInvestment: true,
       ),
       currentBalance: 0,
     );
   }
 
-  Future<void> save(String side, String on, double qty, int total, {String ticker = 'AAPL'}) {
+  Future<void> save(
+    String side,
+    String on,
+    double qty,
+    int total, {
+    String ticker = 'AAPL',
+  }) {
     return db.investmentsDao.saveInvestment(
       draft: validateInvestment(
-        side: side, occurredOn: on, occurredTime: '00:00',
-        ticker: ticker, quantity: qty, totalAmount: total,
+        side: side,
+        occurredOn: on,
+        occurredTime: '00:00',
+        ticker: ticker,
+        quantity: qty,
+        totalAmount: total,
       ).value!,
     );
   }
@@ -56,7 +71,7 @@ void main() {
     expect(s.buy, 80000);
     expect(s.sell, 90000);
     expect(s.dividend, 5000);
-    expect(s.net, 15000); // 90000+5000-80000
+    expect(s.net, 35000); // sell pnl 30000 + dividend 5000
   });
 
   test('availableInvestmentYears — 거래 있는 연도만 정렬', () async {

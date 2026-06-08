@@ -47,6 +47,9 @@ void main() {
     // 매수만 있으면 자산 잔액 영향 0
     final bal = await db.accountsDao.getAccountBalance(invId);
     expect(bal!.balance, 0);
+    final summary = await db.investmentsDao.investmentMonthlySummary('2025-01');
+    expect(summary.buy, 100000);
+    expect(summary.realizedPnl, 0);
   });
 
   test('매도 실현손익이 투자 자산 잔액에 반영', () async {
@@ -54,14 +57,22 @@ void main() {
     // 매수 10주 100000 (평단 10000), 6주 매도 90000 → 원가 60000, 손익 +30000
     await db.investmentsDao.saveInvestment(
       draft: validateInvestment(
-        side: 'buy', occurredOn: '2025-01-01', occurredTime: '00:00',
-        ticker: 'AAPL', quantity: 10, totalAmount: 100000,
+        side: 'buy',
+        occurredOn: '2025-01-01',
+        occurredTime: '00:00',
+        ticker: 'AAPL',
+        quantity: 10,
+        totalAmount: 100000,
       ).value!,
     );
     await db.investmentsDao.saveInvestment(
       draft: validateInvestment(
-        side: 'sell', occurredOn: '2025-02-01', occurredTime: '00:00',
-        ticker: 'AAPL', quantity: 6, totalAmount: 90000,
+        side: 'sell',
+        occurredOn: '2025-02-01',
+        occurredTime: '00:00',
+        ticker: 'AAPL',
+        quantity: 6,
+        totalAmount: 90000,
       ).value!,
     );
 
@@ -70,26 +81,38 @@ void main() {
 
     final summary = await db.investmentsDao.investmentMonthlySummary('2025-02');
     expect(summary.sell, 90000);
+    expect(summary.realizedPnl, 30000);
   });
 
   test('보유종목/실현손익 조회', () async {
     await makeInvestmentAccount();
     await db.investmentsDao.saveInvestment(
       draft: validateInvestment(
-        side: 'buy', occurredOn: '2025-01-01', occurredTime: '00:00',
-        ticker: 'TSLA', quantity: 10, totalAmount: 100000,
+        side: 'buy',
+        occurredOn: '2025-01-01',
+        occurredTime: '00:00',
+        ticker: 'TSLA',
+        quantity: 10,
+        totalAmount: 100000,
       ).value!,
     );
     await db.investmentsDao.saveInvestment(
       draft: validateInvestment(
-        side: 'sell', occurredOn: '2025-01-10', occurredTime: '00:00',
-        ticker: 'TSLA', quantity: 4, totalAmount: 60000,
+        side: 'sell',
+        occurredOn: '2025-01-10',
+        occurredTime: '00:00',
+        ticker: 'TSLA',
+        quantity: 4,
+        totalAmount: 60000,
       ).value!,
     );
 
     expect(await db.investmentsDao.listHeldTickers(), ['TSLA']); // 6주 남음
 
-    final pnl = await db.investmentsDao.getRealizedPnL('2025-01-01', '2025-01-31');
+    final pnl = await db.investmentsDao.getRealizedPnL(
+      '2025-01-01',
+      '2025-01-31',
+    );
     expect(pnl.length, 1);
     expect(pnl.first.pnl, 20000); // 매도 60000 - 원가 40000
   });

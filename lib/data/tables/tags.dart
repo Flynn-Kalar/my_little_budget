@@ -10,8 +10,11 @@ class Tags extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 20).unique()();
   TextColumn get color => text().withDefault(const Constant('#64748b'))();
-  TextColumn get createdAt => text()
-      .withDefault(const CustomExpression("datetime('now')"))();
+  IntColumn get usageCount => integer().withDefault(const Constant(0))();
+  TextColumn get lastUsedAt => text().nullable()();
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
+  TextColumn get createdAt =>
+      text().withDefault(const CustomExpression("datetime('now')"))();
 }
 
 /// SPEC §3.8
@@ -19,8 +22,8 @@ class Tags extends Table {
 @DataClassName('TransactionTagLink')
 @TableIndex(name: 'idx_txtags_tag', columns: {#tagId})
 class TransactionTags extends Table {
-  IntColumn get transactionId => integer()
-      .references(Transactions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get transactionId =>
+      integer().references(Transactions, #id, onDelete: KeyAction.cascade)();
   IntColumn get tagId =>
       integer().references(Tags, #id, onDelete: KeyAction.cascade)();
 

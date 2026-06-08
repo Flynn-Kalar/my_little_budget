@@ -4757,6 +4757,44 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
     requiredDuringInsert: false,
     defaultValue: const Constant('#64748b'),
   );
+  static const VerificationMeta _usageCountMeta = const VerificationMeta(
+    'usageCount',
+  );
+  @override
+  late final GeneratedColumn<int> usageCount = GeneratedColumn<int>(
+    'usage_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastUsedAtMeta = const VerificationMeta(
+    'lastUsedAt',
+  );
+  @override
+  late final GeneratedColumn<String> lastUsedAt = GeneratedColumn<String>(
+    'last_used_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
+    'isPinned',
+  );
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+    'is_pinned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_pinned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4770,7 +4808,15 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
     defaultValue: const CustomExpression("datetime('now')"),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, color, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    color,
+    usageCount,
+    lastUsedAt,
+    isPinned,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -4800,6 +4846,27 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
         color.isAcceptableOrUnknown(data['color']!, _colorMeta),
       );
     }
+    if (data.containsKey('usage_count')) {
+      context.handle(
+        _usageCountMeta,
+        usageCount.isAcceptableOrUnknown(data['usage_count']!, _usageCountMeta),
+      );
+    }
+    if (data.containsKey('last_used_at')) {
+      context.handle(
+        _lastUsedAtMeta,
+        lastUsedAt.isAcceptableOrUnknown(
+          data['last_used_at']!,
+          _lastUsedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_pinned')) {
+      context.handle(
+        _isPinnedMeta,
+        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -4827,6 +4894,18 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
         DriftSqlType.string,
         data['${effectivePrefix}color'],
       )!,
+      usageCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}usage_count'],
+      )!,
+      lastUsedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_used_at'],
+      ),
+      isPinned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pinned'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}created_at'],
@@ -4844,11 +4923,17 @@ class Tag extends DataClass implements Insertable<Tag> {
   final int id;
   final String name;
   final String color;
+  final int usageCount;
+  final String? lastUsedAt;
+  final bool isPinned;
   final String createdAt;
   const Tag({
     required this.id,
     required this.name,
     required this.color,
+    required this.usageCount,
+    this.lastUsedAt,
+    required this.isPinned,
     required this.createdAt,
   });
   @override
@@ -4857,6 +4942,11 @@ class Tag extends DataClass implements Insertable<Tag> {
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
     map['color'] = Variable<String>(color);
+    map['usage_count'] = Variable<int>(usageCount);
+    if (!nullToAbsent || lastUsedAt != null) {
+      map['last_used_at'] = Variable<String>(lastUsedAt);
+    }
+    map['is_pinned'] = Variable<bool>(isPinned);
     map['created_at'] = Variable<String>(createdAt);
     return map;
   }
@@ -4866,6 +4956,11 @@ class Tag extends DataClass implements Insertable<Tag> {
       id: Value(id),
       name: Value(name),
       color: Value(color),
+      usageCount: Value(usageCount),
+      lastUsedAt: lastUsedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastUsedAt),
+      isPinned: Value(isPinned),
       createdAt: Value(createdAt),
     );
   }
@@ -4879,6 +4974,9 @@ class Tag extends DataClass implements Insertable<Tag> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       color: serializer.fromJson<String>(json['color']),
+      usageCount: serializer.fromJson<int>(json['usageCount']),
+      lastUsedAt: serializer.fromJson<String?>(json['lastUsedAt']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
     );
   }
@@ -4889,22 +4987,42 @@ class Tag extends DataClass implements Insertable<Tag> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'color': serializer.toJson<String>(color),
+      'usageCount': serializer.toJson<int>(usageCount),
+      'lastUsedAt': serializer.toJson<String?>(lastUsedAt),
+      'isPinned': serializer.toJson<bool>(isPinned),
       'createdAt': serializer.toJson<String>(createdAt),
     };
   }
 
-  Tag copyWith({int? id, String? name, String? color, String? createdAt}) =>
-      Tag(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        color: color ?? this.color,
-        createdAt: createdAt ?? this.createdAt,
-      );
+  Tag copyWith({
+    int? id,
+    String? name,
+    String? color,
+    int? usageCount,
+    Value<String?> lastUsedAt = const Value.absent(),
+    bool? isPinned,
+    String? createdAt,
+  }) => Tag(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    color: color ?? this.color,
+    usageCount: usageCount ?? this.usageCount,
+    lastUsedAt: lastUsedAt.present ? lastUsedAt.value : this.lastUsedAt,
+    isPinned: isPinned ?? this.isPinned,
+    createdAt: createdAt ?? this.createdAt,
+  );
   Tag copyWithCompanion(TagsCompanion data) {
     return Tag(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       color: data.color.present ? data.color.value : this.color,
+      usageCount: data.usageCount.present
+          ? data.usageCount.value
+          : this.usageCount,
+      lastUsedAt: data.lastUsedAt.present
+          ? data.lastUsedAt.value
+          : this.lastUsedAt,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -4915,13 +5033,17 @@ class Tag extends DataClass implements Insertable<Tag> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('usageCount: $usageCount, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('isPinned: $isPinned, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, color, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, color, usageCount, lastUsedAt, isPinned, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4929,6 +5051,9 @@ class Tag extends DataClass implements Insertable<Tag> {
           other.id == this.id &&
           other.name == this.name &&
           other.color == this.color &&
+          other.usageCount == this.usageCount &&
+          other.lastUsedAt == this.lastUsedAt &&
+          other.isPinned == this.isPinned &&
           other.createdAt == this.createdAt);
 }
 
@@ -4936,29 +5061,44 @@ class TagsCompanion extends UpdateCompanion<Tag> {
   final Value<int> id;
   final Value<String> name;
   final Value<String> color;
+  final Value<int> usageCount;
+  final Value<String?> lastUsedAt;
+  final Value<bool> isPinned;
   final Value<String> createdAt;
   const TagsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.color = const Value.absent(),
+    this.usageCount = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.isPinned = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   TagsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
     this.color = const Value.absent(),
+    this.usageCount = const Value.absent(),
+    this.lastUsedAt = const Value.absent(),
+    this.isPinned = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Tag> custom({
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? color,
+    Expression<int>? usageCount,
+    Expression<String>? lastUsedAt,
+    Expression<bool>? isPinned,
     Expression<String>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (color != null) 'color': color,
+      if (usageCount != null) 'usage_count': usageCount,
+      if (lastUsedAt != null) 'last_used_at': lastUsedAt,
+      if (isPinned != null) 'is_pinned': isPinned,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -4967,12 +5107,18 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     Value<int>? id,
     Value<String>? name,
     Value<String>? color,
+    Value<int>? usageCount,
+    Value<String?>? lastUsedAt,
+    Value<bool>? isPinned,
     Value<String>? createdAt,
   }) {
     return TagsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       color: color ?? this.color,
+      usageCount: usageCount ?? this.usageCount,
+      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+      isPinned: isPinned ?? this.isPinned,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -4989,6 +5135,15 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     if (color.present) {
       map['color'] = Variable<String>(color.value);
     }
+    if (usageCount.present) {
+      map['usage_count'] = Variable<int>(usageCount.value);
+    }
+    if (lastUsedAt.present) {
+      map['last_used_at'] = Variable<String>(lastUsedAt.value);
+    }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
     }
@@ -5001,6 +5156,9 @@ class TagsCompanion extends UpdateCompanion<Tag> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('usageCount: $usageCount, ')
+          ..write('lastUsedAt: $lastUsedAt, ')
+          ..write('isPinned: $isPinned, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -10370,6 +10528,9 @@ typedef $$TagsTableCreateCompanionBuilder =
       Value<int> id,
       required String name,
       Value<String> color,
+      Value<int> usageCount,
+      Value<String?> lastUsedAt,
+      Value<bool> isPinned,
       Value<String> createdAt,
     });
 typedef $$TagsTableUpdateCompanionBuilder =
@@ -10377,6 +10538,9 @@ typedef $$TagsTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> name,
       Value<String> color,
+      Value<int> usageCount,
+      Value<String?> lastUsedAt,
+      Value<bool> isPinned,
       Value<String> createdAt,
     });
 
@@ -10425,6 +10589,21 @@ class $$TagsTableFilterComposer extends Composer<_$AppDatabase, $TagsTable> {
 
   ColumnFilters<String> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get usageCount => $composableBuilder(
+    column: $table.usageCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10482,6 +10661,21 @@ class $$TagsTableOrderingComposer extends Composer<_$AppDatabase, $TagsTable> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get usageCount => $composableBuilder(
+    column: $table.usageCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -10505,6 +10699,19 @@ class $$TagsTableAnnotationComposer
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<int> get usageCount => $composableBuilder(
+    column: $table.usageCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastUsedAt => $composableBuilder(
+    column: $table.lastUsedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
 
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -10566,11 +10773,17 @@ class $$TagsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> color = const Value.absent(),
+                Value<int> usageCount = const Value.absent(),
+                Value<String?> lastUsedAt = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
               }) => TagsCompanion(
                 id: id,
                 name: name,
                 color: color,
+                usageCount: usageCount,
+                lastUsedAt: lastUsedAt,
+                isPinned: isPinned,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -10578,11 +10791,17 @@ class $$TagsTableTableManager
                 Value<int> id = const Value.absent(),
                 required String name,
                 Value<String> color = const Value.absent(),
+                Value<int> usageCount = const Value.absent(),
+                Value<String?> lastUsedAt = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
               }) => TagsCompanion.insert(
                 id: id,
                 name: name,
                 color: color,
+                usageCount: usageCount,
+                lastUsedAt: lastUsedAt,
+                isPinned: isPinned,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

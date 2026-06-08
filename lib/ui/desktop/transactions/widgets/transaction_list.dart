@@ -203,6 +203,20 @@ class _Row extends StatelessWidget {
                     color: amountColor,
                   ),
                 ),
+                PopupMenuButton<String>(
+                  tooltip: '거래 메뉴',
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      TransactionEditDialog.show(context, row);
+                    } else if (value == 'copy') {
+                      TransactionEditDialog.showDuplicate(context, row);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'edit', child: Text('수정')),
+                    PopupMenuItem(value: 'copy', child: Text('복사')),
+                  ],
+                ),
               ],
             ),
           ),

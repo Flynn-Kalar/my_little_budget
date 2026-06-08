@@ -11,15 +11,27 @@ import '../../../../features/transactions/validation.dart';
 import '../providers.dart';
 import 'form_fields.dart';
 
-/// SPEC §4.1 — 거래 행 클릭 시 편집/복제/삭제 다이얼로그.
 class TransactionEditDialog extends ConsumerStatefulWidget {
-  const TransactionEditDialog({super.key, required this.row});
+  const TransactionEditDialog({
+    super.key,
+    required this.row,
+    this.duplicate = false,
+  });
+
   final TransactionRow row;
+  final bool duplicate;
 
   static Future<void> show(BuildContext context, TransactionRow row) {
     return showDialog<void>(
       context: context,
       builder: (_) => TransactionEditDialog(row: row),
+    );
+  }
+
+  static Future<void> showDuplicate(BuildContext context, TransactionRow row) {
+    return showDialog<void>(
+      context: context,
+      builder: (_) => TransactionEditDialog(row: row, duplicate: true),
     );
   }
 
@@ -35,53 +47,73 @@ class _State extends ConsumerState<TransactionEditDialog> {
   late int? _fromAccountId = widget.row.fromAccountId;
   late int? _toAccountId = widget.row.toAccountId;
   late List<String> _tags = widget.row.tags.map((t) => t.name).toList();
-  late final _amountCtrl =
-      TextEditingController(text: widget.row.amount.toString());
+  late final _amountCtrl = TextEditingController(
+    text: widget.row.amount.toString(),
+  );
+  late final _timeCtrl = TextEditingController(text: widget.row.occurredTime);
   late final _memoCtrl = TextEditingController(text: widget.row.memo ?? '');
   bool _busy = false;
+
+  bool get _isEdit => !widget.duplicate;
 
   @override
   void dispose() {
     _amountCtrl.dispose();
+    _timeCtrl.dispose();
     _memoCtrl.dispose();
     super.dispose();
   }
 
   ValidationResult<TransactionDraft> _validate() => validateTransaction(
-        type: _type,
-        amount: parseKRW(_amountCtrl.text),
-        occurredOn: toDateKey(_date),
-        occurredTime: widget.row.occurredTime,
-        memo: _memoCtrl.text,
-        accountId: _accountId,
-        categoryId: _categoryId,
-        fromAccountId: _fromAccountId,
-        toAccountId: _toAccountId,
-      );
+    type: _type,
+    amount: parseKRW(_amountCtrl.text),
+    occurredOn: toDateKey(_date),
+    occurredTime: parseTimeInput(_timeCtrl.text) ?? _timeCtrl.text.trim(),
+    memo: _memoCtrl.text,
+    accountId: _accountId,
+    categoryId: _categoryId,
+    fromAccountId: _fromAccountId,
+    toAccountId: _toAccountId,
+  );
 
-  /// asNew=true → 복제(새 거래), false → 수정.
-  Future<void> _persist({required bool asNew}) async {
+  Future<void> _persist() async {
     final result = _validate();
     if (result.isFail) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(result.errors.values.first)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result.errors.values.first)));
       return;
     }
     setState(() => _busy = true);
-    await ref.read(transactionsDaoProvider).saveTransaction(
-          id: asNew ? null : widget.row.id,
-          draft: result.value!,
-          tagNames: _type == 'transfer' ? const [] : _tags,
-        );
-    refreshTransactions(ref);
-    if (mounted) Navigator.of(context).pop();
+    try {
+      await ref
+          .read(transactionsDaoProvider)
+          .saveTransaction(
+            id: _isEdit ? widget.row.id : null,
+            draft: result.value!,
+            tagNames: _tags,
+          );
+      refreshTransactions(ref);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _delete() async {
     setState(() => _busy = true);
-    await ref.read(transactionsDaoProvider).deleteTransaction(widget.row.id);
-    refreshTransactions(ref);
-    if (mounted) Navigator.of(context).pop();
+    try {
+      await ref.read(transactionsDaoProvider).deleteTransaction(widget.row.id);
+      refreshTransactions(ref);
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _openDuplicate() {
+    Navigator.of(context).pop();
+    TransactionEditDialog.showDuplicate(context, widget.row);
   }
 
   Future<void> _pickDate() async {
@@ -96,18 +128,20 @@ class _State extends ConsumerState<TransactionEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = ref.watch(activeAccountsProvider).asData?.value ?? const [];
+    final accounts =
+        ref.watch(activeAccountsProvider).asData?.value ?? const [];
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
-    final tagSuggestions = (ref.watch(allTagsProvider).asData?.value ?? const [])
-        .map((t) => t.name)
-        .toList();
+    final tagSuggestions =
+        (ref.watch(allTagsProvider).asData?.value ?? const [])
+            .map((t) => t.name)
+            .toList();
     final visibleCats = categories
         .where((c) => c.type == (_type == 'income' ? 'income' : 'expense'))
         .toList();
 
     return AlertDialog(
-      title: const Text('거래 편집'),
+      title: Text(_isEdit ? '거래 편집' : '거래 복사'),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -133,6 +167,19 @@ class _State extends ConsumerState<TransactionEditDialog> {
                 onPressed: _pickDate,
                 icon: const Icon(Icons.calendar_today, size: 16),
                 label: Text(toDateKey(_date)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _timeCtrl,
+                decoration: const InputDecoration(
+                  labelText: '시간',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                onEditingComplete: () {
+                  final parsed = parseTimeInput(_timeCtrl.text);
+                  if (parsed != null) _timeCtrl.text = parsed;
+                },
               ),
               const SizedBox(height: 12),
               if (_type == 'transfer') ...[
@@ -180,35 +227,35 @@ class _State extends ConsumerState<TransactionEditDialog> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              if (_type != 'transfer') ...[
-                const SizedBox(height: 12),
-                TagInput(
-                  value: _tags,
-                  suggestions: tagSuggestions,
-                  onChanged: (v) => setState(() => _tags = v),
-                ),
-              ],
+              const SizedBox(height: 12),
+              TagInput(
+                value: _tags,
+                suggestions: tagSuggestions,
+                onChanged: (v) => setState(() => _tags = v),
+              ),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _busy ? null : _delete,
-          style: TextButton.styleFrom(foregroundColor: AppTokens.expense),
-          child: const Text('삭제'),
-        ),
-        TextButton(
-          onPressed: _busy ? null : () => _persist(asNew: true),
-          child: const Text('복제'),
-        ),
+        if (_isEdit)
+          TextButton(
+            onPressed: _busy ? null : _delete,
+            style: TextButton.styleFrom(foregroundColor: AppTokens.expense),
+            child: const Text('삭제'),
+          ),
+        if (_isEdit)
+          TextButton(
+            onPressed: _busy ? null : _openDuplicate,
+            child: const Text('복사'),
+          ),
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
           child: const Text('취소'),
         ),
         FilledButton(
-          onPressed: _busy ? null : () => _persist(asNew: false),
-          child: const Text('저장'),
+          onPressed: _busy ? null : _persist,
+          child: Text(_isEdit ? '저장' : '추가'),
         ),
       ],
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),

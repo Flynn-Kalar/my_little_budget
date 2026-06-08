@@ -11,22 +11,45 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   TagsDao(super.db);
 
   Future<List<Tag>> getTags() {
-    return (select(tags)..orderBy([(t) => OrderingTerm(expression: t.name)]))
-        .get();
+    return (select(
+      tags,
+    )..orderBy([(t) => OrderingTerm(expression: t.name)])).get();
+  }
+
+  Future<List<Tag>> getRecommendedTags({int? limit}) {
+    final query = select(tags)
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.isPinned),
+        (t) => OrderingTerm.desc(t.usageCount),
+        (t) => OrderingTerm.desc(t.lastUsedAt),
+        (t) => OrderingTerm(expression: t.name),
+      ]);
+    if (limit != null) query.limit(limit);
+    return query.get();
   }
 
   Stream<List<Tag>> watchTags() {
-    return (select(tags)..orderBy([(t) => OrderingTerm(expression: t.name)]))
-        .watch();
+    return (select(
+      tags,
+    )..orderBy([(t) => OrderingTerm(expression: t.name)])).watch();
   }
 
   Future<int> createTag(String name, String color) {
-    return into(tags).insert(TagsCompanion.insert(name: name, color: Value(color)));
+    return into(
+      tags,
+    ).insert(TagsCompanion.insert(name: name, color: Value(color)));
   }
 
   Future<void> updateTag(int id, String name, String color) async {
-    await (update(tags)..where((t) => t.id.equals(id)))
-        .write(TagsCompanion(name: Value(name), color: Value(color)));
+    await (update(tags)..where((t) => t.id.equals(id))).write(
+      TagsCompanion(name: Value(name), color: Value(color)),
+    );
+  }
+
+  Future<void> setTagPinned(int id, bool pinned) async {
+    await (update(tags)..where((t) => t.id.equals(id))).write(
+      TagsCompanion(isPinned: Value(pinned)),
+    );
   }
 
   Future<void> deleteTag(int id) async {
@@ -36,9 +59,9 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   /// 거래의 태그를 id 목록으로 재설정. SPEC §4.1 (updateTransactionTags).
   Future<void> setTransactionTags(int transactionId, List<int> tagIds) async {
     await transaction(() async {
-      await (delete(transactionTags)
-            ..where((tt) => tt.transactionId.equals(transactionId)))
-          .go();
+      await (delete(
+        transactionTags,
+      )..where((tt) => tt.transactionId.equals(transactionId))).go();
       for (final tagId in tagIds) {
         await into(transactionTags).insert(
           TransactionTagsCompanion.insert(

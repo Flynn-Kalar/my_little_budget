@@ -13,11 +13,17 @@ part 'investments_dao.g.dart';
 /// SPEC §3.6 / §3.10 / §4.7 — 투자 조회·평단 손익·CRUD.
 
 class InvestmentSummary {
-  const InvestmentSummary(this.buy, this.sell, this.dividend);
+  const InvestmentSummary(
+    this.buy,
+    this.sell,
+    this.dividend, {
+    this.realizedPnl = 0,
+  });
   final int buy;
   final int sell;
   final int dividend;
-  int get net => sell + dividend - buy;
+  final int realizedPnl;
+  int get net => realizedPnl;
 }
 
 @DriftAccessor(tables: [Investments, Accounts])
@@ -30,8 +36,12 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
     return (select(investments)
           ..where((i) => i.occurredOn.isBetweenValues(b.start, b.end))
           ..orderBy([
-            (i) => OrderingTerm(expression: i.occurredOn, mode: OrderingMode.desc),
-            (i) => OrderingTerm(expression: i.occurredTime, mode: OrderingMode.desc),
+            (i) =>
+                OrderingTerm(expression: i.occurredOn, mode: OrderingMode.desc),
+            (i) => OrderingTerm(
+              expression: i.occurredTime,
+              mode: OrderingMode.desc,
+            ),
             (i) => OrderingTerm(expression: i.id, mode: OrderingMode.desc),
           ]))
         .get();
@@ -45,10 +55,16 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
   /// 연 단위 투자 목록. = Tauri listInvestmentsByYear.
   Future<List<Investment>> listInvestmentsByYear(int year) {
     return (select(investments)
-          ..where((i) => i.occurredOn.isBetweenValues('$year-01-01', '$year-12-31'))
+          ..where(
+            (i) => i.occurredOn.isBetweenValues('$year-01-01', '$year-12-31'),
+          )
           ..orderBy([
-            (i) => OrderingTerm(expression: i.occurredOn, mode: OrderingMode.desc),
-            (i) => OrderingTerm(expression: i.occurredTime, mode: OrderingMode.desc),
+            (i) =>
+                OrderingTerm(expression: i.occurredOn, mode: OrderingMode.desc),
+            (i) => OrderingTerm(
+              expression: i.occurredTime,
+              mode: OrderingMode.desc,
+            ),
             (i) => OrderingTerm(expression: i.id, mode: OrderingMode.desc),
           ]))
         .get();
@@ -93,7 +109,9 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
           dividend = total;
       }
     }
-    return InvestmentSummary(buy, sell, dividend);
+    final realizedRows = await getRealizedPnL(start, end);
+    final realizedPnl = realizedRows.fold<int>(0, (sum, row) => sum + row.pnl);
+    return InvestmentSummary(buy, sell, dividend, realizedPnl: realizedPnl);
   }
 
   /// 단일 투자 자산 (isInvestment=true, 활성). SPEC §3.6.
@@ -104,8 +122,9 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<Investment?> getInvestmentById(int id) {
-    return (select(investments)..where((i) => i.id.equals(id)))
-        .getSingleOrNull();
+    return (select(
+      investments,
+    )..where((i) => i.id.equals(id))).getSingleOrNull();
   }
 
   /// 보유수량 > 0 인 종목 (정렬). SPEC §4.7. 순수 walker 재사용.

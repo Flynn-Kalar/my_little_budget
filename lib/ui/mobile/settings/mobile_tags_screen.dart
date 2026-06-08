@@ -42,18 +42,28 @@ class MobileTagsScreen extends ConsumerWidget {
   }
 }
 
-class _TagCard extends StatelessWidget {
+class _TagCard extends ConsumerWidget {
   const _TagCard({required this.tag});
 
   final Tag tag;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MobileCard(
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(backgroundColor: _parseColor(tag.color)),
         title: Text('#${tag.name}'),
+        trailing: IconButton(
+          onPressed: () async {
+            await ref.read(tagsDaoProvider).setTagPinned(tag.id, !tag.isPinned);
+            refreshTags(ref);
+          },
+          icon: Icon(
+            tag.isPinned ? Icons.star_rounded : Icons.star_border_rounded,
+          ),
+          tooltip: tag.isPinned ? '고정 해제' : '태그 고정',
+        ),
         onTap: () => _TagSheet.show(context, tag: tag),
       ),
     );

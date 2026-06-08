@@ -663,6 +663,18 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
         mode: InsertMode.insertOrIgnore,
       );
     }
+    if (ids.isNotEmpty) {
+      await customUpdate(
+        '''
+        UPDATE tags
+        SET usage_count = usage_count + 1,
+            last_used_at = datetime('now')
+        WHERE id IN (${_placeholders(ids.length)})
+        ''',
+        variables: ids.map(Variable<int>.new).toList(),
+        updates: {tags},
+      );
+    }
   }
 
   Future<Map<int, List<TransactionTagInfo>>> _tagsFor(List<int> txIds) async {
