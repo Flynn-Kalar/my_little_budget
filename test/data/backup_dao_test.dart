@@ -161,6 +161,8 @@ void main() {
       expect(accts.length, 5);
       expect(accts.every((a) => a.initialBalance == 0), true);
       expect(accts.any((a) => a.name == '사용자추가자산'), false);
+      expect(accts.where((a) => a.isInvestment).length, 1);
+      expect(accts.firstWhere((a) => a.name == '투자').isInvestment, true);
 
       final cats = await db.categoriesDao.getAllCategories();
       expect(cats.length, 14);

@@ -128,6 +128,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
             kind: a.kind,
             color: Value(a.color),
             initialBalance: const Value(0),
+            isInvestment: Value(a.isInvestment),
             sortOrder: Value(i),
           ),
           onConflict: DoUpdate(
@@ -136,7 +137,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
               color: Value(a.color),
               initialBalance: const Value(0),
               excludeFromTotal: const Value(false),
-              isInvestment: const Value(false),
+              isInvestment: Value(a.isInvestment),
               archivedAt: const Value(null),
               sortOrder: Value(i),
             ),

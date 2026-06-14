@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
-import '../../desktop/stats/providers.dart';
+import '../../shared/stats_providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileStatsScreen extends ConsumerWidget {

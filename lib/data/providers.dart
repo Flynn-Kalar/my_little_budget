@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/date.dart';
 import 'daos/accounts_dao.dart';
 import 'daos/backup_dao.dart';
 import 'daos/budget_dao.dart';
@@ -48,3 +49,11 @@ final budgetDaoProvider = Provider<BudgetDao>(
 final backupDaoProvider = Provider<BackupDao>(
   (ref) => ref.watch(appDatabaseProvider).backupDao,
 );
+
+/// 앱 시작 시 당월 말까지 반복거래를 한 번 backfill 한다.
+final recurringBackfillProvider = FutureProvider<int>((ref) {
+  final dao = ref.watch(recurringDaoProvider);
+  return dao.generateDueRecurringTransactions(
+    monthRange(currentMonthKey()).end,
+  );
+});

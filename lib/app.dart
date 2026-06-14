@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_notifier.dart';
+import 'data/providers.dart';
 import 'router/app_router.dart';
 
 class MyLittleBudgetApp extends ConsumerWidget {
@@ -13,6 +14,7 @@ class MyLittleBudgetApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     final colors = ref.watch(themeProvider);
     final mode = ref.watch(themeModeProvider);
+    ref.watch(recurringBackfillProvider);
     return MaterialApp.router(
       title: 'my_little_budget',
       debugShowCheckedModeBanner: false,

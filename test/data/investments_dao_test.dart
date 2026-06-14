@@ -52,6 +52,26 @@ void main() {
     expect(summary.realizedPnl, 0);
   });
 
+  test('기본 투자 자산에 매수 자동 연결', () async {
+    final inv = await db.investmentsDao.getInvestmentAccount();
+    expect(inv, isNotNull);
+    expect(inv!.name, '투자');
+
+    final id = await db.investmentsDao.saveInvestment(
+      draft: validateInvestment(
+        side: 'buy',
+        occurredOn: '2025-01-01',
+        occurredTime: '00:00',
+        ticker: 'AAPL',
+        quantity: 1,
+        totalAmount: 10000,
+      ).value!,
+    );
+
+    final stored = await db.investmentsDao.getInvestmentById(id);
+    expect(stored!.accountId, inv.id);
+  });
+
   test('매도 실현손익이 투자 자산 잔액에 반영', () async {
     final invId = await makeInvestmentAccount();
     // 매수 10주 100000 (평단 10000), 6주 매도 90000 → 원가 60000, 손익 +30000
@@ -115,5 +135,69 @@ void main() {
     );
     expect(pnl.length, 1);
     expect(pnl.first.pnl, 20000); // 매도 60000 - 원가 40000
+  });
+
+  test('미보유 종목 매도/배당은 DAO에서 차단', () async {
+    await makeInvestmentAccount();
+
+    await expectLater(
+      db.investmentsDao.saveInvestment(
+        draft: validateInvestment(
+          side: 'sell',
+          occurredOn: '2025-01-01',
+          occurredTime: '00:00',
+          ticker: 'MISS',
+          quantity: 1,
+          totalAmount: 10000,
+        ).value!,
+      ),
+      throwsArgumentError,
+    );
+
+    await expectLater(
+      db.investmentsDao.saveInvestment(
+        draft: validateInvestment(
+          side: 'dividend',
+          occurredOn: '2025-01-01',
+          occurredTime: '00:00',
+          ticker: 'MISS',
+          quantity: 0,
+          totalAmount: 1000,
+        ).value!,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('보유수량 초과 매도는 DAO에서 차단', () async {
+    await makeInvestmentAccount();
+    await db.investmentsDao.saveInvestment(
+      draft: validateInvestment(
+        side: 'buy',
+        occurredOn: '2025-01-01',
+        occurredTime: '00:00',
+        ticker: 'AAPL',
+        quantity: 1,
+        totalAmount: 10000,
+      ).value!,
+    );
+
+    await expectLater(
+      db.investmentsDao.saveInvestment(
+        draft: validateInvestment(
+          side: 'sell',
+          occurredOn: '2025-01-02',
+          occurredTime: '00:00',
+          ticker: 'AAPL',
+          quantity: 1.0001,
+          totalAmount: 11000,
+        ).value!,
+      ),
+      throwsArgumentError,
+    );
+
+    final rows = await db.investmentsDao.listInvestmentsByMonth('2025-01');
+    expect(rows.length, 1);
+    expect(rows.single.side, 'buy');
   });
 }

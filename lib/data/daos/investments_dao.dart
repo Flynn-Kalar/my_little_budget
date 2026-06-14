@@ -146,8 +146,10 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// 투자 저장. accountId 는 현재 투자 자산으로 자동 지정. SPEC §4.7.
-  /// 검증·보유종목 체크는 호출부(provider) 책임.
+  /// 호출부 검증과 별개로 DAO 에서도 미보유/과매도 저장을 차단한다.
   Future<int> saveInvestment({int? id, required InvestmentDraft draft}) async {
+    await _ensureTradableDraft(id: id, draft: draft);
+
     final investAccount = await getInvestmentAccount();
     final accountId = investAccount?.id;
 
@@ -183,5 +185,41 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> deleteInvestment(int id) async {
     await (delete(investments)..where((i) => i.id.equals(id))).go();
+  }
+
+  Future<void> _ensureTradableDraft({
+    required int? id,
+    required InvestmentDraft draft,
+  }) async {
+    if (draft.side != 'sell' && draft.side != 'dividend') return;
+
+    final allRows = await select(investments).get();
+    final entries = allRows
+        .where((row) => row.id != id)
+        .map(toInvestmentEntry)
+        .toList();
+    final held = currentHoldings(entries);
+    final heldTickers = held.map((holding) => holding.ticker).toSet();
+
+    final tickerError = checkTradableTicker(
+      side: draft.side,
+      ticker: draft.ticker,
+      heldTickers: heldTickers,
+    );
+    if (tickerError != null) {
+      throw ArgumentError(tickerError);
+    }
+
+    final quantityError = checkSellQuantity(
+      side: draft.side,
+      ticker: draft.ticker,
+      quantity: draft.quantity,
+      heldQuantities: {
+        for (final holding in held) holding.ticker: holding.quantity,
+      },
+    );
+    if (quantityError != null) {
+      throw ArgumentError(quantityError);
+    }
   }
 }

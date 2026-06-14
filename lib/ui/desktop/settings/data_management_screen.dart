@@ -35,7 +35,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       final filename = buildBackupFilename();
       final json = backup.toJsonString();
       final path = await FilePicker.saveFile(
-        dialogTitle: 'Save backup file',
+        dialogTitle: '백업 파일 저장',
         fileName: filename,
         type: FileType.custom,
         allowedExtensions: const ['json'],
@@ -43,9 +43,9 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       );
       if (path == null) return;
       if (!mounted) return;
-      _showSnack('Backup file created: $filename');
+      _showSnack('백업 파일을 만들었습니다: $filename');
     } catch (e) {
-      if (mounted) _showSnack('Failed to create backup file: $e');
+      if (mounted) _showSnack('백업 파일 생성에 실패했습니다: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -55,7 +55,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     setState(() => _busy = true);
     try {
       final picked = await FilePicker.pickFiles(
-        dialogTitle: 'Select backup file to restore',
+        dialogTitle: '복원할 백업 파일 선택',
         type: FileType.custom,
         allowedExtensions: const ['json'],
         allowMultiple: false,
@@ -66,7 +66,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       final content = await file.readAsString();
       final parsed = parseBackup(content);
       if (!parsed.isOk) {
-        _showSnack(parsed.error ?? 'Backup file structure is invalid.');
+        _showSnack(parsed.error ?? '백업 파일 형식이 올바르지 않습니다.');
         return;
       }
 
@@ -77,11 +77,28 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       await ref.read(backupDaoProvider).importBackup(parsed.backup!);
       _invalidateAfterImport(ref);
       if (!mounted) return;
-      _showSnack('Backup data restored.');
+      _showSnack('백업 데이터를 복원했습니다.');
     } catch (e) {
       if (mounted) {
-        _showSnack('Failed to restore backup. Existing data is unchanged. $e');
+        _showSnack('복원에 실패했습니다. 기존 데이터는 유지됩니다. $e');
       }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _resetAllData() async {
+    final confirmed = await showResetConfirmationDialog(context);
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      await ref.read(backupDaoProvider).resetAllData();
+      _invalidateAfterImport(ref);
+      if (!mounted) return;
+      _showSnack('데이터를 초기화했습니다.');
+    } catch (e) {
+      if (mounted) _showSnack('초기화에 실패했습니다: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -104,38 +121,46 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             TextButton.icon(
               onPressed: _busy ? null : () => context.go('/settings'),
               icon: const Icon(Icons.chevron_left),
-              label: const Text('Settings'),
+              label: const Text('설정'),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Data Backup / Restore',
+              '데이터 백업 / 복원',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Export all app data to JSON or fully replace current data from a backup file.',
+              '앱 데이터를 JSON으로 저장하거나, 백업 파일로 현재 데이터를 전체 교체할 수 있습니다.',
               style: TextStyle(fontSize: 13, color: AppTokens.muted),
             ),
             const SizedBox(height: 24),
             _ActionCard(
               buttonKey: const ValueKey('settings-backup-export-button'),
               icon: Icons.file_upload_outlined,
-              title: 'Export data',
-              description:
-                  'Save current app data as one JSON file. The save location is chosen in the file dialog.',
-              buttonLabel: 'Create backup file',
+              title: '백업 내보내기',
+              description: '현재 앱 데이터를 하나의 JSON 파일로 저장합니다.',
+              buttonLabel: '백업 파일 만들기',
               onPressed: _busy ? null : _exportBackup,
             ),
             const SizedBox(height: 12),
             _ActionCard(
               buttonKey: const ValueKey('settings-backup-import-button'),
               icon: Icons.file_download_outlined,
-              title: 'Import data',
-              description:
-                  'Validate a backup JSON file, then fully replace current data with the backup state.',
-              buttonLabel: 'Choose backup file',
+              title: '백업 불러오기',
+              description: '백업 JSON 파일을 확인한 뒤 현재 데이터를 백업 데이터로 교체합니다.',
+              buttonLabel: '백업 파일 선택',
               danger: true,
               onPressed: _busy ? null : _importBackup,
+            ),
+            const SizedBox(height: 12),
+            _ActionCard(
+              buttonKey: const ValueKey('settings-data-reset-button'),
+              icon: Icons.delete_forever_outlined,
+              title: '데이터 초기화',
+              description: '거래, 예산, 투자, 태그 데이터를 삭제하고 기본 자산과 카테고리를 복구합니다.',
+              buttonLabel: '초기화',
+              danger: true,
+              onPressed: _busy ? null : _resetAllData,
             ),
             const SizedBox(height: 12),
             const _WarningCard(),
@@ -149,6 +174,26 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       ),
     );
   }
+}
+
+Future<bool?> showResetConfirmationDialog(BuildContext context) {
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('데이터 초기화'),
+      content: const Text('현재 데이터를 모두 삭제하고 기본 자산과 카테고리를 복구합니다. 되돌릴 수 없습니다.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('취소'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('초기화'),
+        ),
+      ],
+    ),
+  );
 }
 
 Future<bool?> showImportConfirmationDialog(BuildContext context) {
@@ -259,7 +304,7 @@ class _WarningCard extends StatelessWidget {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Import is not a merge. It validates the backup file and asks for confirmation before replacing all current app data.',
+                '복원은 병합이 아닙니다. 백업 파일을 확인한 뒤 현재 데이터를 모두 덮어쓰기 전에 확인을 요청합니다.',
                 style: TextStyle(color: AppTokens.muted),
               ),
             ),

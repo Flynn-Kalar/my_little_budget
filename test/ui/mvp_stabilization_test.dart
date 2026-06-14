@@ -483,6 +483,11 @@ void main() {
       find.byKey(const ValueKey('settings-backup-import-button')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const ValueKey('settings-data-reset-button')),
+      findsOneWidget,
+    );
+    expect(find.text('데이터 백업 / 복원'), findsOneWidget);
   });
 
   testWidgets('Settings backup import confirmation warns full replacement', (
@@ -508,6 +513,31 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('복원'), findsOneWidget);
+  });
+
+  testWidgets('Settings reset confirmation warns destructive reset', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => FilledButton(
+            onPressed: () => showResetConfirmationDialog(context),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('데이터 초기화'), findsOneWidget);
+    expect(
+      find.text('현재 데이터를 모두 삭제하고 기본 자산과 카테고리를 복구합니다. 되돌릴 수 없습니다.'),
+      findsOneWidget,
+    );
+    expect(find.text('초기화'), findsOneWidget);
   });
 }
 

@@ -6,7 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/tags/validation.dart';
-import '../../desktop/settings/providers.dart';
+import '../../shared/settings_providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileTagsScreen extends ConsumerWidget {

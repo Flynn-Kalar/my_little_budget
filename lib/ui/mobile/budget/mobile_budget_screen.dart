@@ -7,7 +7,7 @@ import '../../../data/daos/budget_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/budget/validation.dart';
-import '../../desktop/budget/providers.dart';
+import '../../shared/budget_providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileBudgetScreen extends ConsumerWidget {

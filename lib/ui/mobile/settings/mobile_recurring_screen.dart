@@ -11,7 +11,7 @@ import '../../../data/daos/recurring_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/recurring/validation.dart';
-import '../../desktop/settings/providers.dart';
+import '../../shared/settings_providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileRecurringScreen extends ConsumerWidget {

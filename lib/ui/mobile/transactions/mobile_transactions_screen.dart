@@ -8,7 +8,7 @@ import '../../../data/daos/transactions_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/transactions/validation.dart';
-import '../../desktop/transactions/providers.dart';
+import '../../shared/transactions_providers.dart';
 import '../mobile_widgets.dart';
 
 final _quickInputTagsProvider = FutureProvider.autoDispose<List<Tag>>(

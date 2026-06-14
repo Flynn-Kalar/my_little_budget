@@ -34,18 +34,10 @@ bool hasActiveTransactionFilter(TransactionFilter filter) {
       filter.toDate != null;
 }
 
-/// SPEC §4.1 — 진입 시 이번 달 말일까지 반복거래 backfill (1회, 캐시).
-final _recurringBackfillProvider = FutureProvider<int>((ref) async {
-  final dao = ref.read(recurringDaoProvider);
-  return dao.generateDueRecurringTransactions(
-    monthRange(currentMonthKey()).end,
-  );
-});
-
 /// 월 + 타입 필터 기준 거래 목록. backfill 완료 후 조회.
 final transactionsListProvider =
     FutureProvider.autoDispose<List<TransactionRow>>((ref) async {
-      await ref.watch(_recurringBackfillProvider.future);
+      await ref.watch(recurringBackfillProvider.future);
       final month = ref.watch(selectedMonthProvider);
       final type = ref.watch(typeFilterProvider);
       final sf = ref.watch(searchFilterProvider);

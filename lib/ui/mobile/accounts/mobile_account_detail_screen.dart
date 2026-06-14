@@ -6,7 +6,7 @@ import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import '../../../features/investments/quantity_precision.dart';
-import '../../desktop/accounts/providers.dart';
+import '../../shared/accounts_providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileAccountDetailScreen extends ConsumerWidget {

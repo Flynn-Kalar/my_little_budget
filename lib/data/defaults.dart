@@ -1,14 +1,19 @@
 // SPEC §5.3 — 첫 실행/초기화 시 들어가는 기본 자산·카테고리.
 
-typedef DefaultAccount = ({String name, String kind, String color});
+typedef DefaultAccount = ({
+  String name,
+  String kind,
+  String color,
+  bool isInvestment,
+});
 typedef DefaultCategory = ({String name, String color});
 
 const List<DefaultAccount> defaultAccounts = [
-  (name: '주거래 통장', kind: 'bank', color: '#2563eb'),
-  (name: '신용카드', kind: 'card', color: '#dc2626'),
-  (name: '현금', kind: 'cash', color: '#16a34a'),
-  (name: '비상금', kind: 'bank', color: '#0891b2'),
-  (name: '투자', kind: 'other', color: '#7c3aed'),
+  (name: '주거래 통장', kind: 'bank', color: '#2563eb', isInvestment: false),
+  (name: '신용카드', kind: 'card', color: '#dc2626', isInvestment: false),
+  (name: '현금', kind: 'cash', color: '#16a34a', isInvestment: false),
+  (name: '비상금', kind: 'bank', color: '#0891b2', isInvestment: false),
+  (name: '투자', kind: 'other', color: '#7c3aed', isInvestment: true),
 ];
 
 const List<DefaultCategory> defaultExpenseCategories = [

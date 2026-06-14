@@ -9,13 +9,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/backup.dart';
 import '../../../data/providers.dart';
-import '../../desktop/accounts/providers.dart' as accounts_providers;
-import '../../desktop/budget/providers.dart' as budget_providers;
-import '../../desktop/investments/providers.dart' as investments_providers;
-import '../../desktop/settings/providers.dart' as settings_providers;
-import '../../desktop/shell/badges_providers.dart' as badges_providers;
-import '../../desktop/stats/providers.dart' as stats_providers;
-import '../../desktop/transactions/providers.dart' as transactions_providers;
+import '../../shared/accounts_providers.dart' as accounts_providers;
+import '../../shared/budget_providers.dart' as budget_providers;
+import '../../shared/investments_providers.dart' as investments_providers;
+import '../../shared/settings_providers.dart' as settings_providers;
+import '../../shared/badges_providers.dart' as badges_providers;
+import '../../shared/stats_providers.dart' as stats_providers;
+import '../../shared/transactions_providers.dart' as transactions_providers;
 import '../mobile_widgets.dart';
 
 class MobileDataManagementScreen extends ConsumerStatefulWidget {

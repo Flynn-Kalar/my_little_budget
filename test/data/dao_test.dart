@@ -28,6 +28,8 @@ void main() {
       final cats = await db.categoriesDao.getAllCategories();
       expect(accts.length, 5);
       expect(cats.length, 14);
+      expect(accts.where((a) => a.isInvestment).length, 1);
+      expect(accts.firstWhere((a) => a.name == '투자').isInvestment, true);
       expect(cats.where((c) => c.type == 'expense').length, 10);
       expect(cats.where((c) => c.type == 'income').length, 4);
     });
@@ -71,7 +73,10 @@ void main() {
           categoryId: await firstIncomeCategoryId(),
         ),
       );
-      expect(await db.transactionsDao.listTransactionsByMonth('2025-05'), isEmpty);
+      expect(
+        await db.transactionsDao.listTransactionsByMonth('2025-05'),
+        isEmpty,
+      );
       expect(
         (await db.transactionsDao.listTransactionsByMonth('2025-04')).length,
         1,
@@ -134,7 +139,10 @@ void main() {
 
       final balances = await db.accountsDao.getAccountBalances();
       expect(balances.where((x) => x.isInvestment).length, 1);
-      expect(balances.firstWhere((x) => x.accountId == b.id).isInvestment, true);
+      expect(
+        balances.firstWhere((x) => x.accountId == b.id).isInvestment,
+        true,
+      );
     });
   });
 

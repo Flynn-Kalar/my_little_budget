@@ -46,6 +46,7 @@ Future<void> seedDefaults(AppDatabase db) async {
             name: a.name,
             kind: a.kind,
             color: Value(a.color),
+            isInvestment: Value(a.isInvestment),
             sortOrder: Value(i++),
           ),
         );

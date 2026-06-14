@@ -7,7 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/accounts_dao.dart';
 import '../../../data/providers.dart';
 import '../../../features/accounts/validation.dart';
-import '../../desktop/accounts/providers.dart';
+import '../../shared/accounts_providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileAccountsScreen extends ConsumerWidget {
