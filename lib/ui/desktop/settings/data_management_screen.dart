@@ -8,8 +8,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/backup.dart';
-import '../../../data/cloud_backup.dart';
 import '../../../data/providers.dart';
+import '../../../data/supabase_backup_service.dart';
+import '../../../data/supabase_backup_settings.dart';
 import '../accounts/providers.dart' as accounts_providers;
 import '../budget/providers.dart' as budget_providers;
 import '../investments/providers.dart' as investments_providers;
@@ -28,31 +29,60 @@ class DataManagementScreen extends ConsumerStatefulWidget {
 
 class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   bool _busy = false;
-  CloudBackupAccount? _cloudAccount;
-  CloudBackupFile? _latestCloudBackup;
+  SupabaseBackupRemoteStatus? _remoteStatus;
+  String? _remoteStatusError;
+  late final _supabaseUrlCtrl = TextEditingController();
+  late final _supabaseAnonKeyCtrl = TextEditingController();
+  late final _supabaseBucketCtrl = TextEditingController();
+  late final _supabasePathPrefixCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(_loadCloudStatus);
+    Future.microtask(_loadSupabaseSettings);
   }
 
-  Future<void> _loadCloudStatus() async {
-    final service = ref.read(cloudBackupServiceProvider);
-    if (!service.isSupported) return;
+  @override
+  void dispose() {
+    _supabaseUrlCtrl.dispose();
+    _supabaseAnonKeyCtrl.dispose();
+    _supabaseBucketCtrl.dispose();
+    _supabasePathPrefixCtrl.dispose();
+    super.dispose();
+  }
 
-    final account = await service.currentAccount();
-    CloudBackupFile? latest;
-    if (account != null) {
-      final list = await service.listBackups();
-      if (list.isOk && list.value!.isNotEmpty) {
-        latest = list.value!.first;
-      }
+  Future<void> _loadSupabaseSettings() async {
+    final notifier = ref.read(supabaseBackupSettingsProvider.notifier);
+    await notifier.whenReady;
+    if (!mounted) return;
+    _fillSupabaseControllers(ref.read(supabaseBackupSettingsProvider));
+  }
+
+  void _fillSupabaseControllers(SupabaseBackupSettings settings) {
+    _supabaseUrlCtrl.text = settings.url;
+    _supabaseAnonKeyCtrl.text = settings.anonKey;
+    _supabaseBucketCtrl.text = settings.bucket;
+    _supabasePathPrefixCtrl.text = settings.pathPrefix;
+  }
+
+  Future<void> _refreshSupabaseRemoteStatus() async {
+    final draft = _supabaseDraft();
+    final error = validateSupabaseBackupSettings(draft);
+    if (error != null) {
+      setState(() {
+        _remoteStatus = null;
+        _remoteStatusError = error;
+      });
+      return;
     }
+
+    final result = await ref
+        .read(supabaseBackupServiceProvider)
+        .getRemoteStatus(draft);
     if (!mounted) return;
     setState(() {
-      _cloudAccount = account;
-      _latestCloudBackup = latest;
+      _remoteStatus = result.value;
+      _remoteStatusError = result.error;
     });
   }
 
@@ -132,92 +162,124 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     }
   }
 
-  Future<void> _connectGoogleDrive() async {
+  SupabaseBackupSettings _supabaseDraft() {
+    return SupabaseBackupSettings(
+      url: _supabaseUrlCtrl.text,
+      anonKey: _supabaseAnonKeyCtrl.text,
+      bucket: _supabaseBucketCtrl.text,
+      pathPrefix: _supabasePathPrefixCtrl.text,
+    );
+  }
+
+  Future<void> _saveSupabaseSettings() async {
+    final draft = _supabaseDraft();
+    final error = validateSupabaseBackupSettings(draft);
+    if (error != null) {
+      _showSnack(error);
+      return;
+    }
+
     setState(() => _busy = true);
     try {
-      final service = ref.read(cloudBackupServiceProvider);
-      final account = await service.signIn();
+      await ref.read(supabaseBackupSettingsProvider.notifier).save(draft);
       if (!mounted) return;
-      if (account == null) {
-        _showSnack('Google 계정 연결이 취소되었습니다.');
-        return;
-      }
-      setState(() => _cloudAccount = account);
-      await _loadCloudStatus();
-      if (mounted) _showSnack('Google Drive에 연결되었습니다.');
+      _fillSupabaseControllers(ref.read(supabaseBackupSettingsProvider));
+      _showSnack('Supabase 연결 설정을 저장했습니다.');
     } catch (e) {
-      if (mounted) _showSnack('Google Drive 연결에 실패했습니다: $e');
+      if (mounted) _showSnack('Supabase 설정 저장에 실패했습니다: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _disconnectGoogleDrive() async {
-    setState(() => _busy = true);
-    try {
-      await ref.read(cloudBackupServiceProvider).signOut();
-      if (!mounted) return;
-      setState(() {
-        _cloudAccount = null;
-        _latestCloudBackup = null;
-      });
-      _showSnack('Google Drive 연결을 해제했습니다.');
-    } catch (e) {
-      if (mounted) _showSnack('Google Drive 연결 해제에 실패했습니다: $e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
+  Future<void> _testSupabaseSettings() async {
+    final draft = _supabaseDraft();
+    final error = validateSupabaseBackupSettings(draft);
+    if (error != null) {
+      _showSnack(error);
+      return;
     }
-  }
 
-  Future<void> _uploadGoogleDriveBackup() async {
     setState(() => _busy = true);
     try {
-      final backup = await ref.read(backupDaoProvider).exportBackup();
-      final filename = buildBackupFilename();
       final result = await ref
-          .read(cloudBackupServiceProvider)
-          .uploadBackup(filename: filename, json: backup.toJsonString());
+          .read(supabaseBackupServiceProvider)
+          .testConnection(draft);
+      if (!mounted) return;
+      _showSnack(result.isOk ? 'Supabase Storage 연결을 확인했습니다.' : result.error!);
+      if (result.isOk) await _refreshSupabaseRemoteStatus();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _clearSupabaseSettings() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(supabaseBackupSettingsProvider.notifier).clear();
+      if (!mounted) return;
+      _fillSupabaseControllers(SupabaseBackupSettings.empty);
+      _showSnack('Supabase 연결 설정을 삭제했습니다.');
+      setState(() {
+        _remoteStatus = null;
+        _remoteStatusError = null;
+      });
+    } catch (e) {
+      if (mounted) _showSnack('Supabase 설정 삭제에 실패했습니다: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _uploadSupabaseBackup() async {
+    final draft = _supabaseDraft();
+    final error = validateSupabaseBackupSettings(draft);
+    if (error != null) {
+      _showSnack(error);
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      await ref.read(supabaseBackupSettingsProvider.notifier).save(draft);
+      final backup = await ref.read(backupDaoProvider).exportBackup();
+      final result = await ref
+          .read(supabaseBackupServiceProvider)
+          .uploadBackup(settings: draft, backup: backup);
       if (!mounted) return;
       if (!result.isOk) {
-        _showSnack(result.error ?? 'Google Drive 백업에 실패했습니다.');
+        _showSnack(result.error!);
         return;
       }
-      setState(() => _latestCloudBackup = result.value);
-      _showSnack('Google Drive에 백업했습니다: $filename');
+      await ref.read(supabaseBackupSettingsProvider.notifier).markBackupNow();
+      await _refreshSupabaseRemoteStatus();
+      _showSnack('Supabase에 백업했습니다: ${result.value!.latestPath}');
     } catch (e) {
-      if (mounted) _showSnack('Google Drive 백업에 실패했습니다: $e');
+      if (mounted) _showSnack('Supabase 백업에 실패했습니다: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _restoreGoogleDriveBackup() async {
+  Future<void> _restoreSupabaseBackup() async {
+    final draft = _supabaseDraft();
+    final error = validateSupabaseBackupSettings(draft);
+    if (error != null) {
+      _showSnack(error);
+      return;
+    }
+
     setState(() => _busy = true);
     try {
-      final list = await ref.read(cloudBackupServiceProvider).listBackups();
-      if (!list.isOk) {
-        if (mounted) {
-          _showSnack(list.error ?? 'Google Drive 백업 목록을 불러오지 못했습니다.');
-        }
-        return;
-      }
-      if (list.value!.isEmpty) {
-        if (mounted) _showSnack('Google Drive에 백업 파일이 없습니다.');
+      final result = await ref
+          .read(supabaseBackupServiceProvider)
+          .downloadLatestBackup(draft);
+      if (!result.isOk) {
+        if (mounted) _showSnack(result.error!);
         return;
       }
 
-      final latest = list.value!.first;
-      final content = await ref
-          .read(cloudBackupServiceProvider)
-          .downloadBackup(latest);
-      if (!content.isOk) {
-        if (mounted) {
-          _showSnack(content.error ?? 'Google Drive 백업 다운로드에 실패했습니다.');
-        }
-        return;
-      }
-
-      final parsed = parseBackup(content.value!);
+      final parsed = parseBackup(result.value!);
       if (!parsed.isOk) {
         if (mounted) _showSnack(parsed.error ?? '백업 파일 형식이 올바르지 않습니다.');
         return;
@@ -229,11 +291,12 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 
       await ref.read(backupDaoProvider).importBackup(parsed.backup!);
       _invalidateAfterImport(ref);
+      await ref.read(supabaseBackupSettingsProvider.notifier).markRestoreNow();
       if (!mounted) return;
-      setState(() => _latestCloudBackup = latest);
-      _showSnack('Google Drive 백업을 복원했습니다.');
+      await _refreshSupabaseRemoteStatus();
+      _showSnack('Supabase 백업을 복원했습니다.');
     } catch (e) {
-      if (mounted) _showSnack('Google Drive 복원에 실패했습니다: $e');
+      if (mounted) _showSnack('Supabase 복원에 실패했습니다: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -269,15 +332,24 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
             SizedBox(height: 24),
-            _CloudBackupCard(
-              supported: ref.watch(cloudBackupServiceProvider).isSupported,
-              account: _cloudAccount,
-              latest: _latestCloudBackup,
+            _SupabaseSettingsCard(
+              urlController: _supabaseUrlCtrl,
+              anonKeyController: _supabaseAnonKeyCtrl,
+              bucketController: _supabaseBucketCtrl,
+              pathPrefixController: _supabasePathPrefixCtrl,
+              configured: ref
+                  .watch(supabaseBackupSettingsProvider)
+                  .isConfigured,
+              settings: ref.watch(supabaseBackupSettingsProvider),
+              remoteStatus: _remoteStatus,
+              remoteStatusError: _remoteStatusError,
               busy: _busy,
-              onConnect: _connectGoogleDrive,
-              onDisconnect: _disconnectGoogleDrive,
-              onUpload: _uploadGoogleDriveBackup,
-              onRestore: _restoreGoogleDriveBackup,
+              onSave: _saveSupabaseSettings,
+              onTest: _testSupabaseSettings,
+              onClear: _clearSupabaseSettings,
+              onUpload: _uploadSupabaseBackup,
+              onRestore: _restoreSupabaseBackup,
+              onRefresh: _refreshSupabaseRemoteStatus,
             ),
             SizedBox(height: 12),
             _ActionCard(
@@ -322,100 +394,166 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   }
 }
 
-class _CloudBackupCard extends StatelessWidget {
-  const _CloudBackupCard({
-    required this.supported,
-    required this.account,
-    required this.latest,
+class _SupabaseSettingsCard extends StatelessWidget {
+  const _SupabaseSettingsCard({
+    required this.urlController,
+    required this.anonKeyController,
+    required this.bucketController,
+    required this.pathPrefixController,
+    required this.configured,
+    required this.settings,
+    required this.remoteStatus,
+    required this.remoteStatusError,
     required this.busy,
-    required this.onConnect,
-    required this.onDisconnect,
+    required this.onSave,
+    required this.onTest,
+    required this.onClear,
     required this.onUpload,
     required this.onRestore,
+    required this.onRefresh,
   });
 
-  final bool supported;
-  final CloudBackupAccount? account;
-  final CloudBackupFile? latest;
+  final TextEditingController urlController;
+  final TextEditingController anonKeyController;
+  final TextEditingController bucketController;
+  final TextEditingController pathPrefixController;
+  final bool configured;
+  final SupabaseBackupSettings settings;
+  final SupabaseBackupRemoteStatus? remoteStatus;
+  final String? remoteStatusError;
   final bool busy;
-  final VoidCallback onConnect;
-  final VoidCallback onDisconnect;
+  final VoidCallback onSave;
+  final VoidCallback onTest;
+  final VoidCallback onClear;
   final VoidCallback onUpload;
   final VoidCallback onRestore;
+  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    final connected = account != null;
-    final latestText = latest == null
-        ? '최근 Google Drive 백업이 없습니다.'
-        : '최근 백업: ${latest!.name}${_formatModifiedAt(latest!.modifiedAt)}';
-    final description = supported
-        ? connected
-              ? '${account!.email}\n$latestText'
-              : 'Android에서 Google 계정을 연결하면 앱 전용 Drive 저장소에 JSON 백업을 보관합니다.'
-        : 'Google Drive 백업은 현재 Android에서만 사용할 수 있습니다.';
-
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.cloud_upload_outlined, color: context.desktopAccent),
-            SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Google Drive 백업',
+            Row(
+              children: [
+                Icon(Icons.cloud_sync_outlined, color: context.desktopAccent),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Supabase 백업 연결',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    description,
-                    key: const ValueKey('settings-cloud-latest'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.desktopMuted,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
+                ),
+                _StatusChip(configured: configured),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              '본인 Supabase 프로젝트의 URL, anon/publishable key, Storage bucket을 저장합니다. service_role key는 입력하지 마세요.',
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
+            ),
+            SizedBox(height: 16),
+            _SupabaseStatusPanel(
+              settings: settings,
+              remoteStatus: remoteStatus,
+              remoteStatusError: remoteStatusError,
+            ),
+            SizedBox(height: 16),
+            TextField(
+              key: const ValueKey('settings-supabase-url-field'),
+              controller: urlController,
+              enabled: !busy,
+              decoration: const InputDecoration(
+                labelText: 'Supabase URL',
+                hintText: 'https://project-ref.supabase.co',
+                prefixIcon: Icon(Icons.link),
               ),
             ),
-            SizedBox(width: 12),
+            SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('settings-supabase-anon-key-field'),
+              controller: anonKeyController,
+              enabled: !busy,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'anon / publishable key',
+                prefixIcon: Icon(Icons.key_outlined),
+              ),
+            ),
+            SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('settings-supabase-bucket-field'),
+                    controller: bucketController,
+                    enabled: !busy,
+                    decoration: const InputDecoration(
+                      labelText: 'Storage bucket',
+                      hintText: 'my-little-budget',
+                      prefixIcon: Icon(Icons.inventory_2_outlined),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('settings-supabase-path-prefix-field'),
+                    controller: pathPrefixController,
+                    enabled: !busy,
+                    decoration: const InputDecoration(
+                      labelText: 'Path prefix',
+                      hintText: 'my_little_budget',
+                      prefixIcon: Icon(Icons.folder_outlined),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              alignment: WrapAlignment.end,
               children: [
-                if (!connected)
-                  OutlinedButton.icon(
-                    key: const ValueKey('settings-cloud-connect-button'),
-                    onPressed: supported && !busy ? onConnect : null,
-                    icon: const Icon(Icons.login),
-                    label: const Text('연결'),
-                  )
-                else
-                  OutlinedButton.icon(
-                    key: const ValueKey('settings-cloud-disconnect-button'),
-                    onPressed: busy ? null : onDisconnect,
-                    icon: const Icon(Icons.logout),
-                    label: const Text('해제'),
-                  ),
                 FilledButton.icon(
-                  key: const ValueKey('settings-cloud-upload-button'),
-                  onPressed: supported && connected && !busy ? onUpload : null,
-                  icon: const Icon(Icons.cloud_upload_outlined),
-                  label: const Text('Drive 백업'),
+                  key: const ValueKey('settings-supabase-save-button'),
+                  onPressed: busy ? null : onSave,
+                  icon: const Icon(Icons.save_outlined),
+                  label: const Text('설정 저장'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('settings-supabase-test-button'),
+                  onPressed: busy ? null : onTest,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('연결 테스트'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('settings-supabase-refresh-button'),
+                  onPressed: busy ? null : onRefresh,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('상태 새로고침'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('settings-supabase-clear-button'),
+                  onPressed: busy || !configured ? null : onClear,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('설정 삭제'),
                 ),
                 FilledButton.icon(
-                  key: const ValueKey('settings-cloud-restore-button'),
-                  onPressed: supported && connected && !busy ? onRestore : null,
+                  key: const ValueKey('settings-supabase-upload-button'),
+                  onPressed: busy ? null : onUpload,
+                  icon: const Icon(Icons.cloud_upload_outlined),
+                  label: const Text('Supabase 백업'),
+                ),
+                FilledButton.icon(
+                  key: const ValueKey('settings-supabase-restore-button'),
+                  onPressed: busy ? null : onRestore,
                   icon: const Icon(Icons.cloud_download_outlined),
-                  label: const Text('Drive 복원'),
+                  label: const Text('Supabase 복원'),
                 ),
               ],
             ),
@@ -424,13 +562,95 @@ class _CloudBackupCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  static String _formatModifiedAt(DateTime? value) {
-    if (value == null) return '';
-    final local = value.toLocal();
-    String two(int n) => n.toString().padLeft(2, '0');
-    return ' (${local.year}-${two(local.month)}-${two(local.day)} '
-        '${two(local.hour)}:${two(local.minute)})';
+class _SupabaseStatusPanel extends StatelessWidget {
+  const _SupabaseStatusPanel({
+    required this.settings,
+    required this.remoteStatus,
+    required this.remoteStatusError,
+  });
+
+  final SupabaseBackupSettings settings;
+  final SupabaseBackupRemoteStatus? remoteStatus;
+  final String? remoteStatusError;
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = <String>[
+      'latest 경로: ${settings.normalized().pathPrefix}/latest.json',
+      '마지막 앱 백업: ${_formatIso(settings.lastBackupAt)}',
+      '마지막 앱 복원: ${_formatIso(settings.lastRestoreAt)}',
+    ];
+    if (remoteStatusError != null) {
+      lines.add('원격 상태: $remoteStatusError');
+    } else if (remoteStatus == null) {
+      lines.add('원격 상태: 아직 확인하지 않았습니다.');
+    } else if (!remoteStatus!.exists) {
+      lines.add('원격 상태: latest.json 없음');
+    } else {
+      lines.add(
+        '원격 상태: latest.json 있음 ${_formatDate(remoteStatus!.updatedAt)}',
+      );
+    }
+
+    return Container(
+      key: const ValueKey('settings-supabase-status-panel'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Text(
+        lines.join('\n'),
+        style: TextStyle(
+          fontSize: 13,
+          color: context.desktopMuted,
+          height: 1.4,
+        ),
+      ),
+    );
+  }
+}
+
+String _formatIso(String? value) {
+  if (value == null || value.isEmpty) return '없음';
+  return _formatDate(DateTime.tryParse(value));
+}
+
+String _formatDate(DateTime? value) {
+  if (value == null) return '';
+  final local = value.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${local.year}-${two(local.month)}-${two(local.day)} '
+      '${two(local.hour)}:${two(local.minute)}';
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.configured});
+
+  final bool configured;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = configured ? context.desktopIncome : context.desktopMuted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        configured ? '설정됨' : '미설정',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
   }
 }
 

@@ -488,15 +488,27 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('settings-cloud-connect-button')),
+      find.byKey(const ValueKey('settings-supabase-url-field')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('settings-cloud-upload-button')),
+      find.byKey(const ValueKey('settings-supabase-save-button')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('settings-cloud-restore-button')),
+      find.byKey(const ValueKey('settings-supabase-test-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('settings-supabase-upload-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('settings-supabase-restore-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('settings-supabase-status-panel')),
       findsOneWidget,
     );
     expect(find.text('데이터 백업 / 복원'), findsOneWidget);
