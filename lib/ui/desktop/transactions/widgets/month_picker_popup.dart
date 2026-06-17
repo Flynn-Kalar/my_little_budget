@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/date.dart';
 import '../../../../core/theme/app_theme.dart';
 
-/// 월 선택 팝업. 연도 ◀▶ + 1~12월 3×4 그리드.
-/// 현재 선택된 (year, month) 는 검정 배경으로 강조.
 class MonthPickerPopup extends StatefulWidget {
   const MonthPickerPopup({
     super.key,
@@ -12,7 +10,7 @@ class MonthPickerPopup extends StatefulWidget {
     required this.onPick,
   });
 
-  final String currentMonth; // YYYY-MM
+  final String currentMonth;
   final ValueChanged<String> onPick;
 
   @override
@@ -25,6 +23,7 @@ class _MonthPickerPopupState extends State<MonthPickerPopup> {
   @override
   Widget build(BuildContext context) {
     final selected = parseMonthKey(widget.currentMonth);
+    final scheme = Theme.of(context).colorScheme;
 
     return SizedBox(
       width: 280,
@@ -41,9 +40,13 @@ class _MonthPickerPopupState extends State<MonthPickerPopup> {
                   icon: const Icon(Icons.chevron_left, size: 18),
                   tooltip: '이전 연도',
                 ),
-                Text('$_year년',
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(
+                  '$_year년',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 IconButton(
                   onPressed: () => setState(() => _year++),
                   icon: const Icon(Icons.chevron_right, size: 18),
@@ -59,30 +62,46 @@ class _MonthPickerPopupState extends State<MonthPickerPopup> {
               crossAxisSpacing: 6,
               childAspectRatio: 2.2,
               children: List.generate(12, (i) {
-                final m = i + 1;
+                final month = i + 1;
                 final isSelected =
-                    _year == selected.year && m == selected.month;
+                    _year == selected.year && month == selected.month;
                 return Material(
-                  color: isSelected ? Colors.black87 : Colors.transparent,
+                  color: isSelected
+                      ? scheme.primaryContainer
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(6),
                     onTap: () {
                       final monthKey =
-                          '${_year.toString().padLeft(4, '0')}-${m.toString().padLeft(2, '0')}';
+                          '${_year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}';
                       widget.onPick(monthKey);
                     },
                     child: Center(
-                      child: Text(
-                        '$m월',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                          color:
-                              isSelected ? Colors.white : AppTokens.muted,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSelected) ...[
+                            Icon(
+                              Icons.check,
+                              size: 14,
+                              color: scheme.onPrimaryContainer,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            '$month월',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: isSelected
+                                  ? scheme.onPrimaryContainer
+                                  : context.desktopMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

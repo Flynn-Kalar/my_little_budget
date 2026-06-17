@@ -18,13 +18,13 @@ class TypeFilter extends ConsumerWidget {
     final current = ref.watch(typeFilterProvider);
     return Wrap(
       spacing: 8,
-      children: _options.map((o) {
-        final selected = current == o.$1;
+      children: _options.map((option) {
+        final selected = current == option.$1;
         return ChoiceChip(
-          label: Text(o.$2),
+          label: Text(option.$2, softWrap: false),
           selected: selected,
           onSelected: (_) =>
-              ref.read(typeFilterProvider.notifier).state = o.$1,
+              ref.read(typeFilterProvider.notifier).state = option.$1,
         );
       }).toList(),
     );

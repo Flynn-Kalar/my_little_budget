@@ -68,8 +68,8 @@ class _TagFormState extends ConsumerState<TagForm> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -86,14 +86,14 @@ class _TagFormState extends ConsumerState<TagForm> {
               counterText: '',
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
-              const Text(
+              Text(
                 '색상',
-                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+                style: TextStyle(fontSize: 12, color: context.desktopMuted),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               for (final c in colorPalette)
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
@@ -108,8 +108,8 @@ class _TagFormState extends ConsumerState<TagForm> {
                         color: colorFromHex(c),
                         border: Border.all(
                           color: _color == c
-                              ? Colors.black87
-                              : AppTokens.sidebarBorder,
+                              ? Theme.of(context).colorScheme.onSurface
+                              : context.desktopBorder,
                           width: _color == c ? 2 : 1,
                         ),
                       ),
@@ -118,17 +118,17 @@ class _TagFormState extends ConsumerState<TagForm> {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Row(
             children: [
               FilledButton(
                 onPressed: _busy ? null : _save,
                 child: Text(_busy ? '저장 중...' : '저장'),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               TextButton(
                 onPressed: _busy ? null : widget.onDone,
-                child: const Text('취소'),
+                child: Text('취소'),
               ),
             ],
           ),

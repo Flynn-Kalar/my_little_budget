@@ -80,7 +80,7 @@ class _State extends ConsumerState<AccountList> {
   Widget build(BuildContext context) {
     final async = ref.watch(accountBalancesProvider);
     return async.when(
-      loading: () => const Padding(
+      loading: () => Padding(
         padding: EdgeInsets.all(24),
         child: Center(child: CircularProgressIndicator()),
       ),
@@ -102,25 +102,25 @@ class _State extends ConsumerState<AccountList> {
                   if (_reorderMode) ...[
                     TextButton.icon(
                       onPressed: _saving ? null : _cancelReorder,
-                      icon: const Icon(Icons.close, size: 14),
-                      label: const Text('취소'),
+                      icon: Icon(Icons.close, size: 14),
+                      label: Text('취소'),
                       style: TextButton.styleFrom(
-                        foregroundColor: AppTokens.muted,
+                        foregroundColor: context.desktopMuted,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     FilledButton.icon(
                       onPressed: _saving ? null : () => _saveReorder(items),
-                      icon: const Icon(Icons.check, size: 14),
+                      icon: Icon(Icons.check, size: 14),
                       label: Text(_saving ? '저장 중…' : '순서 저장'),
                     ),
                   ] else if (items.length > 1)
                     OutlinedButton.icon(
                       onPressed: () => _startReorder(items),
-                      icon: const Icon(Icons.swap_vert, size: 14),
-                      label: const Text('순서 편집'),
+                      icon: Icon(Icons.swap_vert, size: 14),
+                      label: Text('순서 편집'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTokens.muted,
+                        foregroundColor: context.desktopMuted,
                       ),
                     ),
                 ],
@@ -128,11 +128,11 @@ class _State extends ConsumerState<AccountList> {
             ),
 
             if (items.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(20),
                 child: Text(
                   '등록된 계좌가 없습니다.',
-                  style: TextStyle(color: AppTokens.muted),
+                  style: TextStyle(color: context.desktopMuted),
                 ),
               )
             else
@@ -172,10 +172,10 @@ class _State extends ConsumerState<AccountList> {
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: () => AccountFormDialog.show(context),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('계좌 추가'),
+                    icon: Icon(Icons.add, size: 16),
+                    label: Text('계좌 추가'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTokens.muted,
+                      foregroundColor: context.desktopMuted,
                     ),
                   ),
                 ),
@@ -202,7 +202,7 @@ class _DisplayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTokens.surface,
+      color: context.desktopSurface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -210,26 +210,26 @@ class _DisplayRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
           decoration: BoxDecoration(
-            border: Border.all(color: AppTokens.sidebarBorder),
+            border: Border.all(color: context.desktopBorder),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             children: [
               _ColorDot(color: account.color),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
-                child: Text(account.name, style: const TextStyle(fontSize: 14)),
+                child: Text(account.name, style: TextStyle(fontSize: 14)),
               ),
               _Meta(account: account),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               _BalanceText(account: account),
               SizedBox(
                 width: 32,
                 child: showEditIcon
                     ? IconButton(
                         key: ValueKey('account-edit-${account.accountId}'),
-                        icon: const Icon(Icons.edit_outlined, size: 16),
-                        color: AppTokens.muted,
+                        icon: Icon(Icons.edit_outlined, size: 16),
+                        color: context.desktopMuted,
                         tooltip: '편집',
                         onPressed: onEdit,
                       )
@@ -262,8 +262,8 @@ class _ReorderRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -272,7 +272,7 @@ class _ReorderRow extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: isFirst ? null : onUp,
-                icon: const Icon(Icons.arrow_upward, size: 14),
+                icon: Icon(Icons.arrow_upward, size: 14),
                 tooltip: '위로',
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
@@ -280,7 +280,7 @@ class _ReorderRow extends StatelessWidget {
               ),
               IconButton(
                 onPressed: isLast ? null : onDown,
-                icon: const Icon(Icons.arrow_downward, size: 14),
+                icon: Icon(Icons.arrow_downward, size: 14),
                 tooltip: '아래로',
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
@@ -288,14 +288,12 @@ class _ReorderRow extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _ColorDot(color: account.color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(account.name, style: const TextStyle(fontSize: 14)),
-          ),
+          SizedBox(width: 12),
+          Expanded(child: Text(account.name, style: TextStyle(fontSize: 14))),
           _Meta(account: account),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _BalanceText(account: account),
         ],
       ),
@@ -327,27 +325,27 @@ class _Meta extends StatelessWidget {
       children: [
         Text(
           _kindLabels[account.kind] ?? account.kind,
-          style: const TextStyle(fontSize: 11, color: AppTokens.muted),
+          style: TextStyle(fontSize: 11, color: context.desktopMuted),
         ),
         if (account.isInvestment) ...[
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: AppTokens.transfer.withValues(alpha: 0.12),
+              color: context.desktopTransfer.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: const Text(
+            child: Text(
               '투자',
-              style: TextStyle(fontSize: 10, color: AppTokens.transfer),
+              style: TextStyle(fontSize: 10, color: context.desktopTransfer),
             ),
           ),
         ],
         if (account.excludeFromTotal) ...[
-          const SizedBox(width: 8),
-          const Text(
+          SizedBox(width: 8),
+          Text(
             '제외',
-            style: TextStyle(fontSize: 11, color: AppTokens.muted),
+            style: TextStyle(fontSize: 11, color: context.desktopMuted),
           ),
         ],
       ],
@@ -361,9 +359,9 @@ class _BalanceText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = account.excludeFromTotal
-        ? AppTokens.muted
+        ? context.desktopMuted
         : account.balance < 0
-        ? AppTokens.expense
+        ? context.desktopExpense
         : null;
     return Text(
       formatKRW(account.balance),

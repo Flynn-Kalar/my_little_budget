@@ -79,6 +79,8 @@ class _BudgetTotal extends StatelessWidget {
     final budget = rows.fold<int>(0, (sum, row) => sum + row.budgetAmount);
     final spent = rows.fold<int>(0, (sum, row) => sum + row.spentAmount);
     final remain = budget - spent;
+    final income = context.appIncome;
+    final expense = context.appExpense;
 
     return MobileCard(
       child: Column(
@@ -88,7 +90,7 @@ class _BudgetTotal extends StatelessWidget {
           AmountLine(
             label: '남은 금액',
             value: formatKRW(remain),
-            valueColor: remain < 0 ? AppTokens.expense : AppTokens.income,
+            valueColor: remain < 0 ? expense : income,
           ),
         ],
       ),
@@ -105,6 +107,8 @@ class _BudgetCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final over = row.spentAmount > row.budgetAmount;
+    final danger = context.appExpense;
+    final positive = context.appIncome;
     final progress = row.budgetAmount <= 0
         ? 0.0
         : (row.spentAmount / row.budgetAmount).clamp(0.0, 1.0);
@@ -138,7 +142,7 @@ class _BudgetCard extends StatelessWidget {
             LinearProgressIndicator(
               value: progress,
               minHeight: 8,
-              color: over ? AppTokens.expense : AppTokens.income,
+              color: over ? danger : positive,
               backgroundColor: theme.dividerColor,
             ),
             const SizedBox(height: 10),
@@ -147,7 +151,7 @@ class _BudgetCard extends StatelessWidget {
             AmountLine(
               label: '사용률',
               value: '${row.usagePercent}%',
-              valueColor: over ? AppTokens.expense : null,
+              valueColor: over ? danger : null,
             ),
             if (row.categories.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -451,7 +455,7 @@ class _BudgetGroupSheetState extends ConsumerState<_BudgetGroupSheet> {
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('삭제'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTokens.expense,
+                      foregroundColor: context.appExpense,
                     ),
                   ),
                 const Spacer(),
@@ -529,7 +533,7 @@ class _CategorySelector extends StatelessWidget {
       loading: () => const LinearProgressIndicator(minHeight: 3),
       error: (error, _) => Text(
         error.toString(),
-        style: const TextStyle(color: AppTokens.expense),
+        style: TextStyle(color: context.appExpense),
       ),
     );
   }
@@ -568,7 +572,7 @@ class _AccountSelector extends StatelessWidget {
       loading: () => const LinearProgressIndicator(minHeight: 3),
       error: (error, _) => Text(
         error.toString(),
-        style: const TextStyle(color: AppTokens.expense),
+        style: TextStyle(color: context.appExpense),
       ),
     );
   }

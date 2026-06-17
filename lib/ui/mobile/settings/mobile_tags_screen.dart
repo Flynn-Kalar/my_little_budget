@@ -177,7 +177,7 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('삭제'),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppTokens.expense,
+                    foregroundColor: context.appExpense,
                   ),
                 ),
               const Spacer(),

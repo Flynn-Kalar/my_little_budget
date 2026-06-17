@@ -7,10 +7,10 @@ import '../../../../core/date.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
+import '../../../../data/database.dart';
 import '../providers.dart';
 import 'form_fields.dart';
 
-/// SPEC §4.1 — 검색/세부 필터 패널. searchFilterProvider 에 적용.
 class FilterPanel extends ConsumerStatefulWidget {
   const FilterPanel({super.key});
 
@@ -29,6 +29,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
   DateTime? _fromDate;
   DateTime? _toDate;
   Timer? _searchDebounce;
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -99,9 +100,24 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
     ref.read(searchFilterProvider.notifier).state = const TransactionFilter();
   }
 
+  int _activeFilterCount(TransactionFilter filter) {
+    var count = 0;
+    if (filter.q?.trim().isNotEmpty ?? false) count++;
+    if (filter.minAmount != null) count++;
+    if (filter.maxAmount != null) count++;
+    if (filter.accountId != null) count++;
+    if (filter.categoryIds?.isNotEmpty ?? false) count++;
+    if (filter.tagIds?.isNotEmpty ?? false) count++;
+    if (filter.untaggedOnly) count++;
+    if (filter.fromDate != null) count++;
+    if (filter.toDate != null) count++;
+    return count;
+  }
+
   Future<void> _pickDate(bool isFrom) async {
     final picked = await showDatePicker(
       context: context,
+      locale: const Locale('ko', 'KR'),
       initialDate: (isFrom ? _fromDate : _toDate) ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
@@ -120,176 +136,302 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
     final tags = ref.watch(allTagsProvider).asData?.value ?? const [];
     final filter = ref.watch(searchFilterProvider);
     final hasFilter = hasActiveTransactionFilter(filter);
+    final activeCount = _activeFilterCount(filter);
+
+    if (!_expanded) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _expanded = true),
+            icon: const Icon(Icons.filter_list, size: 18),
+            label: Text(activeCount > 0 ? '필터 $activeCount' : '필터'),
+          ),
+          if (hasFilter)
+            ActionChip(
+              visualDensity: VisualDensity.compact,
+              label: const Text('초기화'),
+              onPressed: _reset,
+            ),
+        ],
+      );
+    }
+
     final query = filter.q?.trim();
     final statusText = query != null && query.isNotEmpty
-        ? '검색 중: "$query"'
+        ? '검색 중 "$query"'
         : hasFilter
         ? '필터 적용 중'
         : '필터 없음';
 
     return Card(
       elevation: 0,
-      color: AppTokens.surface,
+      color: context.desktopSurface,
       shape: RoundedRectangleBorder(
-        side: const BorderSide(color: AppTokens.sidebarBorder),
+        side: BorderSide(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: ExpansionTile(
-        leading: const Icon(Icons.filter_list, size: 20),
-        title: const Text('필터', style: TextStyle(fontSize: 14)),
-        subtitle: Text(
-          statusText,
-          style: TextStyle(
-            fontSize: 12,
-            color: hasFilter ? AppTokens.income : AppTokens.muted,
-          ),
-        ),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        children: [
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              SizedBox(
-                width: 220,
-                child: TextField(
-                  key: const ValueKey('transactions-search-field'),
-                  controller: _qCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '검색(제목/메모)',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (_) {
-                    setState(() {});
-                    _scheduleSearchApply();
-                  },
-                  onSubmitted: (_) {
-                    _searchDebounce?.cancel();
-                    _apply();
-                  },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.filter_list, size: 20),
+                const SizedBox(width: 10),
+                const Text(
+                  '필터',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
-              ),
-              if (_qCtrl.text.isNotEmpty)
+                const SizedBox(width: 10),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: hasFilter
+                        ? context.desktopIncome
+                        : context.desktopMuted,
+                  ),
+                ),
+                const Spacer(),
                 IconButton(
-                  key: const ValueKey('transactions-search-clear'),
-                  tooltip: '검색 초기화',
-                  onPressed: _clearSearch,
-                  icon: const Icon(Icons.clear, size: 18),
+                  tooltip: '필터 접기',
+                  onPressed: () => setState(() => _expanded = false),
+                  icon: const Icon(Icons.keyboard_arrow_up, size: 20),
                 ),
-              SizedBox(
-                width: 110,
-                child: TextField(
-                  controller: _minCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: '최소 금액',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 110,
-                child: TextField(
-                  controller: _maxCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: '최대 금액',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              AccountDropdown(
-                hint: '자산 전체',
-                accounts: accounts,
-                value: _accountId,
-                onChanged: (v) => setState(() => _accountId = v),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => _pickDate(true),
-                icon: const Icon(Icons.calendar_today, size: 14),
-                label: Text(_fromDate == null ? '시작일' : toDateKey(_fromDate!)),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 6),
-                child: Text('~'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _pickDate(false),
-                icon: const Icon(Icons.calendar_today, size: 14),
-                label: Text(_toDate == null ? '종료일' : toDateKey(_toDate!)),
-              ),
-            ],
-          ),
-          if (categories.isNotEmpty) ...[
+              ],
+            ),
             const SizedBox(height: 12),
-            const _SectionLabel('카테고리'),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: categories
-                  .map(
-                    (c) => FilterChip(
-                      label: Text(c.name),
-                      selected: _categoryIds.contains(c.id),
-                      onSelected: (s) => setState(() {
-                        s ? _categoryIds.add(c.id) : _categoryIds.remove(c.id);
-                      }),
-                    ),
-                  )
-                  .toList(),
+            _FilterControls(
+              qCtrl: _qCtrl,
+              minCtrl: _minCtrl,
+              maxCtrl: _maxCtrl,
+              accounts: accounts,
+              categories: categories,
+              tags: tags,
+              accountId: _accountId,
+              categoryIds: _categoryIds,
+              tagIds: _tagIds,
+              untaggedOnly: _untaggedOnly,
+              fromDate: _fromDate,
+              toDate: _toDate,
+              onSearchChanged: () {
+                setState(() {});
+                _scheduleSearchApply();
+              },
+              onSearchSubmitted: () {
+                _searchDebounce?.cancel();
+                _apply();
+              },
+              onClearSearch: _clearSearch,
+              onAccountChanged: (v) => setState(() => _accountId = v),
+              onPickFromDate: () => _pickDate(true),
+              onPickToDate: () => _pickDate(false),
+              onCategoryChanged: (id, selected) => setState(() {
+                selected ? _categoryIds.add(id) : _categoryIds.remove(id);
+              }),
+              onUntaggedChanged: (v) => setState(() => _untaggedOnly = v),
+              onTagChanged: (id, selected) => setState(() {
+                selected ? _tagIds.add(id) : _tagIds.remove(id);
+              }),
+              onReset: _reset,
+              onApply: _apply,
             ),
           ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const _SectionLabel('태그'),
-              const Spacer(),
-              const Text(
-                '태그 없는 거래만',
-                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterControls extends StatelessWidget {
+  const _FilterControls({
+    required this.qCtrl,
+    required this.minCtrl,
+    required this.maxCtrl,
+    required this.accounts,
+    required this.categories,
+    required this.tags,
+    required this.accountId,
+    required this.categoryIds,
+    required this.tagIds,
+    required this.untaggedOnly,
+    required this.fromDate,
+    required this.toDate,
+    required this.onSearchChanged,
+    required this.onSearchSubmitted,
+    required this.onClearSearch,
+    required this.onAccountChanged,
+    required this.onPickFromDate,
+    required this.onPickToDate,
+    required this.onCategoryChanged,
+    required this.onUntaggedChanged,
+    required this.onTagChanged,
+    required this.onReset,
+    required this.onApply,
+  });
+
+  final TextEditingController qCtrl;
+  final TextEditingController minCtrl;
+  final TextEditingController maxCtrl;
+  final List<Account> accounts;
+  final List<Category> categories;
+  final List<Tag> tags;
+  final int? accountId;
+  final Set<int> categoryIds;
+  final Set<int> tagIds;
+  final bool untaggedOnly;
+  final DateTime? fromDate;
+  final DateTime? toDate;
+  final VoidCallback onSearchChanged;
+  final VoidCallback onSearchSubmitted;
+  final VoidCallback onClearSearch;
+  final ValueChanged<int?> onAccountChanged;
+  final VoidCallback onPickFromDate;
+  final VoidCallback onPickToDate;
+  final void Function(int id, bool selected) onCategoryChanged;
+  final ValueChanged<bool> onUntaggedChanged;
+  final void Function(int id, bool selected) onTagChanged;
+  final VoidCallback onReset;
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 220,
+              child: TextField(
+                key: const ValueKey('transactions-search-field'),
+                controller: qCtrl,
+                decoration: const InputDecoration(
+                  labelText: '검색(제목/메모)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (_) => onSearchChanged(),
+                onSubmitted: (_) => onSearchSubmitted(),
               ),
-              Switch(
-                value: _untaggedOnly,
-                onChanged: (v) => setState(() => _untaggedOnly = v),
-              ),
-            ],
-          ),
-          if (!_untaggedOnly && tags.isNotEmpty)
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: tags
-                  .map(
-                    (t) => FilterChip(
-                      label: Text('#${t.name}'),
-                      selected: _tagIds.contains(t.id),
-                      onSelected: (s) => setState(() {
-                        s ? _tagIds.add(t.id) : _tagIds.remove(t.id);
-                      }),
-                    ),
-                  )
-                  .toList(),
             ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(onPressed: _reset, child: const Text('초기화')),
-              const SizedBox(width: 8),
-              FilledButton(onPressed: _apply, child: const Text('적용')),
-            ],
+            if (qCtrl.text.isNotEmpty)
+              IconButton(
+                key: const ValueKey('transactions-search-clear'),
+                tooltip: '검색 초기화',
+                onPressed: onClearSearch,
+                icon: const Icon(Icons.clear, size: 18),
+              ),
+            SizedBox(
+              width: 110,
+              child: TextField(
+                controller: minCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '최소 금액',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 110,
+              child: TextField(
+                controller: maxCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '최대 금액',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            AccountDropdown(
+              hint: '자산 전체',
+              accounts: accounts,
+              value: accountId,
+              onChanged: onAccountChanged,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: onPickFromDate,
+              icon: const Icon(Icons.calendar_today, size: 14),
+              label: Text(fromDate == null ? '시작일' : toDateKey(fromDate!)),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child: Text('~'),
+            ),
+            OutlinedButton.icon(
+              onPressed: onPickToDate,
+              icon: const Icon(Icons.calendar_today, size: 14),
+              label: Text(toDate == null ? '종료일' : toDateKey(toDate!)),
+            ),
+          ],
+        ),
+        if (categories.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const _SectionLabel('카테고리'),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: categories
+                .map(
+                  (c) => FilterChip(
+                    label: Text(c.name),
+                    selected: categoryIds.contains(c.id),
+                    onSelected: (s) => onCategoryChanged(c.id, s),
+                  ),
+                )
+                .toList(),
           ),
         ],
-      ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const _SectionLabel('태그'),
+            const Spacer(),
+            Text(
+              '태그 없는 거래만',
+              style: TextStyle(fontSize: 12, color: context.desktopMuted),
+            ),
+            Switch(value: untaggedOnly, onChanged: onUntaggedChanged),
+          ],
+        ),
+        if (!untaggedOnly && tags.isNotEmpty)
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: tags
+                .map(
+                  (t) => FilterChip(
+                    label: Text('#${t.name}'),
+                    selected: tagIds.contains(t.id),
+                    onSelected: (s) => onTagChanged(t.id, s),
+                  ),
+                )
+                .toList(),
+          ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(onPressed: onReset, child: const Text('초기화')),
+            const SizedBox(width: 8),
+            FilledButton(onPressed: onApply, child: const Text('적용')),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -297,13 +439,14 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;
+
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontSize: 12,
-      fontWeight: FontWeight.w600,
-      color: AppTokens.muted,
+      fontWeight: FontWeight.w700,
+      color: context.desktopMuted,
     ),
   );
 }

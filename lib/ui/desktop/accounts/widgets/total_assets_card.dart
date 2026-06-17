@@ -41,30 +41,30 @@ class TotalAssetsCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '총 순자산',
-            style: TextStyle(fontSize: 12, color: AppTokens.muted),
+            style: TextStyle(fontSize: 12, color: context.desktopMuted),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
             formatKRW(total),
             style: TextStyle(
               fontSize: 30,
               fontWeight: FontWeight.bold,
-              color: total < 0 ? AppTokens.expense : null,
+              color: total < 0 ? context.desktopExpense : null,
             ),
           ),
           if (groupRows.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             _GroupBar(rows: groupRows, positiveTotal: positiveTotal),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Wrap(
               spacing: 16,
               runSpacing: 6,
@@ -132,18 +132,18 @@ class _GroupLegend extends StatelessWidget {
             color: colorFromHex(group.colorHex),
           ),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: 6),
         Text(
           group.label,
-          style: const TextStyle(fontSize: 12, color: AppTokens.muted),
+          style: TextStyle(fontSize: 12, color: context.desktopMuted),
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(
           formatKRW(sum),
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: sum < 0 ? AppTokens.expense : null,
+            color: sum < 0 ? context.desktopExpense : null,
           ),
         ),
       ],

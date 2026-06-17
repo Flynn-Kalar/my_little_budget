@@ -21,23 +21,25 @@ class CategoriesScreen extends ConsumerWidget {
           children: [
             TextButton.icon(
               onPressed: () => context.go('/settings'),
-              icon: const Icon(Icons.chevron_left, size: 18),
-              label: const Text('설정'),
-              style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
+              icon: Icon(Icons.chevron_left, size: 18),
+              label: Text('설정'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.desktopMuted,
+              ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '카테고리 관리',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '지출·수입 카테고리를 추가하고 색상과 순서를 바꿀 수 있습니다.',
-              style: TextStyle(fontSize: 13, color: AppTokens.muted),
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: 28),
             async.when(
-              loading: () => const Padding(
+              loading: () => Padding(
                 padding: EdgeInsets.all(40),
                 child: Center(child: CircularProgressIndicator()),
               ),
@@ -59,21 +61,21 @@ class CategoriesScreen extends ConsumerWidget {
                       title: '지출 카테고리',
                       items: expense,
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32),
                     CategoryManager(
                       type: 'income',
                       title: '수입 카테고리',
                       items: income,
                     ),
                     if (archived.isNotEmpty) ...[
-                      const SizedBox(height: 32),
+                      SizedBox(height: 32),
                       CategoryManager(
                         type: 'archived',
                         title: '보관됨',
                         items: archived,
                       ),
                     ],
-                    const SizedBox(height: 40),
+                    SizedBox(height: 40),
                   ],
                 );
               },

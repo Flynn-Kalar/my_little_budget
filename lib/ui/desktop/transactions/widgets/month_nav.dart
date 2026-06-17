@@ -19,8 +19,8 @@ class _MonthNavState extends ConsumerState<MonthNav> {
   @override
   Widget build(BuildContext context) {
     final month = ref.watch(selectedMonthProvider);
-    final d = parseMonthKey(month);
-    final label = '${d.year}년 ${d.month}월';
+    final date = parseMonthKey(month);
+    final label = '${date.year}\uB144 ${date.month}\uC6D4';
 
     void shift(int delta) {
       ref.read(selectedMonthProvider.notifier).state = shiftMonth(month, delta);
@@ -32,7 +32,7 @@ class _MonthNavState extends ConsumerState<MonthNav> {
         IconButton(
           onPressed: () => shift(-1),
           icon: const Icon(Icons.chevron_left),
-          tooltip: '이전 달',
+          tooltip: '\uC774\uC804 \uB2EC',
         ),
         MenuAnchor(
           controller: _menu,
@@ -57,21 +57,23 @@ class _MonthNavState extends ConsumerState<MonthNav> {
               minimumSize: const Size(140, 36),
               padding: const EdgeInsets.symmetric(horizontal: 12),
             ),
-            child: Text(label,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
           ),
         ),
         IconButton(
           onPressed: () => shift(1),
           icon: const Icon(Icons.chevron_right),
-          tooltip: '다음 달',
+          tooltip: '\uB2E4\uC74C \uB2EC',
         ),
         const SizedBox(width: 4),
         TextButton(
-          onPressed: () =>
-              ref.read(selectedMonthProvider.notifier).state = currentMonthKey(),
-          style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
-          child: const Text('오늘'),
+          onPressed: () => ref.read(selectedMonthProvider.notifier).state =
+              currentMonthKey(),
+          style: TextButton.styleFrom(foregroundColor: context.desktopMuted),
+          child: const Text('\uC624\uB298'),
         ),
       ],
     );

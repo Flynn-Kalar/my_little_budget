@@ -474,6 +474,8 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final income = context.appIncome;
+    final expense = context.appExpense;
     return MobileCard(
       child: Column(
         children: [
@@ -483,9 +485,7 @@ class _SummaryCard extends StatelessWidget {
           AmountLine(
             label: '실현손익',
             value: formatKRW(summary.realizedPnl),
-            valueColor: summary.realizedPnl < 0
-                ? AppTokens.expense
-                : AppTokens.income,
+            valueColor: summary.realizedPnl < 0 ? expense : income,
           ),
         ],
       ),
@@ -541,6 +541,8 @@ class _HoldingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final income = context.appIncome;
+    final expense = context.appExpense;
     const unrealizedPnl = 0;
     const returnRate = 0.0;
 
@@ -573,13 +575,13 @@ class _HoldingTile extends StatelessWidget {
             AmountLine(
               label: '실현손익',
               value: formatKRW(realized),
-              valueColor: realized < 0 ? AppTokens.expense : AppTokens.income,
+              valueColor: realized < 0 ? expense : income,
             ),
             AmountLine(label: '배당금', value: formatKRW(dividends)),
             AmountLine(
               label: '수익률',
               value: '${(returnRate * 100).toStringAsFixed(1)}%',
-              valueColor: returnRate < 0 ? AppTokens.expense : AppTokens.income,
+              valueColor: returnRate < 0 ? expense : income,
             ),
           ],
         ),
@@ -630,6 +632,8 @@ class _RealizedPnlCard extends StatelessWidget {
     if (rows.isEmpty) return const EmptyMobileCard('실현손익 내역이 없습니다.');
 
     final total = rows.fold<int>(0, (sum, row) => sum + row.pnl);
+    final income = context.appIncome;
+    final expense = context.appExpense;
     final byTicker = <String, int>{};
     for (final row in rows) {
       byTicker[row.ticker] = (byTicker[row.ticker] ?? 0) + row.pnl;
@@ -644,7 +648,7 @@ class _RealizedPnlCard extends StatelessWidget {
           AmountLine(
             label: '총 실현손익',
             value: formatKRW(total),
-            valueColor: total < 0 ? AppTokens.expense : AppTokens.income,
+            valueColor: total < 0 ? expense : income,
           ),
           const SizedBox(height: 10),
           const Text('종목별 실현손익', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -653,9 +657,7 @@ class _RealizedPnlCard extends StatelessWidget {
             AmountLine(
               label: entry.key,
               value: formatKRW(entry.value),
-              valueColor: entry.value < 0
-                  ? AppTokens.expense
-                  : AppTokens.income,
+              valueColor: entry.value < 0 ? expense : income,
             ),
           const SizedBox(height: 8),
           const Divider(),
@@ -669,7 +671,7 @@ class _RealizedPnlCard extends StatelessWidget {
               trailing: Text(
                 formatKRW(row.pnl),
                 style: TextStyle(
-                  color: row.pnl < 0 ? AppTokens.expense : AppTokens.income,
+                  color: row.pnl < 0 ? expense : income,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -800,9 +802,9 @@ class _InvestmentCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final color = switch (row.side) {
-      'buy' => AppTokens.expense,
-      'sell' => AppTokens.income,
-      'dividend' => AppTokens.warning,
+      'buy' => context.appExpense,
+      'sell' => context.appIncome,
+      'dividend' => context.appWarning,
       _ => theme.colorScheme.onSurface,
     };
 

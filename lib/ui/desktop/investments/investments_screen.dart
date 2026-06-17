@@ -30,11 +30,11 @@ class InvestmentsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               '투자',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             Wrap(
               spacing: 12,
               runSpacing: 8,
@@ -44,9 +44,9 @@ class InvestmentsScreen extends ConsumerWidget {
                 const _AddInvestmentButton(),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             const _InvestmentFilterBar(),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             account.when(
               data: (value) => _InvestmentAccountBanner(account: value),
               loading: () => const _InvestmentCard(
@@ -54,7 +54,7 @@ class InvestmentsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             summary.when(
               data: (value) => _InvestmentSummaryCard(summary: value),
               loading: () => const _InvestmentCard(
@@ -62,7 +62,7 @@ class InvestmentsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             holdings.when(
               data: (value) => _HoldingsCard(holdings: value),
               loading: () => const _InvestmentCard(
@@ -70,7 +70,7 @@ class InvestmentsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             rows.when(
               data: (value) => _InvestmentRowsCard(
                 rows: value,
@@ -81,7 +81,7 @@ class InvestmentsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             realizedPnl.when(
               data: (value) => _RealizedPnlCard(rows: value),
               loading: () => const _InvestmentCard(
@@ -89,7 +89,7 @@ class InvestmentsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: 40),
           ],
         ),
       ),
@@ -108,8 +108,8 @@ class _AddInvestmentButton extends StatelessWidget {
         initialSide: 'buy',
         lockSide: true,
       ),
-      icon: const Icon(Icons.add, size: 18),
-      label: const Text('투자 거래 추가'),
+      icon: Icon(Icons.add, size: 18),
+      label: Text('투자 거래 추가'),
     );
   }
 }
@@ -233,20 +233,20 @@ class _InvestmentFilterBarState extends ConsumerState<_InvestmentFilterBar> {
           OutlinedButton.icon(
             key: const ValueKey('investment-from-filter'),
             onPressed: () => _pickDate(true),
-            icon: const Icon(Icons.calendar_today, size: 14),
+            icon: Icon(Icons.calendar_today, size: 14),
             label: Text(filter.fromDate ?? '시작일'),
           ),
           OutlinedButton.icon(
             key: const ValueKey('investment-to-filter'),
             onPressed: () => _pickDate(false),
-            icon: const Icon(Icons.calendar_today, size: 14),
+            icon: Icon(Icons.calendar_today, size: 14),
             label: Text(filter.toDate ?? '종료일'),
           ),
           TextButton.icon(
             key: const ValueKey('investment-filter-reset'),
             onPressed: filter.isActive ? _reset : null,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('초기화'),
+            icon: Icon(Icons.refresh, size: 16),
+            label: Text('초기화'),
           ),
         ],
       ),
@@ -275,7 +275,7 @@ class _InvestmentMonthNav extends ConsumerWidget {
       children: [
         IconButton(
           onPressed: () => shift(-1),
-          icon: const Icon(Icons.chevron_left),
+          icon: Icon(Icons.chevron_left),
           tooltip: '이전 달',
         ),
         OutlinedButton.icon(
@@ -283,12 +283,12 @@ class _InvestmentMonthNav extends ConsumerWidget {
             ref.read(investmentMonthProvider.notifier).state =
                 currentMonthKey();
           },
-          icon: const Icon(Icons.calendar_month, size: 18),
+          icon: Icon(Icons.calendar_month, size: 18),
           label: Text('${d.year}년 ${d.month}월'),
         ),
         IconButton(
           onPressed: () => shift(1),
-          icon: const Icon(Icons.chevron_right),
+          icon: Icon(Icons.chevron_right),
           tooltip: '다음 달',
         ),
       ],
@@ -312,23 +312,23 @@ class _InvestmentAccountBanner extends StatelessWidget {
             hasAccount
                 ? Icons.account_balance_wallet_outlined
                 : Icons.info_outline,
-            color: hasAccount ? AppTokens.income : AppTokens.warning,
+            color: hasAccount ? context.desktopIncome : context.desktopWarning,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   hasAccount ? '투자 계좌 연결됨' : '투자 계좌 없음',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   hasAccount
                       ? '${account!.name} 계좌에 투자 거래가 연결됩니다.'
                       : '활성 투자 자산이 없으면 투자 거래는 계좌 없이 저장됩니다.',
-                  style: const TextStyle(color: AppTokens.muted),
+                  style: TextStyle(color: context.desktopMuted),
                 ),
               ],
             ),
@@ -353,36 +353,36 @@ class _InvestmentSummaryCard extends StatelessWidget {
             label: '매수',
             amount: summary.buy,
             icon: Icons.south_west,
-            color: AppTokens.expense,
+            color: context.desktopExpense,
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _SummaryTile(
             label: '매도',
             amount: summary.sell,
             icon: Icons.north_east,
-            color: AppTokens.income,
+            color: context.desktopIncome,
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _SummaryTile(
             label: '배당',
             amount: summary.dividend,
             icon: Icons.payments_outlined,
-            color: AppTokens.warning,
+            color: context.desktopWarning,
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: _SummaryTile(
             label: '실현손익',
             amount: summary.realizedPnl,
             icon: Icons.swap_vert,
             color: summary.realizedPnl < 0
-                ? AppTokens.expense
-                : AppTokens.accent,
+                ? context.desktopExpense
+                : context.desktopAccent,
           ),
         ),
       ],
@@ -409,13 +409,13 @@ class _SummaryTile extends StatelessWidget {
       child: Row(
         children: [
           Icon(icon, color: color),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: AppTokens.muted)),
-                const SizedBox(height: 4),
+                Text(label, style: TextStyle(color: context.desktopMuted)),
+                SizedBox(height: 4),
                 Text(
                   formatKRW(amount),
                   overflow: TextOverflow.ellipsis,
@@ -457,7 +457,7 @@ class _HoldingsCardState extends ConsumerState<_HoldingsCard> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   '현재 보유 종목',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -465,11 +465,11 @@ class _HoldingsCardState extends ConsumerState<_HoldingsCard> {
               ),
               Text(
                 formatKRW(totalCost),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           if (holdings.isEmpty)
             const _EmptyState(message: '보유 종목이 없습니다. BUY 거래를 추가하면 여기에 표시됩니다.')
           else
@@ -518,7 +518,7 @@ class _HoldingsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (compact) return const SizedBox.shrink();
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
@@ -552,9 +552,9 @@ class _HoldingRow extends StatelessWidget {
         Icon(
           expanded ? Icons.expand_less : Icons.expand_more,
           size: 18,
-          color: AppTokens.muted,
+          color: context.desktopMuted,
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Expanded(
           child: Tooltip(
             message: holding.ticker,
@@ -563,7 +563,7 @@ class _HoldingRow extends StatelessWidget {
               holding.ticker,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -580,7 +580,7 @@ class _HoldingRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               title,
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Wrap(
                 spacing: 14,
                 runSpacing: 4,
@@ -655,9 +655,9 @@ class _HoldingInlineActions extends StatelessWidget {
       padding: EdgeInsets.fromLTRB(compact ? 0 : 22, 4, 0, 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppTokens.sidebarActive,
+          color: context.desktopSelectedSurface,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: AppTokens.sidebarBorder),
+          border: Border.all(color: context.desktopBorder),
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -668,9 +668,9 @@ class _HoldingInlineActions extends StatelessWidget {
                 '${holding.ticker} · ${_formatQuantity(holding.quantity)} 보유',
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final narrow = constraints.maxWidth < 720;
@@ -690,7 +690,7 @@ class _HoldingInlineActions extends StatelessWidget {
                     return Column(
                       children: [
                         forms[0],
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         forms[1],
                       ],
                     );
@@ -699,7 +699,7 @@ class _HoldingInlineActions extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: forms[0]),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(child: forms[1]),
                     ],
                   );
@@ -728,13 +728,13 @@ class _MiniMetric extends StatelessWidget {
         children: [
           Text(
             '$label ',
-            style: const TextStyle(fontSize: 12, color: AppTokens.muted),
+            style: TextStyle(fontSize: 12, color: context.desktopMuted),
           ),
           Flexible(
             child: Text(
               value,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -865,9 +865,9 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTokens.surface,
+        color: context.desktopSurface,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppTokens.sidebarBorder),
+        border: Border.all(color: context.desktopBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -879,16 +879,16 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
                 Icon(
                   _sideIcon(widget.side),
                   size: 16,
-                  color: _sideColor(widget.side),
+                  color: _sideColor(context, widget.side),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Text(
                   _isSell ? '매도 입력' : '배당 입력',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             TextField(
               controller: _date,
               readOnly: true,
@@ -896,11 +896,11 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
                 labelText: '거래일',
                 suffixIcon: IconButton(
                   onPressed: _busy ? null : _pickDate,
-                  icon: const Icon(Icons.calendar_month_outlined),
+                  icon: Icon(Icons.calendar_month_outlined),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             if (_isSell) ...[
               _QuantityField(
                 controller: _quantity,
@@ -910,7 +910,7 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
                 textInputAction: TextInputAction.next,
                 onSubmitted: (_) => _totalAmountFocus.requestFocus(),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               TextField(
                 controller: _totalAmount,
                 focusNode: _totalAmountFocus,
@@ -923,7 +923,7 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
                   suffixText: '원',
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               TextField(
                 controller: _fee,
                 focusNode: _feeFocus,
@@ -950,7 +950,7 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
                 ),
               ),
             ],
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             TextField(
               controller: _memo,
               focusNode: _memoFocus,
@@ -961,13 +961,13 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
               onSubmitted: (_) => _busy ? null : _save(),
               decoration: const InputDecoration(labelText: '메모'),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
                 onPressed: _busy ? null : _save,
                 icon: _busy
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(strokeWidth: 2),
@@ -995,11 +995,11 @@ class _InvestmentRowsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '월간 투자 거래',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           if (rows.isEmpty)
             _EmptyState(
               message: filterActive ? '필터 결과가 없습니다.' : '이번 달 투자 거래가 없습니다.',
@@ -1023,7 +1023,7 @@ class _InvestmentRowsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
@@ -1045,7 +1045,7 @@ class _InvestmentRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sideColor = _sideColor(row.side);
+    final sideColor = _sideColor(context, row.side);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -1061,7 +1061,7 @@ class _InvestmentRow extends ConsumerWidget {
             child: Text(
               row.ticker,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
@@ -1089,14 +1089,14 @@ class _InvestmentRow extends ConsumerWidget {
                   tooltip: '수정',
                   onPressed: () =>
                       _InvestmentCreateDialog.show(context, investment: row),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  icon: Icon(Icons.edit_outlined, size: 18),
                 ),
                 IconButton(
                   key: ValueKey('investment-delete-${row.id}'),
                   tooltip: '삭제',
                   onPressed: () => _confirmDeleteInvestment(context, ref, row),
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  color: AppTokens.expense,
+                  icon: Icon(Icons.delete_outline, size: 18),
+                  color: context.desktopExpense,
                 ),
               ],
             ),
@@ -1116,17 +1116,17 @@ Future<void> _confirmDeleteInvestment(
     context: context,
     builder: (dialogContext) => AlertDialog(
       key: const ValueKey('investment-delete-confirm-dialog'),
-      title: const Text('투자 거래 삭제'),
+      title: Text('투자 거래 삭제'),
       content: Text('${row.ticker} ${_sideLabel(row.side)} 거래를 삭제할까요?'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('취소'),
+          child: Text('취소'),
         ),
         FilledButton(
           key: const ValueKey('investment-delete-confirm-button'),
           onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('삭제'),
+          child: Text('삭제'),
         ),
       ],
     ),
@@ -1160,9 +1160,11 @@ class _SidePill extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: _sideColor(side).withValues(alpha: 0.10),
+          color: _sideColor(context, side).withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: _sideColor(side).withValues(alpha: 0.35)),
+          border: Border.all(
+            color: _sideColor(context, side).withValues(alpha: 0.35),
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1172,12 +1174,12 @@ class _SidePill extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(_sideIcon(side), size: 12, color: _sideColor(side)),
-                const SizedBox(width: 4),
+                Icon(_sideIcon(side), size: 12, color: _sideColor(context, side)),
+                SizedBox(width: 4),
                 Text(
                   _sideLabel(side),
                   style: TextStyle(
-                    color: _sideColor(side),
+                    color: _sideColor(context, side),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1210,39 +1212,39 @@ class _RealizedPnlCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '실현손익',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _InlineMetric(
                   label: '월간 실현손익',
                   amount: totalPnl,
-                  color: totalPnl < 0 ? AppTokens.expense : AppTokens.income,
+                  color: totalPnl < 0 ? context.desktopExpense : context.desktopIncome,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _InlineMetric(
                   label: '총 매도금액',
                   amount: totalSell,
-                  color: AppTokens.income,
+                  color: context.desktopIncome,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _InlineMetric(
                   label: '총 배당금',
                   amount: totalDividend,
-                  color: AppTokens.warning,
+                  color: context.desktopWarning,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           if (rows.isEmpty)
             const _EmptyState(message: '이번 달 실현손익 내역이 없습니다.')
           else
@@ -1274,7 +1276,7 @@ class _InlineMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTokens.sidebarActive,
+        color: context.desktopSelectedSurface,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Padding(
@@ -1282,8 +1284,8 @@ class _InlineMetric extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: AppTokens.muted)),
-            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: context.desktopMuted)),
+            SizedBox(height: 4),
             Text(
               formatKRW(amount),
               overflow: TextOverflow.ellipsis,
@@ -1305,7 +1307,7 @@ class _RealizedPnlHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
@@ -1331,7 +1333,7 @@ class _RealizedPnlRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final side = row.kind == RealizedKind.sell ? 'sell' : 'dividend';
-    final pnlColor = row.pnl < 0 ? AppTokens.expense : AppTokens.income;
+    final pnlColor = row.pnl < 0 ? context.desktopExpense : context.desktopIncome;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -1347,7 +1349,7 @@ class _RealizedPnlRow extends StatelessWidget {
             child: Text(
               row.ticker,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
           Expanded(
@@ -1604,7 +1606,7 @@ class _InvestmentCreateDialogState
 
     return AlertDialog(
       key: const ValueKey('investment-dialog'),
-      title: const Text('투자 거래 추가'),
+      title: Text('투자 거래 추가'),
       content: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: (MediaQuery.sizeOf(context).width - 48).clamp(280.0, 540.0),
@@ -1629,7 +1631,7 @@ class _InvestmentCreateDialogState
                       ? null
                       : (values) => setState(() => _side = values.first),
                 ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               TextField(
                 key: const ValueKey('investment-date-field'),
                 controller: _date,
@@ -1638,11 +1640,11 @@ class _InvestmentCreateDialogState
                   labelText: '거래일',
                   suffixIcon: IconButton(
                     onPressed: _busy ? null : _pickDate,
-                    icon: const Icon(Icons.calendar_month_outlined),
+                    icon: Icon(Icons.calendar_month_outlined),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               TextField(
                 key: const ValueKey('investment-ticker-field'),
                 controller: _ticker,
@@ -1661,7 +1663,7 @@ class _InvestmentCreateDialogState
                 },
                 decoration: const InputDecoration(labelText: 'ticker'),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               if (_side == 'buy') ...[
                 TextField(
                   key: const ValueKey('investment-name-field'),
@@ -1675,7 +1677,7 @@ class _InvestmentCreateDialogState
                     helperText: '현재 DB에는 별도 종목명 컬럼이 없어 메모에 함께 저장됩니다.',
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -1687,7 +1689,7 @@ class _InvestmentCreateDialogState
                         onSubmitted: (_) => _unitPriceFocus.requestFocus(),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: TextField(
                         key: const ValueKey('investment-unit-price-field'),
@@ -1705,7 +1707,7 @@ class _InvestmentCreateDialogState
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
               ] else if (_side == 'sell') ...[
                 _QuantityField(
                   controller: _quantity,
@@ -1715,7 +1717,7 @@ class _InvestmentCreateDialogState
                   textInputAction: TextInputAction.next,
                   onSubmitted: (_) => _totalAmountFocus.requestFocus(),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 TextField(
                   key: const ValueKey('investment-total-amount-field'),
                   controller: _totalAmount,
@@ -1729,7 +1731,7 @@ class _InvestmentCreateDialogState
                     suffixText: '원',
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
               ] else ...[
                 TextField(
                   key: const ValueKey('investment-total-amount-field'),
@@ -1744,7 +1746,7 @@ class _InvestmentCreateDialogState
                     suffixText: '원',
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
               ],
               if (_side != 'dividend') ...[
                 TextField(
@@ -1760,7 +1762,7 @@ class _InvestmentCreateDialogState
                     suffixText: '원',
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
               ],
               account.when(
                 data: (value) => InputDecorator(
@@ -1770,10 +1772,10 @@ class _InvestmentCreateDialogState
                 loading: () => const LinearProgressIndicator(minHeight: 3),
                 error: (error, _) => Text(
                   error.toString(),
-                  style: const TextStyle(color: AppTokens.expense),
+                  style: TextStyle(color: context.desktopExpense),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               TextField(
                 key: const ValueKey('investment-memo-field'),
                 controller: _memo,
@@ -1793,12 +1795,12 @@ class _InvestmentCreateDialogState
         TextButton(
           key: const ValueKey('investment-cancel-button'),
           onPressed: _busy ? null : () => Navigator.pop(context),
-          child: const Text('취소'),
+          child: Text('취소'),
         ),
         FilledButton(
           key: const ValueKey('investment-save-button'),
           onPressed: _busy ? null : _save,
-          child: const Text('저장'),
+          child: Text('저장'),
         ),
       ],
     );
@@ -1850,12 +1852,12 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.inbox_outlined, color: AppTokens.muted, size: 22),
-            const SizedBox(height: 8),
+            Icon(Icons.inbox_outlined, color: context.desktopMuted, size: 22),
+            SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTokens.muted),
+              style: TextStyle(color: context.desktopMuted),
             ),
           ],
         ),
@@ -1872,7 +1874,7 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _InvestmentCard(
-      child: Text(message, style: const TextStyle(color: AppTokens.expense)),
+      child: Text(message, style: TextStyle(color: context.desktopExpense)),
     );
   }
 }
@@ -1906,12 +1908,12 @@ String _sideLabel(String side) {
   };
 }
 
-Color _sideColor(String side) {
+Color _sideColor(BuildContext context, String side) {
   return switch (side) {
-    'buy' => AppTokens.expense,
-    'sell' => AppTokens.income,
-    'dividend' => AppTokens.warning,
-    _ => AppTokens.muted,
+    'buy' => context.appExpense,
+    'sell' => context.appIncome,
+    'dividend' => context.appWarning,
+    _ => context.desktopMuted,
   };
 }
 

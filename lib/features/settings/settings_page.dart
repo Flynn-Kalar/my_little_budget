@@ -13,7 +13,7 @@ class SettingsPage extends StatelessWidget {
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text(
               '설정',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -21,7 +21,7 @@ class SettingsPage extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               '거래 입력과 앱 관리에 필요한 기준 데이터를 정리합니다.',
-              style: TextStyle(fontSize: 13, color: AppTokens.muted),
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
             SizedBox(height: 24),
             _SettingsCard(
@@ -79,15 +79,17 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = _enabled ? Colors.black87 : AppTokens.muted;
+    final foreground = _enabled
+        ? Theme.of(context).colorScheme.onSurface
+        : context.desktopMuted;
     final borderColor = _enabled
-        ? AppTokens.sidebarBorder
-        : AppTokens.sidebarBorder.withValues(alpha: 0.65);
+        ? context.desktopBorder
+        : context.desktopBorder.withValues(alpha: 0.65);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: AppTokens.surface,
+        color: context.desktopSurface,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -103,9 +105,9 @@ class _SettingsCard extends StatelessWidget {
                 Icon(
                   icon,
                   size: 18,
-                  color: _enabled ? AppTokens.muted : foreground,
+                  color: _enabled ? context.desktopMuted : foreground,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,24 +127,24 @@ class _SettingsCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppTokens.muted,
+                          color: context.desktopMuted,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Icon(
                   _enabled ? Icons.chevron_right : Icons.lock_outline,
                   size: 18,
-                  color: AppTokens.muted,
+                  color: context.desktopMuted,
                 ),
               ],
             ),

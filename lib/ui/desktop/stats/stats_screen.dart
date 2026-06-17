@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
@@ -25,16 +26,19 @@ class StatsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               '통계',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             _StatsMonthNav(month: month),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
+            _MonthlyInsightCard(breakdown: breakdown, trend: trend),
+            SizedBox(height: 16),
             breakdown.when(
               data: (rows) => _ExpenseBreakdownCard(
                 rows: rows,
+                netAmount: _netForMonth(trend, month),
                 selectedCategoryId: selectedCategory?.categoryId,
               ),
               loading: () => const _StatsCard(
@@ -43,7 +47,7 @@ class StatsScreen extends ConsumerWidget {
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
             if (selectedCategory != null) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               selectedTransactions.when(
                 data: (rows) => _CategoryDetailCard(
                   category: selectedCategory,
@@ -56,7 +60,7 @@ class StatsScreen extends ConsumerWidget {
                 error: (error, _) => _ErrorCard(message: error.toString()),
               ),
             ],
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             trend.when(
               data: (rows) => _TrendCard(rows: rows),
               loading: () => const _StatsCard(
@@ -64,14 +68,26 @@ class StatsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             const _YearlyTodoCard(),
-            const SizedBox(height: 40),
+            SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
+}
+
+int? _netForMonth(AsyncValue<List<MonthlyTrendRow>> trend, String month) {
+  return trend.maybeWhen(
+    data: (rows) {
+      for (final row in rows) {
+        if (row.month == month) return row.net;
+      }
+      return rows.isEmpty ? null : rows.last.net;
+    },
+    orElse: () => null,
+  );
 }
 
 class _StatsMonthNav extends ConsumerWidget {
@@ -93,7 +109,7 @@ class _StatsMonthNav extends ConsumerWidget {
       children: [
         IconButton(
           onPressed: () => shift(-1),
-          icon: const Icon(Icons.chevron_left),
+          icon: Icon(Icons.chevron_left),
           tooltip: '이전 달',
         ),
         OutlinedButton.icon(
@@ -101,12 +117,12 @@ class _StatsMonthNav extends ConsumerWidget {
             ref.read(statsMonthProvider.notifier).state = currentMonthKey();
             ref.read(statsSelectedCategoryProvider.notifier).state = null;
           },
-          icon: const Icon(Icons.calendar_month, size: 18),
+          icon: Icon(Icons.calendar_month, size: 18),
           label: Text('${d.year}년 ${d.month}월'),
         ),
         IconButton(
           onPressed: () => shift(1),
-          icon: const Icon(Icons.chevron_right),
+          icon: Icon(Icons.chevron_right),
           tooltip: '다음 달',
         ),
       ],
@@ -114,18 +130,169 @@ class _StatsMonthNav extends ConsumerWidget {
   }
 }
 
+class _MonthlyInsightCard extends StatelessWidget {
+  const _MonthlyInsightCard({required this.breakdown, required this.trend});
+
+  final AsyncValue<List<CategoryBreakdownRow>> breakdown;
+  final AsyncValue<List<MonthlyTrendRow>> trend;
+
+  @override
+  Widget build(BuildContext context) {
+    return breakdown.when(
+      data: (categoryRows) => trend.when(
+        data: (trendRows) {
+          final monthExpense = categoryRows.fold<int>(
+            0,
+            (sum, row) => sum + row.total,
+          );
+          final previousExpense = trendRows.length >= 2
+              ? trendRows[trendRows.length - 2].expense
+              : 0;
+          final diff = monthExpense - previousExpense;
+          final averageExpense = trendRows.isEmpty
+              ? 0
+              : (trendRows.fold<int>(0, (sum, row) => sum + row.expense) /
+                        trendRows.length)
+                    .round();
+          final topCategory = categoryRows.isEmpty ? null : categoryRows.first;
+
+          return _StatsCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: _InsightTile(
+                    icon: Icons.payments_outlined,
+                    label: '이번 달 지출',
+                    value: formatKRW(monthExpense),
+                    color: context.desktopExpense,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _InsightTile(
+                    icon: diff <= 0
+                        ? Icons.trending_down_outlined
+                        : Icons.trending_up_outlined,
+                    label: '전월 대비',
+                    value: previousExpense == 0
+                        ? '-'
+                        : '${diff >= 0 ? '+' : ''}${formatKRW(diff)}',
+                    color: diff > 0
+                        ? context.desktopExpense
+                        : context.desktopIncome,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _InsightTile(
+                    icon: Icons.query_stats_outlined,
+                    label: '12개월 평균',
+                    value: formatKRW(averageExpense),
+                    color: context.desktopAccent,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _InsightTile(
+                    icon: Icons.category_outlined,
+                    label: '최대 카테고리',
+                    value: topCategory == null
+                        ? '-'
+                        : '${topCategory.categoryName} · ${formatKRW(topCategory.total)}',
+                    color: topCategory == null
+                        ? context.desktopMuted
+                        : _parseColor(
+                            topCategory.categoryColor,
+                            context.desktopAccent,
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+        loading: () =>
+            const _StatsCard(child: LinearProgressIndicator(minHeight: 3)),
+        error: (error, _) => _ErrorCard(message: error.toString()),
+      ),
+      loading: () =>
+          const _StatsCard(child: LinearProgressIndicator(minHeight: 3)),
+      error: (error, _) => _ErrorCard(message: error.toString()),
+    );
+  }
+}
+
+class _InsightTile extends StatelessWidget {
+  const _InsightTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.desktopSelectedSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.desktopBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(color: context.desktopMuted)),
+                  SizedBox(height: 4),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ExpenseBreakdownCard extends ConsumerWidget {
   const _ExpenseBreakdownCard({
     required this.rows,
+    required this.netAmount,
     required this.selectedCategoryId,
   });
 
   final List<CategoryBreakdownRow> rows;
+  final int? netAmount;
   final int? selectedCategoryId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final total = rows.fold<int>(0, (sum, row) => sum + row.total);
+    final maxCategoryTotal = rows.fold<int>(
+      0,
+      (max, row) => row.total > max ? row.total : max,
+    );
 
     return _StatsCard(
       child: Column(
@@ -133,39 +300,54 @@ class _ExpenseBreakdownCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   '지출 카테고리',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
-              Text(
-                formatKRW(total),
-                style: const TextStyle(
-                  color: AppTokens.expense,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           if (rows.isEmpty)
             const _EmptyState(message: '이번 달 지출 내역이 없습니다.')
           else
-            Column(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final row in rows)
-                  _BreakdownRow(
-                    row: row,
-                    total: total,
-                    selected: selectedCategoryId == row.categoryId,
-                    onTap: () {
-                      final current = ref.read(statsSelectedCategoryProvider);
-                      ref.read(statsSelectedCategoryProvider.notifier).state =
-                          current?.categoryId == row.categoryId ? null : row;
-                    },
+                Expanded(
+                  child: Column(
+                    children: [
+                      for (final row in rows)
+                        _BreakdownRow(
+                          row: row,
+                          total: total,
+                          maxTotal: maxCategoryTotal,
+                          selected: selectedCategoryId == row.categoryId,
+                          onTap: () {
+                            final current = ref.read(
+                              statsSelectedCategoryProvider,
+                            );
+                            ref
+                                .read(statsSelectedCategoryProvider.notifier)
+                                .state = current?.categoryId == row.categoryId
+                                ? null
+                                : row;
+                          },
+                        ),
+                    ],
                   ),
+                ),
+                SizedBox(width: 20),
+                SizedBox(
+                  width: 280,
+                  height: 240,
+                  child: _CategoryDonutChart(
+                    rows: rows,
+                    total: total,
+                    netAmount: netAmount,
+                  ),
+                ),
               ],
             ),
         ],
@@ -174,16 +356,100 @@ class _ExpenseBreakdownCard extends ConsumerWidget {
   }
 }
 
+class _CategoryDonutChart extends StatelessWidget {
+  const _CategoryDonutChart({
+    required this.rows,
+    required this.total,
+    required this.netAmount,
+  });
+
+  final List<CategoryBreakdownRow> rows;
+  final int total;
+  final int? netAmount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (total == 0) return const SizedBox.shrink();
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        PieChart(
+          PieChartData(
+            centerSpaceRadius: 70,
+            sectionsSpace: 2,
+            startDegreeOffset: -90,
+            sections: [
+              for (final row in rows.take(8))
+                PieChartSectionData(
+                  value: row.total.toDouble(),
+                  color: _parseColor(row.categoryColor, context.desktopMuted),
+                  radius: 28,
+                  showTitle: false,
+                ),
+            ],
+          ),
+        ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '총 지출',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.desktopMuted, fontSize: 12),
+            ),
+            SizedBox(height: 4),
+            Text(
+              formatKRW(total),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: context.desktopExpense,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(height: 5),
+            Text(
+              '순액',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.desktopMuted, fontSize: 12),
+            ),
+            SizedBox(height: 2),
+            Text(
+              netAmount == null ? '-' : formatKRW(netAmount!),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: netAmount == null || netAmount! >= 0
+                    ? context.desktopIncome
+                    : context.desktopExpense,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _BreakdownRow extends StatelessWidget {
   const _BreakdownRow({
     required this.row,
     required this.total,
+    required this.maxTotal,
     required this.selected,
     required this.onTap,
   });
 
   final CategoryBreakdownRow row;
   final int total;
+  final int maxTotal;
   final bool selected;
   final VoidCallback onTap;
 
@@ -194,7 +460,7 @@ class _BreakdownRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Material(
-        color: selected ? AppTokens.sidebarActive : Colors.transparent,
+        color: selected ? context.desktopSelectedSurface : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -206,41 +472,46 @@ class _BreakdownRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    _ColorDot(color: _parseColor(row.categoryColor)),
-                    const SizedBox(width: 8),
+                    _ColorDot(
+                      color: _parseColor(
+                        row.categoryColor,
+                        context.desktopMuted,
+                      ),
+                    ),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         row.categoryName,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Text(
                       '$percent%',
-                      style: const TextStyle(color: AppTokens.muted),
+                      style: TextStyle(color: context.desktopMuted),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     SizedBox(
                       width: 120,
                       child: Text(
                         formatKRW(row.total),
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: total == 0 ? 0 : row.total / total,
+                    value: maxTotal == 0 ? 0 : row.total / maxTotal,
                     minHeight: 6,
-                    backgroundColor: AppTokens.sidebarBorder,
+                    backgroundColor: context.desktopBorder,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _parseColor(row.categoryColor),
+                      _parseColor(row.categoryColor, context.desktopMuted),
                     ),
                   ),
                 ),
@@ -273,16 +544,18 @@ class _CategoryDetailCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              _ColorDot(color: _parseColor(category.categoryColor)),
-              const SizedBox(width: 8),
+              _ColorDot(
+                color: _parseColor(
+                  category.categoryColor,
+                  context.desktopMuted,
+                ),
+              ),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '${d.year}년 ${d.month}월 ${category.categoryName} 상세',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
               IconButton(
@@ -290,11 +563,11 @@ class _CategoryDetailCard extends ConsumerWidget {
                 onPressed: () =>
                     ref.read(statsSelectedCategoryProvider.notifier).state =
                         null,
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           if (rows.isEmpty)
             const _EmptyState(message: '선택한 카테고리의 거래가 없습니다.')
           else
@@ -316,7 +589,7 @@ class _CategoryDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
@@ -371,8 +644,8 @@ class _CategoryDetailRow extends StatelessWidget {
             child: Text(
               formatKRW(row.amount),
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: AppTokens.expense,
+              style: TextStyle(
+                color: context.desktopExpense,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -398,45 +671,195 @@ class _TrendCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '최근 12개월 추세',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '최근 12개월 추세',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Text(
+                '(단위: 만원)',
+                style: TextStyle(color: context.desktopMuted, fontSize: 12),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _TrendSummaryTile(
                   label: '수입',
                   amount: totalIncome,
-                  color: AppTokens.income,
+                  color: context.desktopIncome,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _TrendSummaryTile(
                   label: '지출',
                   amount: totalExpense,
-                  color: AppTokens.expense,
+                  color: context.desktopExpense,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _TrendSummaryTile(
                   label: '순액',
                   amount: totalNet,
-                  color: totalNet < 0 ? AppTokens.expense : AppTokens.accent,
+                  color: totalNet < 0
+                      ? context.desktopExpense
+                      : context.desktopAccent,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           if (rows.isEmpty)
             const _EmptyState(message: '최근 12개월 거래 내역이 없습니다.')
-          else
+          else ...[
+            SizedBox(height: 220, child: _TrendChart(rows: rows)),
+            SizedBox(height: 16),
             _TrendTable(rows: rows),
+          ],
         ],
       ),
+    );
+  }
+}
+
+const int _axisStep = 500000;
+
+int _axisMax(List<MonthlyTrendRow> rows) {
+  final maxValue = rows.fold<int>(0, (max, row) {
+    final rowMax = [
+      row.income,
+      row.expense,
+      row.net > 0 ? row.net : 0,
+    ].reduce((a, b) => a > b ? a : b);
+    return rowMax > max ? rowMax : max;
+  });
+  if (maxValue <= 0) return _axisStep;
+  return ((maxValue + _axisStep - 1) ~/ _axisStep) * _axisStep;
+}
+
+int _axisMin(List<MonthlyTrendRow> rows) {
+  final minNet = rows.fold<int>(0, (min, row) => row.net < min ? row.net : min);
+  if (minNet >= 0) return 0;
+  return ((minNet - _axisStep + 1) ~/ _axisStep) * _axisStep;
+}
+
+String _axisLabel(double value) => '${value.round() ~/ 10000}';
+
+class _TrendChart extends StatelessWidget {
+  const _TrendChart({required this.rows});
+
+  final List<MonthlyTrendRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final minY = _axisMin(rows);
+    final maxY = _axisMax(rows);
+
+    return LineChart(
+      LineChartData(
+        minY: minY.toDouble(),
+        maxY: maxY.toDouble(),
+        lineTouchData: const LineTouchData(enabled: true),
+        gridData: FlGridData(
+          drawVerticalLine: false,
+          horizontalInterval: _axisStep.toDouble(),
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: context.desktopBorder, strokeWidth: 1),
+        ),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 38,
+              interval: _axisStep.toDouble(),
+              getTitlesWidget: (value, meta) {
+                return SideTitleWidget(
+                  meta: meta,
+                  child: Text(
+                    _axisLabel(value),
+                    style: TextStyle(color: context.desktopMuted, fontSize: 10),
+                  ),
+                );
+              },
+            ),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= rows.length) {
+                  return const SizedBox.shrink();
+                }
+                final month = parseMonthKey(rows[index].month).month;
+                return SideTitleWidget(
+                  meta: meta,
+                  child: Text(
+                    '$month월',
+                    style: TextStyle(color: context.desktopMuted, fontSize: 11),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        lineBarsData: [
+          _lineData(context, rows, (row) => row.income, context.desktopIncome),
+          _lineData(
+            context,
+            rows,
+            (row) => row.expense,
+            context.desktopExpense,
+          ),
+          _lineData(context, rows, (row) => row.net, context.desktopAccent),
+        ],
+      ),
+    );
+  }
+
+  LineChartBarData _lineData(
+    BuildContext context,
+    List<MonthlyTrendRow> rows,
+    int Function(MonthlyTrendRow row) read,
+    Color color,
+  ) {
+    return LineChartBarData(
+      isCurved: false,
+      color: color,
+      barWidth: 3,
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (_, _, _, _) => FlDotCirclePainter(
+          radius: 3.5,
+          color: color,
+          strokeWidth: 2,
+          strokeColor: context.desktopSurface,
+        ),
+      ),
+      belowBarData: BarAreaData(
+        show: true,
+        color: color.withValues(alpha: 0.08),
+      ),
+      spots: [
+        for (var i = 0; i < rows.length; i++)
+          FlSpot(i.toDouble(), read(rows[i]).toDouble()),
+      ],
     );
   }
 }
@@ -456,17 +879,17 @@ class _TrendSummaryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTokens.sidebarActive,
+        color: context.desktopSelectedSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTokens.sidebarBorder),
+        border: Border.all(color: context.desktopBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: AppTokens.muted)),
-            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: context.desktopMuted)),
+            SizedBox(height: 4),
             Text(
               formatKRW(amount),
               overflow: TextOverflow.ellipsis,
@@ -505,7 +928,7 @@ class _TrendHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
@@ -527,7 +950,9 @@ class _TrendTableRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = parseMonthKey(row.month);
-    final netColor = row.net < 0 ? AppTokens.expense : Colors.black87;
+    final netColor = row.net < 0
+        ? context.desktopExpense
+        : Theme.of(context).colorScheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -564,9 +989,9 @@ class _YearlyTodoCard extends StatelessWidget {
     return _StatsCard(
       child: Row(
         children: [
-          const Icon(Icons.table_chart_outlined, color: AppTokens.muted),
-          const SizedBox(width: 12),
-          const Expanded(
+          Icon(Icons.table_chart_outlined, color: context.desktopMuted),
+          SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -574,16 +999,16 @@ class _YearlyTodoCard extends StatelessWidget {
                 SizedBox(height: 2),
                 Text(
                   '월별 수입/지출/순액과 카테고리별 연간 지출을 확인합니다.',
-                  style: TextStyle(color: AppTokens.muted),
+                  style: TextStyle(color: context.desktopMuted),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           OutlinedButton.icon(
             onPressed: () => context.go('/stats/yearly'),
-            icon: const Icon(Icons.open_in_new, size: 18),
-            label: const Text('연간 통계 보기'),
+            icon: Icon(Icons.open_in_new, size: 18),
+            label: Text('연간 통계 보기'),
           ),
         ],
       ),
@@ -601,7 +1026,7 @@ class _EmptyState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Center(
-        child: Text(message, style: const TextStyle(color: AppTokens.muted)),
+        child: Text(message, style: TextStyle(color: context.desktopMuted)),
       ),
     );
   }
@@ -615,7 +1040,7 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _StatsCard(
-      child: Text(message, style: const TextStyle(color: AppTokens.expense)),
+      child: Text(message, style: TextStyle(color: context.desktopExpense)),
     );
   }
 }
@@ -629,7 +1054,7 @@ class _ColorDot extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: const SizedBox(width: 10, height: 10),
+      child: SizedBox(width: 10, height: 10),
     );
   }
 }
@@ -648,9 +1073,9 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
-Color _parseColor(String hex) {
+Color _parseColor(String hex, Color fallback) {
   final normalized = hex.replaceFirst('#', '');
   final value = int.tryParse(normalized, radix: 16);
-  if (value == null) return AppTokens.muted;
+  if (value == null) return fallback;
   return Color(0xFF000000 | value);
 }

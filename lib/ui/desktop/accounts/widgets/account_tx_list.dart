@@ -41,9 +41,9 @@ class AccountTxList extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _AccountDetailFilterBar(accountId: accountId),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         async.when(
-          loading: () => const Padding(
+          loading: () => Padding(
             padding: EdgeInsets.all(40),
             child: Center(child: CircularProgressIndicator()),
           ),
@@ -59,15 +59,15 @@ class AccountTxList extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 48),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      border: Border.all(color: AppTokens.sidebarBorder),
+                      border: Border.all(color: context.desktopBorder),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       filter.isActive ? '필터 결과가 없습니다.' : '거래 내역이 없습니다.',
-                      style: const TextStyle(color: AppTokens.muted),
+                      style: TextStyle(color: context.desktopMuted),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                   _InitialBalanceRow(initialBalance: initialBalance),
                 ],
               );
@@ -87,17 +87,17 @@ class AccountTxList extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 16, bottom: 6),
                     child: Text(
                       _dateHeader(entry.key),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppTokens.muted,
+                        color: context.desktopMuted,
                       ),
                     ),
                   ),
                   for (final row in entry.value)
                     _TxRowItem(row: row, accountId: accountId),
                 ],
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 _InitialBalanceRow(initialBalance: initialBalance),
               ],
             );
@@ -170,8 +170,8 @@ class _AccountDetailFilterBar extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -185,13 +185,13 @@ class _AccountDetailFilterBar extends ConsumerWidget {
               OutlinedButton.icon(
                 key: const ValueKey('account-detail-from-filter'),
                 onPressed: () => _pickDate(context, ref, filter, true),
-                icon: const Icon(Icons.calendar_today, size: 14),
+                icon: Icon(Icons.calendar_today, size: 14),
                 label: Text(filter.fromDate ?? '시작일'),
               ),
               OutlinedButton.icon(
                 key: const ValueKey('account-detail-to-filter'),
                 onPressed: () => _pickDate(context, ref, filter, false),
-                icon: const Icon(Icons.calendar_today, size: 14),
+                icon: Icon(Icons.calendar_today, size: 14),
                 label: Text(filter.toDate ?? '종료일'),
               ),
               TextButton.icon(
@@ -208,22 +208,22 @@ class _AccountDetailFilterBar extends ConsumerWidget {
                             const AccountDetailFilter();
                       }
                     : null,
-                icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('초기화'),
+                icon: Icon(Icons.refresh, size: 16),
+                label: Text('초기화'),
               ),
             ],
           ),
           if (categories.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               '카테고리',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppTokens.muted,
+                color: context.desktopMuted,
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -240,16 +240,16 @@ class _AccountDetailFilterBar extends ConsumerWidget {
             ),
           ],
           if (tags.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               '태그',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppTokens.muted,
+                color: context.desktopMuted,
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -309,10 +309,10 @@ class _GeneralRow extends ConsumerWidget {
       final isIncoming = row.toAccountId == accountId;
       final counterpart = isIncoming ? row.fromAccountName : row.toAccountName;
       final direction = isIncoming ? '← 이체 입금' : '→ 이체 출금';
-      leading = const CircleAvatar(
+      leading = CircleAvatar(
         radius: 14,
-        backgroundColor: AppTokens.sidebarActive,
-        child: Icon(Icons.swap_horiz, size: 16, color: AppTokens.muted),
+        backgroundColor: context.desktopSelectedSurface,
+        child: Icon(Icons.swap_horiz, size: 16, color: context.desktopMuted),
       );
       title = direction;
       metaParts = [
@@ -320,7 +320,7 @@ class _GeneralRow extends ConsumerWidget {
         ?counterpart,
         if (row.memo != null) row.memo!,
       ];
-      amountColor = isIncoming ? AppTokens.income : AppTokens.expense;
+      amountColor = isIncoming ? context.desktopIncome : context.desktopExpense;
       sign = isIncoming ? '+' : '-';
     } else {
       leading = Container(
@@ -336,14 +336,14 @@ class _GeneralRow extends ConsumerWidget {
         if (showTime) row.occurredTime,
         if (row.memo != null) row.memo!,
       ];
-      amountColor = isIncome ? AppTokens.income : AppTokens.expense;
+      amountColor = isIncome ? context.desktopIncome : context.desktopExpense;
       sign = isIncome ? '+' : '-';
     }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: AppTokens.surface,
+        color: context.desktopSurface,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -354,13 +354,13 @@ class _GeneralRow extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: AppTokens.sidebarBorder),
+              border: Border.all(color: context.desktopBorder),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
                 SizedBox(width: 28, child: Center(child: leading)),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,14 +371,14 @@ class _GeneralRow extends ConsumerWidget {
                             child: Text(
                               title,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                           if (row.tags.isNotEmpty) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             for (final t in row.tags)
                               Padding(
                                 padding: const EdgeInsets.only(right: 4),
@@ -392,15 +392,15 @@ class _GeneralRow extends ConsumerWidget {
                           metaParts.join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppTokens.muted,
+                            color: context.desktopMuted,
                           ),
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text(
                   '$sign${formatKRW(row.amount)}',
                   style: TextStyle(
@@ -427,7 +427,7 @@ class _AdjustmentRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final delta = row.amount;
     final isUp = delta > 0;
-    final color = isUp ? AppTokens.income : AppTokens.expense;
+    final color = isUp ? context.desktopIncome : context.desktopExpense;
     final sign = isUp ? '+' : '−';
     final showTime = row.occurredTime != '00:00';
     final metaParts = [
@@ -438,7 +438,7 @@ class _AdjustmentRow extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: AppTokens.surface,
+        color: context.desktopSurface,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -451,24 +451,28 @@ class _AdjustmentRow extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               border: Border.all(
-                color: AppTokens.sidebarBorder,
+                color: context.desktopBorder,
                 style: BorderStyle.solid,
               ),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 14,
-                  backgroundColor: AppTokens.sidebarActive,
-                  child: Icon(Icons.tune, size: 14, color: AppTokens.muted),
+                  backgroundColor: context.desktopSelectedSurface,
+                  child: Icon(
+                    Icons.tune,
+                    size: 14,
+                    color: context.desktopMuted,
+                  ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         '잔액 조정',
                         style: TextStyle(
                           fontSize: 14,
@@ -480,9 +484,9 @@ class _AdjustmentRow extends ConsumerWidget {
                           metaParts.join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: AppTokens.muted,
+                            color: context.desktopMuted,
                           ),
                         ),
                     ],
@@ -516,15 +520,15 @@ class _InvestmentVirtualRow extends StatelessWidget {
     final sideLabel =
         {'buy': '매수', 'sell': '매도', 'dividend': '배당'}[side] ?? side;
     final sideColor = switch (side) {
-      'buy' => AppTokens.muted,
-      'sell' => AppTokens.income,
-      _ => AppTokens.transfer, // dividend
+      'buy' => context.desktopMuted,
+      'sell' => context.desktopIncome,
+      _ => context.desktopTransfer, // dividend
     };
     final amountColor = impact > 0
-        ? AppTokens.income
+        ? context.desktopIncome
         : impact < 0
-        ? AppTokens.expense
-        : AppTokens.muted;
+        ? context.desktopExpense
+        : context.desktopMuted;
     final sign = impact > 0
         ? '+'
         : impact < 0
@@ -548,7 +552,7 @@ class _InvestmentVirtualRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: AppTokens.surface,
+        color: context.desktopSurface,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -556,7 +560,7 @@ class _InvestmentVirtualRow extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: AppTokens.sidebarBorder),
+              border: Border.all(color: context.desktopBorder),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
@@ -579,7 +583,7 @@ class _InvestmentVirtualRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,7 +591,7 @@ class _InvestmentVirtualRow extends StatelessWidget {
                       Text(
                         row.ticker ?? '',
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -596,9 +600,9 @@ class _InvestmentVirtualRow extends StatelessWidget {
                         meta,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppTokens.muted,
+                          color: context.desktopMuted,
                         ),
                       ),
                     ],
@@ -655,22 +659,22 @@ class _InitialBalanceRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(bottom: 6),
           child: Text(
             '초기',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppTokens.muted,
+              color: context.desktopMuted,
             ),
           ),
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: AppTokens.surface,
-            border: Border.all(color: AppTokens.sidebarBorder),
+            color: context.desktopSurface,
+            border: Border.all(color: context.desktopBorder),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
@@ -678,24 +682,24 @@ class _InitialBalanceRow extends StatelessWidget {
               Container(
                 width: 10,
                 height: 10,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTokens.muted,
+                  color: context.desktopMuted,
                 ),
               ),
-              const SizedBox(width: 14),
-              const Expanded(
+              SizedBox(width: 14),
+              Expanded(
                 child: Text(
                   '초기 잔액',
-                  style: TextStyle(fontSize: 14, color: AppTokens.muted),
+                  style: TextStyle(fontSize: 14, color: context.desktopMuted),
                 ),
               ),
               Text(
                 formatKRW(initialBalance),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppTokens.muted,
+                  color: context.desktopMuted,
                 ),
               ),
             ],

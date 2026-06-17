@@ -8,28 +8,35 @@ import 'widgets/summary_bar.dart';
 import 'widgets/transaction_list.dart';
 import 'widgets/type_filter.dart';
 
-/// SPEC §4.1 — 내역 화면 (PC). 로직/DAO 는 import 만.
+/// Desktop transaction screen. Data access stays inside the child widgets.
 class TransactionsScreen extends ConsumerWidget {
   const TransactionsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 1100),
-      child: SingleChildScrollView(
+    return SingleChildScrollView(
+      child: SizedBox(
+        width: double.infinity,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('내역',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(
+              '내역',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 20),
             MonthNav(),
             SizedBox(height: 16),
             SummaryBar(),
             SizedBox(height: 20),
-            TypeFilter(),
-            SizedBox(height: 12),
-            FilterPanel(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TypeFilter(),
+                SizedBox(width: 8),
+                Expanded(child: FilterPanel()),
+              ],
+            ),
             SizedBox(height: 16),
             InlineEntry(),
             SizedBox(height: 8),

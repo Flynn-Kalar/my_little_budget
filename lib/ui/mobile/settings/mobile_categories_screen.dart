@@ -180,7 +180,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                   icon: const Icon(Icons.delete_outline),
                   label: const Text('삭제'),
                   style: TextButton.styleFrom(
-                    foregroundColor: AppTokens.expense,
+                    foregroundColor: context.appExpense,
                   ),
                 ),
               const Spacer(),

@@ -91,17 +91,17 @@ class _State extends ConsumerState<AccountFormDialog> {
       context: context,
       builder: (ctx) => AlertDialog(
         key: const ValueKey('account-archive-confirm-dialog'),
-        title: const Text('자산 보관'),
+        title: Text('자산 보관'),
         content: Text("'${acc.name}' 자산을 보관할까요?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
+            child: Text('취소'),
           ),
           FilledButton(
             key: const ValueKey('account-archive-confirm-button'),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('보관'),
+            child: Text('보관'),
           ),
         ],
       ),
@@ -137,7 +137,7 @@ class _State extends ConsumerState<AccountFormDialog> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _kind,
                 decoration: const InputDecoration(
@@ -153,7 +153,7 @@ class _State extends ConsumerState<AccountFormDialog> {
                     .toList(),
                 onChanged: (v) => setState(() => _kind = v ?? 'bank'),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               TextField(
                 controller: _balanceCtrl,
                 keyboardType: TextInputType.number,
@@ -166,26 +166,26 @@ class _State extends ConsumerState<AccountFormDialog> {
                       : null,
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 '색상',
-                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+                style: TextStyle(fontSize: 12, color: context.desktopMuted),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               ColorSwatchPicker(
                 value: _color,
                 onChanged: (c) => setState(() => _color = c),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('총 순자산에서 제외', style: TextStyle(fontSize: 14)),
+                title: Text('총 순자산에서 제외', style: TextStyle(fontSize: 14)),
                 value: _excludeFromTotal,
                 onChanged: (v) => setState(() => _excludeFromTotal = v),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text(
+                title: Text(
                   '투자 페이지 연동 (1개 자산만)',
                   style: TextStyle(fontSize: 14),
                 ),
@@ -201,14 +201,14 @@ class _State extends ConsumerState<AccountFormDialog> {
           TextButton(
             key: const ValueKey('account-archive-button'),
             onPressed: _busy ? null : _archive,
-            style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
-            child: const Text('보관'),
+            style: TextButton.styleFrom(foregroundColor: context.desktopMuted),
+            child: Text('보관'),
           ),
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context),
-          child: const Text('취소'),
+          child: Text('취소'),
         ),
-        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+        FilledButton(onPressed: _busy ? null : _save, child: Text('저장')),
       ],
     );
   }

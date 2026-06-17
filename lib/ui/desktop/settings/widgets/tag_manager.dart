@@ -26,16 +26,16 @@ class _TagManagerState extends ConsumerState<TagManager> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('태그 삭제'),
-        content: const Text('거래에 붙은 태그도 함께 해제됩니다.'),
+        title: Text('태그 삭제'),
+        content: Text('거래에 붙은 태그도 함께 해제됩니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
+            child: Text('취소'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('삭제'),
+            child: Text('삭제'),
           ),
         ],
       ),
@@ -56,11 +56,11 @@ class _TagManagerState extends ConsumerState<TagManager> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.tags.isEmpty && !_showAdd)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Text(
               '등록된 태그가 없습니다.',
-              style: TextStyle(fontSize: 13, color: AppTokens.muted),
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
           ),
         for (final tag in widget.tags)
@@ -90,9 +90,11 @@ class _TagManagerState extends ConsumerState<TagManager> {
                     _editingId = null;
                     _showAdd = true;
                   }),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('태그 추가'),
-                  style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
+                  icon: Icon(Icons.add, size: 16),
+                  label: Text('태그 추가'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.desktopMuted,
+                  ),
                 ),
               ),
       ],
@@ -118,8 +120,8 @@ class _TagRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -132,21 +134,19 @@ class _TagRow extends StatelessWidget {
               color: colorFromHex(tag.color),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text('#${tag.name}', style: const TextStyle(fontSize: 14)),
-          ),
+          SizedBox(width: 12),
+          Expanded(child: Text('#${tag.name}', style: TextStyle(fontSize: 14))),
           IconButton(
             onPressed: busy ? null : onEdit,
-            icon: const Icon(Icons.edit_outlined, size: 16),
+            icon: Icon(Icons.edit_outlined, size: 16),
             tooltip: '편집',
-            color: AppTokens.muted,
+            color: context.desktopMuted,
           ),
           IconButton(
             onPressed: busy ? null : onDelete,
-            icon: const Icon(Icons.delete_outline, size: 16),
+            icon: Icon(Icons.delete_outline, size: 16),
             tooltip: '삭제',
-            color: AppTokens.warning,
+            color: context.desktopWarning,
           ),
         ],
       ),

@@ -31,12 +31,14 @@ class ColorSwatchPicker extends StatelessWidget {
               shape: BoxShape.circle,
               color: colorFromHex(hex),
               border: Border.all(
-                color: selected ? Colors.black87 : Colors.transparent,
+                color: selected
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Colors.transparent,
                 width: 2.5,
               ),
             ),
             child: selected
-                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                ? Icon(Icons.check, size: 14, color: Colors.white)
                 : null,
           ),
         );

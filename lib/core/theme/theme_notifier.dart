@@ -7,9 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'theme_colors.dart';
 
 /// SPEC §2.2 — 사용자 테마 색을 SharedPreferences 에 영속.
-/// Tauri 의 localStorage 'mlb-theme-v1' 키와 의미 동등.
-class ThemeNotifier extends Notifier<ThemeColors> {
-  static const _key = 'mlb-theme-v1';
+class ThemeNotifier extends Notifier<ThemePalettes> {
+  static const _key = 'mlb-theme-palettes-v1';
+  static const _legacyKey = 'mlb-theme-v1';
 
   final _ready = Completer<void>();
 
@@ -17,10 +17,10 @@ class ThemeNotifier extends Notifier<ThemeColors> {
   Future<void> get whenReady => _ready.future;
 
   @override
-  ThemeColors build() {
+  ThemePalettes build() {
     // 동기 build: 기본값 즉시 반환 + 비동기 로드 시작.
     unawaited(_load());
-    return defaultTheme;
+    return defaultPalettes;
   }
 
   Future<void> _load() async {
@@ -28,27 +28,47 @@ class ThemeNotifier extends Notifier<ThemeColors> {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_key);
       if (raw != null) {
-        state = ThemeColors.fromJsonString(raw);
+        state = ThemePalettes.fromJsonString(raw);
+        return;
+      }
+      final legacyRaw = prefs.getString(_legacyKey);
+      if (legacyRaw != null) {
+        state = ThemePalettes(
+          light: ThemeColors.fromJsonString(legacyRaw),
+          dark: darkDefaultTheme,
+        );
+        await prefs.setString(_key, state.toJsonString());
       }
     } finally {
       if (!_ready.isCompleted) _ready.complete();
     }
   }
 
-  Future<void> setColor(ThemeToken token, Color color) async {
-    state = state.withColor(token, color);
+  Future<void> setColor(
+    ThemeToken token,
+    Color color, {
+    required Brightness brightness,
+  }) async {
+    state = state.withColor(brightness, token, color);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, state.toJsonString());
   }
 
-  Future<void> reset() async {
-    state = defaultTheme;
+  Future<void> reset({required Brightness brightness}) async {
+    state = state.reset(brightness);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, state.toJsonString());
+  }
+
+  Future<void> resetAll() async {
+    state = defaultPalettes;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_key);
+    await prefs.remove(_legacyKey);
   }
 }
 
-final themeProvider = NotifierProvider<ThemeNotifier, ThemeColors>(
+final themeProvider = NotifierProvider<ThemeNotifier, ThemePalettes>(
   ThemeNotifier.new,
 );
 

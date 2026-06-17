@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/theme_notifier.dart';
+import '../../shared/prism_color_picker.dart';
 import '../mobile_widgets.dart';
 
 class MobileThemeScreen extends ConsumerWidget {
@@ -13,7 +13,7 @@ class MobileThemeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final colors = ref.watch(themeProvider);
+    final colors = ref.watch(themeProvider).forBrightness(theme.brightness);
     final mode = ref.watch(themeModeProvider);
 
     return MobilePage(
@@ -92,7 +92,9 @@ class MobileThemeScreen extends ConsumerWidget {
                 ),
               ),
               TextButton.icon(
-                onPressed: () => ref.read(themeProvider.notifier).reset(),
+                onPressed: () => ref
+                    .read(themeProvider.notifier)
+                    .reset(brightness: theme.brightness),
                 icon: const Icon(Icons.restart_alt, size: 18),
                 label: const Text('전체 기본값'),
               ),
@@ -189,215 +191,34 @@ class _ColorEditSheet extends ConsumerStatefulWidget {
 }
 
 class _ColorEditSheetState extends ConsumerState<_ColorEditSheet> {
-  late final _r = TextEditingController();
-  late final _g = TextEditingController();
-  late final _b = TextEditingController();
-  late final _hex = TextEditingController();
-  late Color _preview = widget.color;
-  String? _error;
-
-  bool get _valid => _error == null;
-  bool get _changed => _preview.toARGB32() != widget.color.toARGB32();
-
-  @override
-  void initState() {
-    super.initState();
-    _setControllers(widget.color);
-  }
-
-  @override
-  void dispose() {
-    _r.dispose();
-    _g.dispose();
-    _b.dispose();
-    _hex.dispose();
-    super.dispose();
-  }
-
-  void _setControllers(Color color) {
-    final rgb = _rgb(color);
-    _r.text = rgb.$1.toString();
-    _g.text = rgb.$2.toString();
-    _b.text = rgb.$3.toString();
-    _hex.text = _toHex(color);
-  }
-
-  void _updateFromRgb() {
-    final r = int.tryParse(_r.text.trim());
-    final g = int.tryParse(_g.text.trim());
-    final b = int.tryParse(_b.text.trim());
-    if (r == null || g == null || b == null) {
-      setState(() => _error = 'RGB 값을 모두 입력해주세요.');
-      return;
-    }
-    if ([r, g, b].any((value) => value < 0 || value > 255)) {
-      setState(() => _error = 'RGB 값은 0~255 사이여야 합니다.');
-      return;
-    }
-    final color = Color.fromARGB(255, r, g, b);
-    setState(() {
-      _preview = color;
-      _hex.text = _toHex(color);
-      _error = null;
-    });
-  }
-
-  void _updateFromHex(String raw) {
-    final parsed = _parseHex(raw);
-    if (parsed == null) {
-      setState(() => _error = 'Hex 값은 #RRGGBB 형식이어야 합니다.');
-      return;
-    }
-    setState(() {
-      _preview = parsed;
-      final rgb = _rgb(parsed);
-      _r.text = rgb.$1.toString();
-      _g.text = rgb.$2.toString();
-      _b.text = rgb.$3.toString();
-      _error = null;
-    });
-  }
-
-  Future<void> _apply() async {
-    if (!_valid) return;
-    await ref.read(themeProvider.notifier).setColor(widget.token, _preview);
-    if (!mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${_tokenLabel(widget.token)} 색상을 적용했습니다.')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
+        left: 8,
+        right: 8,
+        top: 8,
         bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              '${_tokenLabel(widget.token)} 색상 변경',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: _preview,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: theme.dividerColor, width: 2),
-                ),
-                child: const SizedBox(width: 84, height: 84),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                _toHex(_preview),
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _RgbField(
-                    label: 'R',
-                    controller: _r,
-                    onChanged: _updateFromRgb,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _RgbField(
-                    label: 'G',
-                    controller: _g,
-                    onChanged: _updateFromRgb,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _RgbField(
-                    label: 'B',
-                    controller: _b,
-                    onChanged: _updateFromRgb,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _hex,
-              textCapitalization: TextCapitalization.characters,
-              decoration: InputDecoration(
-                labelText: 'Hex',
-                hintText: '#2563EB',
-                errorText: _error,
-                border: const OutlineInputBorder(),
-              ),
-              onChanged: _updateFromHex,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('취소'),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: _valid && _changed ? _apply : null,
-                  child: const Text('적용'),
-                ),
-              ],
-            ),
-          ],
-        ),
+      child: PrismColorPicker(
+        title: '${_tokenLabel(widget.token)} 색상 변경',
+        initialColor: widget.color,
+        onCancel: () => Navigator.pop(context),
+        onApply: (picked) async {
+          final brightness = Theme.of(context).brightness;
+          final navigator = Navigator.of(context);
+          final messenger = ScaffoldMessenger.of(context);
+          final label = _tokenLabel(widget.token);
+          await ref
+              .read(themeProvider.notifier)
+              .setColor(widget.token, picked, brightness: brightness);
+          if (!mounted) return;
+          navigator.pop();
+          messenger.showSnackBar(
+            SnackBar(content: Text('$label 색상을 적용했습니다.')),
+          );
+        },
       ),
-    );
-  }
-}
-
-class _RgbField extends StatelessWidget {
-  const _RgbField({
-    required this.label,
-    required this.controller,
-    required this.onChanged,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(3),
-      ],
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      onChanged: (_) => onChanged(),
     );
   }
 }
@@ -422,18 +243,4 @@ String _tokenDescription(ThemeToken token) => switch (token) {
   ThemeToken.warning => '경고와 주의 표시',
 };
 
-String _toHex(Color color) {
-  final value = color.toARGB32() & 0xFFFFFF;
-  return '#${value.toRadixString(16).padLeft(6, '0').toUpperCase()}';
-}
-
-Color? _parseHex(String raw) {
-  final value = raw.trim().replaceFirst('#', '');
-  if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(value)) return null;
-  return Color(0xFF000000 | int.parse(value, radix: 16));
-}
-
-(int, int, int) _rgb(Color color) {
-  final value = color.toARGB32();
-  return ((value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF);
-}
+String _toHex(Color color) => hexFromColor(color);

@@ -36,18 +36,18 @@ class _State extends ConsumerState<ArchivedAccounts> {
       context: context,
       builder: (ctx) => AlertDialog(
         key: const ValueKey('account-delete-confirm-dialog'),
-        title: const Text('영구 삭제'),
+        title: Text('영구 삭제'),
         content: Text("'$name' 자산을 완전히 삭제합니다. 되돌릴 수 없습니다."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
+            child: Text('취소'),
           ),
           FilledButton(
             key: const ValueKey('account-delete-confirm-button'),
-            style: FilledButton.styleFrom(backgroundColor: AppTokens.warning),
+            style: FilledButton.styleFrom(backgroundColor: context.desktopWarning),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('삭제'),
+            child: Text('삭제'),
           ),
         ],
       ),
@@ -88,31 +88,28 @@ class _State extends ConsumerState<ArchivedAccounts> {
                   Icon(
                     _open ? Icons.expand_more : Icons.chevron_right,
                     size: 16,
-                    color: AppTokens.muted,
+                    color: context.desktopMuted,
                   ),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(
                     '보관된 자산 (${items.length})',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppTokens.muted,
-                    ),
+                    style: TextStyle(fontSize: 13, color: context.desktopMuted),
                   ),
                 ],
               ),
             ),
           ),
           if (_open) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             for (final a in items)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
                   decoration: BoxDecoration(
-                    color: AppTokens.surface,
+                    color: context.desktopSurface,
                     border: Border.all(
-                      color: AppTokens.sidebarBorder,
+                      color: context.desktopBorder,
                       style: BorderStyle.solid,
                     ),
                     borderRadius: BorderRadius.circular(8),
@@ -130,33 +127,33 @@ class _State extends ConsumerState<ArchivedAccounts> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           a.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: AppTokens.muted,
+                            color: context.desktopMuted,
                           ),
                         ),
                       ),
                       Text(
                         _kindLabels[a.kind] ?? a.kind,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: AppTokens.muted,
+                          color: context.desktopMuted,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       TextButton.icon(
                         key: ValueKey('account-restore-${a.id}'),
                         onPressed: _busyId == a.id
                             ? null
                             : () => _restore(a.id),
-                        icon: const Icon(Icons.unarchive_outlined, size: 14),
-                        label: const Text('복원'),
+                        icon: Icon(Icons.unarchive_outlined, size: 14),
+                        label: Text('복원'),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppTokens.muted,
+                          foregroundColor: context.desktopMuted,
                         ),
                       ),
                       TextButton.icon(
@@ -164,10 +161,10 @@ class _State extends ConsumerState<ArchivedAccounts> {
                         onPressed: _busyId == a.id
                             ? null
                             : () => _delete(a.id, a.name),
-                        icon: const Icon(Icons.delete_outline, size: 14),
-                        label: const Text('삭제'),
+                        icon: Icon(Icons.delete_outline, size: 14),
+                        label: Text('삭제'),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppTokens.warning,
+                          foregroundColor: context.desktopWarning,
                         ),
                       ),
                     ],

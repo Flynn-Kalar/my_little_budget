@@ -95,16 +95,16 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('영구 삭제'),
+        title: Text('영구 삭제'),
         content: Text("'${category.name}' 카테고리를 완전히 삭제합니다."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
+            child: Text('취소'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('삭제'),
+            child: Text('삭제'),
           ),
         ],
       ),
@@ -136,10 +136,10 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
           children: [
             Text(
               widget.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: AppTokens.muted,
+                color: context.desktopMuted,
               ),
             ),
             const Spacer(),
@@ -151,31 +151,31 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
                           onPressed: _saving
                               ? null
                               : () => setState(() => _reorderMode = false),
-                          icon: const Icon(Icons.close, size: 14),
-                          label: const Text('취소'),
+                          icon: Icon(Icons.close, size: 14),
+                          label: Text('취소'),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         FilledButton.icon(
                           onPressed: _saving ? null : _saveReorder,
-                          icon: const Icon(Icons.check, size: 14),
+                          icon: Icon(Icons.check, size: 14),
                           label: Text(_saving ? '저장 중...' : '순서 저장'),
                         ),
                       ],
                     )
                   : OutlinedButton.icon(
                       onPressed: _startReorder,
-                      icon: const Icon(Icons.swap_vert, size: 14),
-                      label: const Text('순서 편집'),
+                      icon: Icon(Icons.swap_vert, size: 14),
+                      label: Text('순서 편집'),
                     ),
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         if (visible.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               _isArchived ? '보관된 카테고리가 없습니다.' : '카테고리가 없습니다.',
-              style: const TextStyle(fontSize: 13, color: AppTokens.muted),
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
           ),
         for (var i = 0; i < visible.length; i++)
@@ -219,10 +219,10 @@ class _CategoryManagerState extends ConsumerState<CategoryManager> {
                       _editingId = null;
                       _showAdd = true;
                     }),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('카테고리 추가'),
+                    icon: Icon(Icons.add, size: 16),
+                    label: Text('카테고리 추가'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTokens.muted,
+                      foregroundColor: context.desktopMuted,
                     ),
                   ),
                 ),
@@ -253,41 +253,39 @@ class _CategoryRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
           _ColorDot(color: category.color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(category.name, style: const TextStyle(fontSize: 14)),
-          ),
+          SizedBox(width: 12),
+          Expanded(child: Text(category.name, style: TextStyle(fontSize: 14))),
           if (archived)
             Text(
               category.type == 'expense' ? '지출' : '수입',
-              style: const TextStyle(fontSize: 11, color: AppTokens.muted),
+              style: TextStyle(fontSize: 11, color: context.desktopMuted),
             ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           if (archived) ...[
             TextButton.icon(
               onPressed: busy ? null : onRestore,
-              icon: const Icon(Icons.unarchive_outlined, size: 14),
-              label: const Text('복원'),
+              icon: Icon(Icons.unarchive_outlined, size: 14),
+              label: Text('복원'),
             ),
             TextButton.icon(
               onPressed: busy ? null : onDelete,
-              icon: const Icon(Icons.delete_outline, size: 14),
-              label: const Text('삭제'),
-              style: TextButton.styleFrom(foregroundColor: AppTokens.warning),
+              icon: Icon(Icons.delete_outline, size: 14),
+              label: Text('삭제'),
+              style: TextButton.styleFrom(foregroundColor: context.desktopWarning),
             ),
           ] else
             IconButton(
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined, size: 16),
+              icon: Icon(Icons.edit_outlined, size: 16),
               tooltip: '편집',
-              color: AppTokens.muted,
+              color: context.desktopMuted,
             ),
         ],
       ),
@@ -315,27 +313,25 @@ class _ReorderCategoryRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
           IconButton(
             onPressed: isFirst ? null : onUp,
-            icon: const Icon(Icons.arrow_upward, size: 14),
+            icon: Icon(Icons.arrow_upward, size: 14),
             visualDensity: VisualDensity.compact,
           ),
           IconButton(
             onPressed: isLast ? null : onDown,
-            icon: const Icon(Icons.arrow_downward, size: 14),
+            icon: Icon(Icons.arrow_downward, size: 14),
             visualDensity: VisualDensity.compact,
           ),
           _ColorDot(color: category.color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(category.name, style: const TextStyle(fontSize: 14)),
-          ),
+          SizedBox(width: 12),
+          Expanded(child: Text(category.name, style: TextStyle(fontSize: 14))),
         ],
       ),
     );

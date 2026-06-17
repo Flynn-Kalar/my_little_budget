@@ -119,6 +119,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      locale: const Locale('ko', 'KR'),
       initialDate: _date,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
@@ -165,7 +166,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _pickDate,
-                icon: const Icon(Icons.calendar_today, size: 16),
+                icon: Icon(Icons.calendar_today, size: 16),
                 label: Text(toDateKey(_date)),
               ),
               const SizedBox(height: 12),
@@ -241,17 +242,19 @@ class _State extends ConsumerState<TransactionEditDialog> {
         if (_isEdit)
           TextButton(
             onPressed: _busy ? null : _delete,
-            style: TextButton.styleFrom(foregroundColor: AppTokens.expense),
-            child: const Text('삭제'),
+            style: TextButton.styleFrom(
+              foregroundColor: context.desktopExpense,
+            ),
+            child: Text('삭제'),
           ),
         if (_isEdit)
           TextButton(
             onPressed: _busy ? null : _openDuplicate,
-            child: const Text('복사'),
+            child: Text('복사'),
           ),
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('취소'),
+          child: Text('취소'),
         ),
         FilledButton(
           onPressed: _busy ? null : _persist,

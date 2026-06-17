@@ -53,16 +53,16 @@ class _RecurringListState extends ConsumerState<RecurringList> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('반복 거래 삭제'),
-        content: const Text('이미 만들어진 거래는 그대로 남습니다.'),
+        title: Text('반복 거래 삭제'),
+        content: Text('이미 만들어진 거래는 그대로 남습니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
+            child: Text('취소'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('삭제'),
+            child: Text('삭제'),
           ),
         ],
       ),
@@ -83,11 +83,11 @@ class _RecurringListState extends ConsumerState<RecurringList> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.items.isEmpty && !_showAdd)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Text(
               '등록된 반복 거래가 없습니다.',
-              style: TextStyle(fontSize: 13, color: AppTokens.muted),
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
           ),
         for (final item in widget.items)
@@ -126,9 +126,11 @@ class _RecurringListState extends ConsumerState<RecurringList> {
                     _editingId = null;
                     _showAdd = true;
                   }),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('반복 거래 추가'),
-                  style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
+                  icon: Icon(Icons.add, size: 16),
+                  label: Text('반복 거래 추가'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.desktopMuted,
+                  ),
                 ),
               ),
       ],
@@ -155,9 +157,9 @@ class _RecurringRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = item.recurring;
     final typeColor = switch (r.type) {
-      'income' => AppTokens.income,
-      'expense' => AppTokens.expense,
-      _ => AppTokens.transfer,
+      'income' => context.desktopIncome,
+      'expense' => context.desktopExpense,
+      _ => context.desktopTransfer,
     };
     final typeLabel = switch (r.type) {
       'income' => '수입',
@@ -175,8 +177,8 @@ class _RecurringRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -196,7 +198,7 @@ class _RecurringRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,7 +208,7 @@ class _RecurringRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: r.active ? null : AppTokens.muted,
+                    color: r.active ? null : context.desktopMuted,
                     decoration: r.active ? null : TextDecoration.lineThrough,
                   ),
                 ),
@@ -220,32 +222,32 @@ class _RecurringRow extends StatelessWidget {
                   ].join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: AppTokens.muted),
+                  style: TextStyle(fontSize: 12, color: context.desktopMuted),
                 ),
               ],
             ),
           ),
           Text(
             formatKRW(r.amount),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           IconButton(
             onPressed: busy ? null : onToggle,
             icon: Icon(r.active ? Icons.pause : Icons.play_arrow, size: 18),
             tooltip: r.active ? '일시정지' : '재개',
-            color: AppTokens.muted,
+            color: context.desktopMuted,
           ),
           IconButton(
             onPressed: busy ? null : onEdit,
-            icon: const Icon(Icons.edit_outlined, size: 16),
+            icon: Icon(Icons.edit_outlined, size: 16),
             tooltip: '편집',
-            color: AppTokens.muted,
+            color: context.desktopMuted,
           ),
           IconButton(
             onPressed: busy ? null : onDelete,
-            icon: const Icon(Icons.delete_outline, size: 16),
+            icon: Icon(Icons.delete_outline, size: 16),
             tooltip: '삭제',
-            color: AppTokens.warning,
+            color: context.desktopWarning,
           ),
         ],
       ),

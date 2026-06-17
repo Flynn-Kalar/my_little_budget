@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/backup.dart';
+import '../../../data/cloud_backup.dart';
 import '../../../data/providers.dart';
 import '../../shared/accounts_providers.dart' as accounts_providers;
 import '../../shared/budget_providers.dart' as budget_providers;
@@ -29,6 +30,33 @@ class MobileDataManagementScreen extends ConsumerStatefulWidget {
 class _MobileDataManagementScreenState
     extends ConsumerState<MobileDataManagementScreen> {
   bool _busy = false;
+  CloudBackupAccount? _cloudAccount;
+  CloudBackupFile? _latestCloudBackup;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_loadCloudStatus);
+  }
+
+  Future<void> _loadCloudStatus() async {
+    final service = ref.read(cloudBackupServiceProvider);
+    if (!service.isSupported) return;
+
+    final account = await service.currentAccount();
+    CloudBackupFile? latest;
+    if (account != null) {
+      final list = await service.listBackups();
+      if (list.isOk && list.value!.isNotEmpty) {
+        latest = list.value!.first;
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _cloudAccount = account;
+      _latestCloudBackup = latest;
+    });
+  }
 
   Future<void> _exportBackup() async {
     setState(() => _busy = true);
@@ -104,6 +132,116 @@ class _MobileDataManagementScreenState
     }
   }
 
+  Future<void> _connectGoogleDrive() async {
+    setState(() => _busy = true);
+    try {
+      final account = await ref.read(cloudBackupServiceProvider).signIn();
+      if (!mounted) return;
+      if (account == null) {
+        _showSnack('Google 계정 연결이 취소되었습니다.');
+        return;
+      }
+      setState(() => _cloudAccount = account);
+      await _loadCloudStatus();
+      if (mounted) _showSnack('Google Drive에 연결되었습니다.');
+    } catch (e) {
+      debugPrint('connectGoogleDrive failed: $e');
+      if (mounted) _showSnack('Google Drive 연결에 실패했습니다.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _disconnectGoogleDrive() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(cloudBackupServiceProvider).signOut();
+      if (!mounted) return;
+      setState(() {
+        _cloudAccount = null;
+        _latestCloudBackup = null;
+      });
+      _showSnack('Google Drive 연결을 해제했습니다.');
+    } catch (e) {
+      debugPrint('disconnectGoogleDrive failed: $e');
+      if (mounted) _showSnack('Google Drive 연결 해제에 실패했습니다.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _uploadGoogleDriveBackup() async {
+    setState(() => _busy = true);
+    try {
+      final backup = await ref.read(backupDaoProvider).exportBackup();
+      final filename = buildBackupFilename();
+      final result = await ref
+          .read(cloudBackupServiceProvider)
+          .uploadBackup(filename: filename, json: backup.toJsonString());
+      if (!mounted) return;
+      if (!result.isOk) {
+        _showSnack(result.error ?? 'Google Drive 백업에 실패했습니다.');
+        return;
+      }
+      setState(() => _latestCloudBackup = result.value);
+      _showSnack('Google Drive에 백업했습니다.');
+    } catch (e) {
+      debugPrint('uploadGoogleDriveBackup failed: $e');
+      if (mounted) _showSnack('Google Drive 백업에 실패했습니다.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _restoreGoogleDriveBackup() async {
+    setState(() => _busy = true);
+    try {
+      final list = await ref.read(cloudBackupServiceProvider).listBackups();
+      if (!list.isOk) {
+        if (mounted) {
+          _showSnack(list.error ?? 'Google Drive 백업 목록을 불러오지 못했습니다.');
+        }
+        return;
+      }
+      if (list.value!.isEmpty) {
+        if (mounted) _showSnack('Google Drive에 백업 파일이 없습니다.');
+        return;
+      }
+
+      final latest = list.value!.first;
+      final content = await ref
+          .read(cloudBackupServiceProvider)
+          .downloadBackup(latest);
+      if (!content.isOk) {
+        if (mounted) {
+          _showSnack(content.error ?? 'Google Drive 백업 다운로드에 실패했습니다.');
+        }
+        return;
+      }
+
+      final parsed = parseBackup(content.value!);
+      if (!parsed.isOk) {
+        if (mounted) _showSnack(parsed.error ?? '백업 파일 형식이 올바르지 않습니다.');
+        return;
+      }
+
+      if (!mounted) return;
+      final confirmed = await _confirmRestore(context);
+      if (confirmed != true) return;
+
+      await ref.read(backupDaoProvider).importBackup(parsed.backup!);
+      _invalidateAfterImport(ref);
+      if (!mounted) return;
+      setState(() => _latestCloudBackup = latest);
+      _showSnack('Google Drive 백업을 복원했습니다.');
+    } catch (e) {
+      debugPrint('restoreGoogleDriveBackup failed: $e');
+      if (mounted) _showSnack('Google Drive 복원에 실패했습니다.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   void _showSnack(String message) {
     ScaffoldMessenger.of(
       context,
@@ -132,6 +270,16 @@ class _MobileDataManagementScreenState
           ),
         ),
         const SizedBox(height: 12),
+        _CloudBackupCard(
+          supported: ref.watch(cloudBackupServiceProvider).isSupported,
+          account: _cloudAccount,
+          latest: _latestCloudBackup,
+          busy: _busy,
+          onConnect: _connectGoogleDrive,
+          onDisconnect: _disconnectGoogleDrive,
+          onUpload: _uploadGoogleDriveBackup,
+          onRestore: _restoreGoogleDriveBackup,
+        ),
         _ActionCard(
           icon: Icons.file_upload_outlined,
           title: '백업 내보내기',
@@ -159,10 +307,7 @@ class _MobileDataManagementScreenState
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.warning_amber_outlined,
-                color: AppTokens.expense,
-              ),
+              Icon(Icons.warning_amber_outlined, color: context.appExpense),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -180,6 +325,126 @@ class _MobileDataManagementScreenState
         if (_busy) const LinearProgressIndicator(minHeight: 3),
       ],
     );
+  }
+}
+
+class _CloudBackupCard extends StatelessWidget {
+  const _CloudBackupCard({
+    required this.supported,
+    required this.account,
+    required this.latest,
+    required this.busy,
+    required this.onConnect,
+    required this.onDisconnect,
+    required this.onUpload,
+    required this.onRestore,
+  });
+
+  final bool supported;
+  final CloudBackupAccount? account;
+  final CloudBackupFile? latest;
+  final bool busy;
+  final VoidCallback onConnect;
+  final VoidCallback onDisconnect;
+  final VoidCallback onUpload;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final connected = account != null;
+    final latestText = latest == null
+        ? '최근 Google Drive 백업이 없습니다.'
+        : '최근 백업: ${latest!.name}${_formatModifiedAt(latest!.modifiedAt)}';
+    final description = supported
+        ? connected
+              ? '${account!.email}\n$latestText'
+              : 'Google 계정을 연결하면 앱 전용 Drive 저장소에 백업합니다.'
+        : 'Google Drive 백업은 현재 Android에서만 사용할 수 있습니다.';
+
+    return MobileCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.cloud_upload_outlined, color: context.appIncome),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Google Drive 백업',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      key: const ValueKey('mobile-settings-cloud-latest'),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.75,
+                        ),
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (!connected)
+                OutlinedButton.icon(
+                  key: const ValueKey('mobile-settings-cloud-connect-button'),
+                  onPressed: supported && !busy ? onConnect : null,
+                  icon: const Icon(Icons.login),
+                  label: const Text('연결'),
+                )
+              else
+                OutlinedButton.icon(
+                  key: const ValueKey(
+                    'mobile-settings-cloud-disconnect-button',
+                  ),
+                  onPressed: busy ? null : onDisconnect,
+                  icon: const Icon(Icons.logout),
+                  label: const Text('해제'),
+                ),
+              FilledButton.icon(
+                key: const ValueKey('mobile-settings-cloud-upload-button'),
+                onPressed: supported && connected && !busy ? onUpload : null,
+                icon: const Icon(Icons.cloud_upload_outlined),
+                label: const Text('Drive 백업'),
+              ),
+              FilledButton.icon(
+                key: const ValueKey('mobile-settings-cloud-restore-button'),
+                onPressed: supported && connected && !busy ? onRestore : null,
+                icon: const Icon(Icons.cloud_download_outlined),
+                label: const Text('Drive 복원'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatModifiedAt(DateTime? value) {
+    if (value == null) return '';
+    final local = value.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return ' (${local.year}-${two(local.month)}-${two(local.day)} '
+        '${two(local.hour)}:${two(local.minute)})';
   }
 }
 
@@ -223,7 +488,7 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = danger ? AppTokens.expense : AppTokens.income;
+    final color = danger ? context.appExpense : context.appIncome;
 
     return MobileCard(
       child: Column(

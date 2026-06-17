@@ -26,23 +26,25 @@ class RecurringScreen extends ConsumerWidget {
           children: [
             TextButton.icon(
               onPressed: () => context.go('/settings'),
-              icon: const Icon(Icons.chevron_left, size: 18),
-              label: const Text('설정'),
-              style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
+              icon: Icon(Icons.chevron_left, size: 18),
+              label: Text('설정'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.desktopMuted,
+              ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '반복 거래',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '월세·구독·급여처럼 주기적으로 발생하는 거래를 자동으로 추가합니다.',
-              style: TextStyle(fontSize: 13, color: AppTokens.muted),
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             items.when(
-              loading: () => const Padding(
+              loading: () => Padding(
                 padding: EdgeInsets.all(40),
                 child: Center(child: CircularProgressIndicator()),
               ),
@@ -57,7 +59,7 @@ class RecurringScreen extends ConsumerWidget {
                 tags: tags,
               ),
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: 40),
           ],
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
@@ -26,15 +27,15 @@ class YearlyStatsScreen extends ConsumerWidget {
           children: [
             TextButton.icon(
               onPressed: () => context.go('/stats'),
-              icon: const Icon(Icons.chevron_left),
-              label: const Text('월간 통계'),
+              icon: Icon(Icons.chevron_left),
+              label: Text('월간 통계'),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '연간 통계',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             years.when(
               data: (items) => _YearSelector(year: year, years: items),
               loading: () => const _StatsCard(
@@ -42,7 +43,7 @@ class YearlyStatsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             trend.when(
               data: (rows) => _YearlyMonthlyCard(year: year, rows: rows),
               loading: () => const _StatsCard(
@@ -50,7 +51,7 @@ class YearlyStatsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             categories.when(
               data: (rows) => _YearlyCategoryCard(rows: rows),
               loading: () => const _StatsCard(
@@ -58,7 +59,7 @@ class YearlyStatsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: 40),
           ],
         ),
       ),
@@ -81,9 +82,9 @@ class _YearSelector extends ConsumerWidget {
     return _StatsCard(
       child: Row(
         children: [
-          const Icon(Icons.event_outlined, color: AppTokens.muted),
-          const SizedBox(width: 12),
-          const Expanded(
+          Icon(Icons.event_outlined, color: context.desktopMuted),
+          SizedBox(width: 12),
+          Expanded(
             child: Text('조회 연도', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
           DropdownButton<int>(
@@ -124,46 +125,130 @@ class _YearlyMonthlyCard extends StatelessWidget {
         children: [
           Text(
             '$year년 월별 수입/지출',
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _SummaryTile(
                   label: '연간 수입',
                   amount: totalIncome,
-                  color: AppTokens.income,
+                  color: context.desktopIncome,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _SummaryTile(
                   label: '연간 지출',
                   amount: totalExpense,
-                  color: AppTokens.expense,
+                  color: context.desktopExpense,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: _SummaryTile(
                   label: '연간 순액',
                   amount: totalNet,
-                  color: totalNet < 0 ? AppTokens.expense : AppTokens.accent,
+                  color: totalNet < 0
+                      ? context.desktopExpense
+                      : context.desktopAccent,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           if (!hasData)
             const _EmptyState(
               key: ValueKey('yearly-monthly-empty'),
               message: '선택한 연도에 거래 내역이 없습니다.',
             )
-          else
+          else ...[
+            SizedBox(height: 240, child: _YearlyMonthlyChart(rows: rows)),
+            SizedBox(height: 16),
             _MonthlyTable(
               key: const ValueKey('yearly-monthly-table'),
               rows: rows,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _YearlyMonthlyChart extends StatelessWidget {
+  const _YearlyMonthlyChart({required this.rows});
+
+  final List<MonthlyTrendRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxValue = rows.fold<int>(0, (max, row) {
+      final rowMax = row.income > row.expense ? row.income : row.expense;
+      return rowMax > max ? rowMax : max;
+    });
+
+    return BarChart(
+      BarChartData(
+        maxY: maxValue == 0 ? 1 : maxValue * 1.12,
+        barTouchData: BarTouchData(enabled: true),
+        gridData: FlGridData(
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: context.desktopBorder, strokeWidth: 1),
+        ),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              interval: 1,
+              getTitlesWidget: (value, meta) {
+                final index = value.toInt();
+                if (index < 0 || index >= rows.length) {
+                  return const SizedBox.shrink();
+                }
+                return SideTitleWidget(
+                  meta: meta,
+                  child: Text(
+                    '${index + 1}월',
+                    style: TextStyle(color: context.desktopMuted, fontSize: 11),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        barGroups: [
+          for (var i = 0; i < rows.length; i++)
+            BarChartGroupData(
+              x: i,
+              barsSpace: 3,
+              barRods: [
+                BarChartRodData(
+                  toY: rows[i].income.toDouble(),
+                  color: context.desktopIncome,
+                  width: 8,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                BarChartRodData(
+                  toY: rows[i].expense.toDouble(),
+                  color: context.desktopExpense,
+                  width: 8,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ],
             ),
         ],
       ),
@@ -193,7 +278,7 @@ class _MonthlyHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
@@ -215,7 +300,9 @@ class _MonthlyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = parseMonthKey(row.month);
-    final netColor = row.net < 0 ? AppTokens.expense : Colors.black87;
+    final netColor = row.net < 0
+        ? context.desktopExpense
+        : Theme.of(context).colorScheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -259,7 +346,7 @@ class _YearlyCategoryCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   '카테고리별 연간 지출',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -267,15 +354,15 @@ class _YearlyCategoryCard extends StatelessWidget {
               ),
               Text(
                 formatKRW(total),
-                style: const TextStyle(
-                  color: AppTokens.expense,
+                style: TextStyle(
+                  color: context.desktopExpense,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           if (rows.isEmpty)
             const _EmptyState(
               key: ValueKey('yearly-category-empty'),
@@ -305,30 +392,85 @@ class _CategoryRow extends StatelessWidget {
     final percent = total == 0 ? 0 : (row.total * 100 / total).round();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
         children: [
-          _ColorDot(color: _parseColor(row.categoryColor)),
-          const SizedBox(width: 8),
+          _ColorDot(
+            color: _parseColor(row.categoryColor, context.desktopMuted),
+          ),
+          SizedBox(width: 8),
           Expanded(
+            flex: 3,
             child: Text(
               row.categoryName,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(width: 12),
-          Text('$percent%', style: const TextStyle(color: AppTokens.muted)),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
+          Expanded(
+            flex: 4,
+            child: _CategoryMonthBars(
+              values: row.months,
+              color: _parseColor(row.categoryColor, context.desktopMuted),
+            ),
+          ),
+          SizedBox(width: 12),
+          Text('$percent%', style: TextStyle(color: context.desktopMuted)),
+          SizedBox(width: 16),
           SizedBox(
             width: 140,
             child: Text(
               formatKRW(row.total),
               textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryMonthBars extends StatelessWidget {
+  const _CategoryMonthBars({required this.values, required this.color});
+
+  final List<int> values;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxValue = values.fold<int>(0, (max, value) {
+      return value > max ? value : max;
+    });
+
+    return SizedBox(
+      height: 28,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (final value in values)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: FractionallySizedBox(
+                    heightFactor: maxValue == 0 ? 0.08 : value / maxValue,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: value == 0
+                            ? context.desktopBorder
+                            : color.withValues(alpha: 0.82),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: const SizedBox(width: double.infinity),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -350,17 +492,17 @@ class _SummaryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppTokens.sidebarActive,
+        color: context.desktopSelectedSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTokens.sidebarBorder),
+        border: Border.all(color: context.desktopBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: AppTokens.muted)),
-            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: context.desktopMuted)),
+            SizedBox(height: 4),
             Text(
               formatKRW(amount),
               overflow: TextOverflow.ellipsis,
@@ -387,7 +529,7 @@ class _EmptyState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Center(
-        child: Text(message, style: const TextStyle(color: AppTokens.muted)),
+        child: Text(message, style: TextStyle(color: context.desktopMuted)),
       ),
     );
   }
@@ -401,7 +543,7 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _StatsCard(
-      child: Text(message, style: const TextStyle(color: AppTokens.expense)),
+      child: Text(message, style: TextStyle(color: context.desktopExpense)),
     );
   }
 }
@@ -415,7 +557,7 @@ class _ColorDot extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: const SizedBox(width: 10, height: 10),
+      child: SizedBox(width: 10, height: 10),
     );
   }
 }
@@ -434,9 +576,9 @@ class _StatsCard extends StatelessWidget {
   }
 }
 
-Color _parseColor(String hex) {
+Color _parseColor(String hex, Color fallback) {
   final normalized = hex.replaceFirst('#', '');
   final value = int.tryParse(normalized, radix: 16);
-  if (value == null) return AppTokens.muted;
+  if (value == null) return fallback;
   return Color(0xFF000000 | value);
 }

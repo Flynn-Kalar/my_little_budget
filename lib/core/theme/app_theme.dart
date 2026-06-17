@@ -22,14 +22,116 @@ class AppTokens {
   static const muted = secondaryText;
 }
 
+class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
+  const AppSemanticColors({
+    required this.income,
+    required this.expense,
+    required this.transfer,
+    required this.accent,
+    required this.warning,
+  });
+
+  final Color income;
+  final Color expense;
+  final Color transfer;
+  final Color accent;
+  final Color warning;
+
+  @override
+  AppSemanticColors copyWith({
+    Color? income,
+    Color? expense,
+    Color? transfer,
+    Color? accent,
+    Color? warning,
+  }) {
+    return AppSemanticColors(
+      income: income ?? this.income,
+      expense: expense ?? this.expense,
+      transfer: transfer ?? this.transfer,
+      accent: accent ?? this.accent,
+      warning: warning ?? this.warning,
+    );
+  }
+
+  @override
+  AppSemanticColors lerp(ThemeExtension<AppSemanticColors>? other, double t) {
+    if (other is! AppSemanticColors) return this;
+    return AppSemanticColors(
+      income: Color.lerp(income, other.income, t)!,
+      expense: Color.lerp(expense, other.expense, t)!,
+      transfer: Color.lerp(transfer, other.transfer, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
+      warning: Color.lerp(warning, other.warning, t)!,
+    );
+  }
+}
+
+extension AppThemeColors on BuildContext {
+  AppSemanticColors get _semanticColors {
+    return Theme.of(this).extension<AppSemanticColors>() ??
+        const AppSemanticColors(
+          income: AppTokens.income,
+          expense: AppTokens.expense,
+          transfer: AppTokens.transfer,
+          accent: AppTokens.accent,
+          warning: AppTokens.warning,
+        );
+  }
+
+  Color get appIncome => _semanticColors.income;
+
+  Color get appExpense => _semanticColors.expense;
+
+  Color get appTransfer => _semanticColors.transfer;
+
+  Color get appAccent => _semanticColors.accent;
+
+  Color get appWarning => _semanticColors.warning;
+
+  Color get desktopIncome => appIncome;
+
+  Color get desktopExpense => appExpense;
+
+  Color get desktopTransfer => appTransfer;
+
+  Color get desktopAccent => appAccent;
+
+  Color get desktopWarning => appWarning;
+
+  Color get desktopBackground => Theme.of(this).scaffoldBackgroundColor;
+
+  Color get desktopSurface => Theme.of(this).colorScheme.surface;
+
+  Color get desktopBorder => Theme.of(this).dividerColor;
+
+  Color get desktopMuted {
+    final theme = Theme.of(this);
+    return theme.colorScheme.onSurface.withValues(
+      alpha: theme.brightness == Brightness.dark ? 0.80 : 0.74,
+    );
+  }
+
+  Color get desktopSelectedSurface {
+    final theme = Theme.of(this);
+    return theme.brightness == Brightness.dark
+        ? theme.colorScheme.surfaceContainerHighest
+        : AppTokens.sidebarActive;
+  }
+
+  Color get desktopSidebarBackground {
+    final theme = Theme.of(this);
+    return theme.brightness == Brightness.dark
+        ? theme.colorScheme.surface
+        : AppTokens.sidebarBg;
+  }
+}
+
 ThemeData buildAppTheme({
   ThemeColors colors = defaultTheme,
   Brightness brightness = Brightness.light,
 }) {
-  final effectiveColors =
-      brightness == Brightness.dark && colors == defaultTheme
-      ? darkDefaultTheme
-      : colors;
+  final effectiveColors = colors;
   final isDark = brightness == Brightness.dark;
 
   final primaryText = isDark ? Colors.white : AppTokens.primaryText;
@@ -41,8 +143,10 @@ ThemeData buildAppTheme({
       : AppTokens.disabledText;
   final divider = isDark ? const Color(0xFF50536A) : AppTokens.sidebarBorder;
   final activeSurface = isDark
-      ? const Color(0xFF4B4E68)
+      ? effectiveColors.surface.withValues(alpha: 0.82)
       : AppTokens.sidebarActive;
+  final onPrimary = _readableOn(effectiveColors.income);
+  final onSecondary = _readableOn(effectiveColors.accent);
 
   final scheme = ColorScheme.fromSeed(
     seedColor: effectiveColors.income,
@@ -52,8 +156,8 @@ ThemeData buildAppTheme({
     surface: effectiveColors.surface,
     error: effectiveColors.expense,
     onSurface: primaryText,
-    onPrimary: Colors.white,
-    onSecondary: Colors.white,
+    onPrimary: onPrimary,
+    onSecondary: onSecondary,
   );
 
   final textTheme = ThemeData(
@@ -68,6 +172,15 @@ ThemeData buildAppTheme({
     useMaterial3: true,
     brightness: brightness,
     colorScheme: scheme,
+    extensions: [
+      AppSemanticColors(
+        income: effectiveColors.income,
+        expense: effectiveColors.expense,
+        transfer: effectiveColors.transfer,
+        accent: effectiveColors.accent,
+        warning: effectiveColors.warning,
+      ),
+    ],
     scaffoldBackgroundColor: effectiveColors.background,
     disabledColor: disabledText,
     dividerColor: divider,
@@ -152,4 +265,8 @@ ThemeData buildAppTheme({
       side: BorderSide(color: divider),
     ),
   );
+}
+
+Color _readableOn(Color color) {
+  return color.computeLuminance() > 0.46 ? Colors.black : Colors.white;
 }

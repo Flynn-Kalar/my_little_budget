@@ -137,8 +137,8 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -155,7 +155,7 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
               counterText: '',
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -244,7 +244,7 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -277,7 +277,7 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
               ],
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -319,7 +319,7 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           TextField(
             controller: _memoCtrl,
             maxLength: 200,
@@ -330,17 +330,17 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
               counterText: '',
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               FilledButton(
                 onPressed: _busy ? null : _save,
                 child: Text(_busy ? '저장 중...' : '저장'),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               TextButton(
                 onPressed: _busy ? null : widget.onDone,
-                child: const Text('취소'),
+                child: Text('취소'),
               ),
             ],
           ),
@@ -441,7 +441,7 @@ class _DateField extends StatelessWidget {
           border: const OutlineInputBorder(),
           suffixIcon: IconButton(
             onPressed: onPick,
-            icon: const Icon(Icons.calendar_today, size: 14),
+            icon: Icon(Icons.calendar_today, size: 14),
             tooltip: '날짜 선택',
           ),
         ),

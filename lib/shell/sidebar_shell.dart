@@ -13,10 +13,18 @@ class _NavItem {
 }
 
 const _topItems = <_NavItem>[
-  _NavItem(path: '/transactions', label: '내역', icon: Icons.receipt_long_outlined),
+  _NavItem(
+    path: '/transactions',
+    label: '내역',
+    icon: Icons.receipt_long_outlined,
+  ),
   _NavItem(path: '/budget', label: '예산', icon: Icons.savings_outlined),
   _NavItem(path: '/stats', label: '통계', icon: Icons.bar_chart_outlined),
-  _NavItem(path: '/accounts', label: '자산', icon: Icons.account_balance_wallet_outlined),
+  _NavItem(
+    path: '/accounts',
+    label: '자산',
+    icon: Icons.account_balance_wallet_outlined,
+  ),
   _NavItem(path: '/investments', label: '투자', icon: Icons.trending_up),
 ];
 
@@ -32,6 +40,10 @@ class SidebarShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).matchedLocation;
     final overBudget = ref.watch(overBudgetCountProvider).asData?.value ?? 0;
+    final sidebarBg = context.desktopSidebarBackground;
+    final border = context.desktopBorder;
+    final background = context.desktopBackground;
+    final muted = context.desktopMuted;
 
     int badgeFor(String path) => path == '/budget' ? overBudget : 0;
 
@@ -40,18 +52,19 @@ class SidebarShell extends ConsumerWidget {
         children: [
           Container(
             width: 224,
-            decoration: const BoxDecoration(
-              color: AppTokens.sidebarBg,
-              border: Border(
-                right: BorderSide(color: AppTokens.sidebarBorder),
-              ),
+            decoration: BoxDecoration(
+              color: sidebarBg,
+              border: Border(right: BorderSide(color: border)),
             ),
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -66,28 +79,29 @@ class SidebarShell extends ConsumerWidget {
                       SizedBox(height: 4),
                       Text(
                         '나만의 작은 가계부',
-                        style: TextStyle(fontSize: 11, color: AppTokens.muted),
+                        style: TextStyle(fontSize: 11, color: muted),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                ..._topItems.map((item) => _NavTile(
-                      item: item,
-                      current: location,
-                      badge: badgeFor(item.path),
-                    )),
+                SizedBox(height: 16),
+                ..._topItems.map(
+                  (item) => _NavTile(
+                    item: item,
+                    current: location,
+                    badge: badgeFor(item.path),
+                  ),
+                ),
                 const Spacer(),
-                ..._bottomItems.map((item) => _NavTile(
-                      item: item,
-                      current: location,
-                    )),
+                ..._bottomItems.map(
+                  (item) => _NavTile(item: item, current: location),
+                ),
               ],
             ),
           ),
           Expanded(
             child: ColoredBox(
-              color: AppTokens.background,
+              color: background,
               child: Padding(padding: const EdgeInsets.all(32), child: child),
             ),
           ),
@@ -106,10 +120,12 @@ class _NavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = current == item.path || current.startsWith('${item.path}/');
+    final foreground = Theme.of(context).colorScheme.onSurface;
+    final muted = context.desktopMuted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: active ? AppTokens.sidebarActive : Colors.transparent,
+        color: active ? context.desktopSelectedSurface : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -118,19 +134,15 @@ class _NavTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
-                Icon(
-                  item.icon,
-                  size: 16,
-                  color: active ? Colors.black87 : AppTokens.muted,
-                ),
-                const SizedBox(width: 12),
+                Icon(item.icon, size: 16, color: active ? foreground : muted),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     item.label,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: active ? Colors.black87 : AppTokens.muted,
+                      color: active ? foreground : muted,
                     ),
                   ),
                 ),
@@ -160,11 +172,7 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         '$count',
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: red,
-        ),
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: red),
       ),
     );
   }

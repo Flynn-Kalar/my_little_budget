@@ -18,27 +18,27 @@ class SummaryBar extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          _Cell(label: '수입', value: income, color: AppTokens.income),
+          _Cell(label: '수입', value: income, color: context.desktopIncome),
           _Cell(
             label: '지출',
             value: expense,
-            color: AppTokens.expense,
+            color: context.desktopExpense,
             prefix: expense > 0 ? '-' : '',
           ),
           _Cell(
             label: '순수입',
             value: net,
             color: net > 0
-                ? AppTokens.income
+                ? context.desktopIncome
                 : net < 0
-                    ? AppTokens.expense
-                    : Colors.black87,
+                ? context.desktopExpense
+                : Theme.of(context).colorScheme.onSurface,
             prefix: net > 0 ? '+' : '',
           ),
         ],
@@ -65,9 +65,11 @@ class _Cell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(fontSize: 12, color: AppTokens.muted)),
-          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, color: context.desktopMuted),
+          ),
+          SizedBox(height: 4),
           Text(
             '$prefix${formatKRW(value)}',
             style: TextStyle(

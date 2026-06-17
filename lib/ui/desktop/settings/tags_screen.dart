@@ -20,23 +20,25 @@ class TagsScreen extends ConsumerWidget {
           children: [
             TextButton.icon(
               onPressed: () => context.go('/settings'),
-              icon: const Icon(Icons.chevron_left, size: 18),
-              label: const Text('설정'),
-              style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
+              icon: Icon(Icons.chevron_left, size: 18),
+              label: Text('설정'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.desktopMuted,
+              ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '태그 관리',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               '카테고리와 독립적인 자유 라벨입니다. 한 거래에 여러 태그를 붙일 수 있습니다.',
-              style: TextStyle(fontSize: 13, color: AppTokens.muted),
+              style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             async.when(
-              loading: () => const Padding(
+              loading: () => Padding(
                 padding: EdgeInsets.all(40),
                 child: Center(child: CircularProgressIndicator()),
               ),

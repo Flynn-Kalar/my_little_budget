@@ -81,6 +81,21 @@ class ThemeColors {
 
   String toJsonString() => jsonEncode(toJson());
 
+  static ThemeColors fromJsonMap(
+    Map<dynamic, dynamic> j, {
+    ThemeColors base = defaultTheme,
+  }) {
+    var result = base;
+    for (final t in ThemeToken.values) {
+      final v = j[t.name];
+      if (v is String) {
+        final c = _parseHex(v);
+        if (c != null) result = result.withColor(t, c);
+      }
+    }
+    return result;
+  }
+
   /// 저장된 부분 JSON 과 기본값 merge.
   static ThemeColors fromJsonString(
     String s, {
@@ -89,17 +104,59 @@ class ThemeColors {
     try {
       final j = jsonDecode(s);
       if (j is! Map) return base;
-      var result = base;
-      for (final t in ThemeToken.values) {
-        final v = j[t.name];
-        if (v is String) {
-          final c = _parseHex(v);
-          if (c != null) result = result.withColor(t, c);
-        }
-      }
-      return result;
+      return fromJsonMap(j, base: base);
     } catch (_) {
       return base;
+    }
+  }
+}
+
+class ThemePalettes {
+  const ThemePalettes({required this.light, required this.dark});
+
+  final ThemeColors light;
+  final ThemeColors dark;
+
+  ThemeColors forBrightness(Brightness brightness) {
+    return brightness == Brightness.dark ? dark : light;
+  }
+
+  ThemePalettes withColor(
+    Brightness brightness,
+    ThemeToken token,
+    Color color,
+  ) {
+    return brightness == Brightness.dark
+        ? ThemePalettes(light: light, dark: dark.withColor(token, color))
+        : ThemePalettes(light: light.withColor(token, color), dark: dark);
+  }
+
+  ThemePalettes reset(Brightness brightness) {
+    return brightness == Brightness.dark
+        ? ThemePalettes(light: light, dark: darkDefaultTheme)
+        : ThemePalettes(light: defaultTheme, dark: dark);
+  }
+
+  Map<String, Object> toJson() => {
+    'light': light.toJson(),
+    'dark': dark.toJson(),
+  };
+
+  String toJsonString() => jsonEncode(toJson());
+
+  static ThemePalettes fromJsonString(String s) {
+    try {
+      final j = jsonDecode(s);
+      if (j is! Map) return defaultPalettes;
+      final light = j['light'] is Map
+          ? ThemeColors.fromJsonMap(j['light'] as Map, base: defaultTheme)
+          : defaultTheme;
+      final dark = j['dark'] is Map
+          ? ThemeColors.fromJsonMap(j['dark'] as Map, base: darkDefaultTheme)
+          : darkDefaultTheme;
+      return ThemePalettes(light: light, dark: dark);
+    } catch (_) {
+      return defaultPalettes;
     }
   }
 }
@@ -123,6 +180,11 @@ const darkDefaultTheme = ThemeColors(
   surface: Color(0xFF3D4056),
   accent: Color(0xFF8B8CFF),
   warning: Color(0xFFA78BFA),
+);
+
+const defaultPalettes = ThemePalettes(
+  light: defaultTheme,
+  dark: darkDefaultTheme,
 );
 
 String _toHex(Color c) {

@@ -487,6 +487,18 @@ void main() {
       find.byKey(const ValueKey('settings-data-reset-button')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const ValueKey('settings-cloud-connect-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('settings-cloud-upload-button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('settings-cloud-restore-button')),
+      findsOneWidget,
+    );
     expect(find.text('데이터 백업 / 복원'), findsOneWidget);
   });
 

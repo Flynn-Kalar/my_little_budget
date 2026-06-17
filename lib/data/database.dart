@@ -76,12 +76,6 @@ class AppDatabase extends _$AppDatabase {
 
   static QueryExecutor _openConnection() {
     // 모바일·데스크톱 모두: path_provider 의 application documents directory 에 budget.db
-    return driftDatabase(
-      name: 'budget',
-      web: DriftWebOptions(
-        sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-        driftWorker: Uri.parse('drift_worker.js'),
-      ),
-    );
+    return driftDatabase(name: 'budget');
   }
 }

@@ -104,7 +104,7 @@ class MobileAsync<T> extends StatelessWidget {
       error: (error, _) => MobileCard(
         child: Text(
           error.toString(),
-          style: const TextStyle(color: AppTokens.expense),
+          style: TextStyle(color: context.appExpense),
         ),
       ),
     );

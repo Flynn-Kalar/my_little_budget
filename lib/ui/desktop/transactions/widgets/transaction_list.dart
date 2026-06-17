@@ -26,7 +26,7 @@ class TransactionList extends ConsumerWidget {
     final type = ref.watch(typeFilterProvider);
 
     return async.when(
-      loading: () => const Padding(
+      loading: () => Padding(
         padding: EdgeInsets.all(40),
         child: Center(child: CircularProgressIndicator()),
       ),
@@ -47,13 +47,10 @@ class TransactionList extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(vertical: 48),
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: AppTokens.sidebarBorder),
+              border: Border.all(color: context.desktopBorder),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(
-              message,
-              style: const TextStyle(color: AppTokens.muted),
-            ),
+            child: Text(message, style: TextStyle(color: context.desktopMuted)),
           );
         }
 
@@ -70,10 +67,10 @@ class TransactionList extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 12, bottom: 6),
                 child: Text(
                   _dateHeader(entry.key),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTokens.muted,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: context.desktopMuted,
                   ),
                 ),
               ),
@@ -101,10 +98,10 @@ class _Row extends StatelessWidget {
     final List<String> metaParts;
 
     if (isTransfer) {
-      leading = const CircleAvatar(
+      leading = CircleAvatar(
         radius: 14,
-        backgroundColor: AppTokens.sidebarActive,
-        child: Icon(Icons.swap_horiz, size: 16, color: AppTokens.muted),
+        backgroundColor: context.desktopSelectedSurface,
+        child: Icon(Icons.swap_horiz, size: 16, color: context.desktopMuted),
       );
       title = '이체';
       metaParts = [
@@ -130,16 +127,16 @@ class _Row extends StatelessWidget {
     }
 
     final amountColor = isTransfer
-        ? Colors.black87
+        ? Theme.of(context).colorScheme.onSurface
         : isIncome
-        ? AppTokens.income
-        : AppTokens.expense;
+        ? context.desktopIncome
+        : context.desktopExpense;
     final sign = isTransfer ? '' : (isIncome ? '+' : '-');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
-        color: AppTokens.surface,
+        color: context.desktopSurface,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
@@ -147,13 +144,13 @@ class _Row extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: AppTokens.sidebarBorder),
+              border: Border.all(color: context.desktopBorder),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
                 SizedBox(width: 28, child: Center(child: leading)),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,14 +161,14 @@ class _Row extends StatelessWidget {
                             child: Text(
                               title,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                           if (row.tags.isNotEmpty) ...[
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             ...row.tags.map(
                               (t) => Padding(
                                 padding: const EdgeInsets.only(right: 4),
@@ -186,20 +183,23 @@ class _Row extends StatelessWidget {
                           metaParts.join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTokens.muted,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.82),
                           ),
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text(
                   '$sign${formatKRW(row.amount)}',
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     color: amountColor,
                   ),
                 ),

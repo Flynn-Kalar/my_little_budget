@@ -94,8 +94,8 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        border: Border.all(color: AppTokens.sidebarBorder),
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -111,14 +111,14 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
               counterText: '',
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
-              const Text(
+              Text(
                 '색상',
-                style: TextStyle(fontSize: 12, color: AppTokens.muted),
+                style: TextStyle(fontSize: 12, color: context.desktopMuted),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               for (final c in colorPalette)
                 Padding(
                   padding: const EdgeInsets.only(right: 6),
@@ -133,8 +133,8 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
                         color: colorFromHex(c),
                         border: Border.all(
                           color: _color == c
-                              ? Colors.black87
-                              : AppTokens.sidebarBorder,
+                              ? Theme.of(context).colorScheme.onSurface
+                              : context.desktopBorder,
                           width: _color == c ? 2 : 1,
                         ),
                       ),
@@ -143,24 +143,26 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           Row(
             children: [
               FilledButton(
                 onPressed: _busy ? null : _save,
                 child: Text(_busy ? '저장 중...' : '저장'),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               TextButton(
                 onPressed: _busy ? null : widget.onDone,
-                child: const Text('취소'),
+                child: Text('취소'),
               ),
               const Spacer(),
               if (_isEditing)
                 TextButton(
                   onPressed: _busy ? null : _archive,
-                  style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
-                  child: const Text('보관'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.desktopMuted,
+                  ),
+                  child: Text('보관'),
                 ),
             ],
           ),

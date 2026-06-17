@@ -209,23 +209,25 @@ class _Summary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final income = context.appIncome;
+    final expense = context.appExpense;
     return MobileCard(
       child: Column(
         children: [
           AmountLine(
             label: '수입',
             value: formatKRW(summary.income),
-            valueColor: AppTokens.income,
+            valueColor: income,
           ),
           AmountLine(
             label: '지출',
             value: formatKRW(summary.expense),
-            valueColor: AppTokens.expense,
+            valueColor: expense,
           ),
           AmountLine(
             label: '순수익',
             value: formatKRW(summary.net),
-            valueColor: summary.net < 0 ? AppTokens.expense : AppTokens.income,
+            valueColor: summary.net < 0 ? expense : income,
           ),
         ],
       ),
@@ -288,9 +290,9 @@ class _TransactionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = switch (row.type) {
-      'income' => AppTokens.income,
-      'expense' => AppTokens.expense,
-      'transfer' => AppTokens.transfer,
+      'income' => context.appIncome,
+      'expense' => context.appExpense,
+      'transfer' => context.appTransfer,
       _ => theme.colorScheme.onSurface,
     };
     final title = row.memo?.trim().isNotEmpty == true
@@ -675,7 +677,7 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('삭제'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTokens.expense,
+                      foregroundColor: context.appExpense,
                     ),
                   ),
                 const Spacer(),

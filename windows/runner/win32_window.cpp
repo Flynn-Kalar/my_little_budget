@@ -26,6 +26,10 @@ constexpr const wchar_t kGetPreferredBrightnessRegKey[] =
   L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
 constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme";
 
+constexpr const wchar_t kWindowPlacementRegKey[] =
+  L"Software\\my_little_budget\\WindowPlacement";
+constexpr const wchar_t kWindowPlacementRegValue[] = L"Placement";
+
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
 
@@ -51,6 +55,58 @@ void EnableFullDpiSupportIfAvailable(HWND hwnd) {
     enable_non_client_dpi_scaling(hwnd);
   }
   FreeLibrary(user32_module);
+}
+
+bool IsWindowPlacementVisible(const WINDOWPLACEMENT& placement) {
+  RECT normal_position = placement.rcNormalPosition;
+  if (normal_position.right <= normal_position.left ||
+      normal_position.bottom <= normal_position.top) {
+    return false;
+  }
+
+  return MonitorFromRect(&normal_position, MONITOR_DEFAULTTONULL) != nullptr;
+}
+
+bool ReadWindowPlacement(WINDOWPLACEMENT* placement) {
+  if (placement == nullptr) {
+    return false;
+  }
+
+  WINDOWPLACEMENT stored_placement{};
+  DWORD stored_placement_size = sizeof(stored_placement);
+  LSTATUS result = RegGetValue(HKEY_CURRENT_USER, kWindowPlacementRegKey,
+                               kWindowPlacementRegValue, RRF_RT_REG_BINARY,
+                               nullptr, &stored_placement,
+                               &stored_placement_size);
+  if (result != ERROR_SUCCESS ||
+      stored_placement_size != sizeof(stored_placement) ||
+      !IsWindowPlacementVisible(stored_placement)) {
+    return false;
+  }
+
+  stored_placement.length = sizeof(WINDOWPLACEMENT);
+  if (stored_placement.showCmd == SW_SHOWMINIMIZED ||
+      stored_placement.showCmd == SW_MINIMIZE ||
+      stored_placement.showCmd == SW_SHOWMINNOACTIVE) {
+    stored_placement.showCmd = SW_SHOWNORMAL;
+  }
+
+  *placement = stored_placement;
+  return true;
+}
+
+void WriteWindowPlacement(const WINDOWPLACEMENT& placement) {
+  HKEY key = nullptr;
+  LSTATUS result =
+      RegCreateKeyEx(HKEY_CURRENT_USER, kWindowPlacementRegKey, 0, nullptr, 0,
+                     KEY_SET_VALUE, nullptr, &key, nullptr);
+  if (result != ERROR_SUCCESS) {
+    return;
+  }
+
+  RegSetValueEx(key, kWindowPlacementRegValue, 0, REG_BINARY,
+                reinterpret_cast<const BYTE*>(&placement), sizeof(placement));
+  RegCloseKey(key);
 }
 
 }  // namespace
@@ -146,11 +202,20 @@ bool Win32Window::Create(const std::wstring& title,
 
   UpdateTheme(window);
 
+  WINDOWPLACEMENT placement{};
+  if (ReadWindowPlacement(&placement)) {
+    initial_show_command_ =
+        placement.showCmd == SW_SHOWMAXIMIZED ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL;
+    SetWindowPlacement(window, &placement);
+  } else {
+    initial_show_command_ = SW_SHOWNORMAL;
+  }
+
   return OnCreate();
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  return ShowWindow(window_handle_, initial_show_command_);
 }
 
 // static
@@ -179,7 +244,12 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_CLOSE:
+      SaveWindowPlacement();
+      return DefWindowProc(window_handle_, message, wparam, lparam);
+
     case WM_DESTROY:
+      SaveWindowPlacement();
       window_handle_ = nullptr;
       Destroy();
       if (quit_on_close_) {
@@ -222,6 +292,8 @@ Win32Window::MessageHandler(HWND hwnd,
 }
 
 void Win32Window::Destroy() {
+  SaveWindowPlacement();
+
   OnDestroy();
 
   if (window_handle_) {
@@ -261,6 +333,27 @@ HWND Win32Window::GetHandle() {
 
 void Win32Window::SetQuitOnClose(bool quit_on_close) {
   quit_on_close_ = quit_on_close;
+}
+
+void Win32Window::SaveWindowPlacement() {
+  if (window_placement_saved_ || window_handle_ == nullptr) {
+    return;
+  }
+
+  WINDOWPLACEMENT placement{};
+  placement.length = sizeof(WINDOWPLACEMENT);
+  if (!GetWindowPlacement(window_handle_, &placement)) {
+    return;
+  }
+
+  if (placement.showCmd == SW_SHOWMINIMIZED ||
+      placement.showCmd == SW_MINIMIZE ||
+      placement.showCmd == SW_SHOWMINNOACTIVE) {
+    placement.showCmd = SW_SHOWNORMAL;
+  }
+
+  WriteWindowPlacement(placement);
+  window_placement_saved_ = true;
 }
 
 bool Win32Window::OnCreate() {

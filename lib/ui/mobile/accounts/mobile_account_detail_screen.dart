@@ -51,8 +51,8 @@ class MobileAccountDetailScreen extends ConsumerWidget {
                     label: _kindLabel(value.kind),
                     value: formatKRW(value.balance),
                     valueColor: value.balance < 0
-                        ? AppTokens.expense
-                        : AppTokens.income,
+                        ? context.appExpense
+                        : context.appIncome,
                   ),
                   if (value.isInvestment)
                     Text(
@@ -92,7 +92,7 @@ class _AccountTransactionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = row.type == 'income' ? AppTokens.income : AppTokens.expense;
+    final color = row.type == 'income' ? context.appIncome : context.appExpense;
     return MobileCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

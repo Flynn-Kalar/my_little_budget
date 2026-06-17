@@ -31,15 +31,15 @@ class MobileAccountsScreen extends ConsumerWidget {
               0,
               (sum, row) => sum + row.balance,
             );
+            final income = context.appIncome;
+            final expense = context.appExpense;
             return Column(
               children: [
                 MobileCard(
                   child: AmountLine(
                     label: '총 자산',
                     value: formatKRW(total),
-                    valueColor: total < 0
-                        ? AppTokens.expense
-                        : AppTokens.income,
+                    valueColor: total < 0 ? expense : income,
                   ),
                 ),
                 for (final row in value) _AccountCard(account: row),
@@ -96,6 +96,8 @@ class _AccountCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final income = context.appIncome;
+    final expense = context.appExpense;
     return MobileCard(
       child: InkWell(
         onTap: () => context.go('/accounts/${account.accountId}'),
@@ -163,9 +165,7 @@ class _AccountCard extends ConsumerWidget {
             AmountLine(
               label: _kindLabel(account.kind),
               value: formatKRW(account.balance),
-              valueColor: account.balance < 0
-                  ? AppTokens.expense
-                  : AppTokens.income,
+              valueColor: account.balance < 0 ? expense : income,
             ),
           ],
         ),
@@ -370,7 +370,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
                     icon: const Icon(Icons.delete_outline),
                     label: const Text('삭제'),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppTokens.expense,
+                      foregroundColor: context.appExpense,
                     ),
                   ),
                 const Spacer(),

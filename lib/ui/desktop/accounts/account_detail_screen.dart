@@ -27,13 +27,15 @@ class AccountDetailScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: TextButton.icon(
                 onPressed: () => context.go('/accounts'),
-                icon: const Icon(Icons.chevron_left, size: 18),
-                label: const Text('자산'),
-                style: TextButton.styleFrom(foregroundColor: AppTokens.muted),
+                icon: Icon(Icons.chevron_left, size: 18),
+                label: Text('자산'),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.desktopMuted,
+                ),
               ),
             ),
             async.when(
-              loading: () => const Padding(
+              loading: () => Padding(
                 padding: EdgeInsets.all(40),
                 child: Center(child: CircularProgressIndicator()),
               ),
@@ -43,7 +45,7 @@ class AccountDetailScreen extends ConsumerWidget {
               ),
               data: (account) {
                 if (account == null) {
-                  return const Padding(
+                  return Padding(
                     padding: EdgeInsets.all(40),
                     child: Center(child: Text('자산을 찾을 수 없습니다')),
                   );
@@ -61,27 +63,31 @@ class AccountDetailScreen extends ConsumerWidget {
                             color: colorFromHex(account.color),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Text(account.name,
-                            style: const TextStyle(
-                                fontSize: 24, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 10),
+                        Text(
+                          account.name,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       formatKRW(account.balance),
                       style: TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.bold,
-                        color: account.balance < 0 ? AppTokens.expense : null,
+                        color: account.balance < 0 ? context.desktopExpense : null,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    SizedBox(height: 32),
                     AccountTxList(
                       accountId: accountId,
                       initialBalance: account.initialBalance,
                     ),
-                    const SizedBox(height: 40),
+                    SizedBox(height: 40),
                   ],
                 );
               },

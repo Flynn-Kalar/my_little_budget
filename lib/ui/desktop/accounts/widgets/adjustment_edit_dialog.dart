@@ -95,7 +95,7 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('잔액 조정'),
+      title: Text('잔액 조정'),
       content: SizedBox(
         width: 380,
         child: Column(
@@ -104,10 +104,10 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
           children: [
             OutlinedButton.icon(
               onPressed: _pickDate,
-              icon: const Icon(Icons.calendar_today, size: 14),
+              icon: Icon(Icons.calendar_today, size: 14),
               label: Text(toDateKey(_date)),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: _amountCtrl,
               keyboardType: const TextInputType.numberWithOptions(signed: true),
@@ -117,7 +117,7 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: _memoCtrl,
               decoration: const InputDecoration(
@@ -126,10 +126,10 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 4),
-            const Text(
+            SizedBox(height: 4),
+            Text(
               '양수는 잔액 증가, 음수는 감소입니다.',
-              style: TextStyle(fontSize: 11, color: AppTokens.muted),
+              style: TextStyle(fontSize: 11, color: context.desktopMuted),
             ),
           ],
         ),
@@ -137,14 +137,14 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : _delete,
-          style: TextButton.styleFrom(foregroundColor: AppTokens.expense),
-          child: const Text('삭제'),
+          style: TextButton.styleFrom(foregroundColor: context.desktopExpense),
+          child: Text('삭제'),
         ),
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context),
-          child: const Text('취소'),
+          child: Text('취소'),
         ),
-        FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),
+        FilledButton(onPressed: _busy ? null : _save, child: Text('저장')),
       ],
     );
   }
