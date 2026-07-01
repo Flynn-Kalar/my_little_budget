@@ -109,9 +109,25 @@ class _AccountTransactionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
-                formatKRW(row.amount),
-                style: TextStyle(color: color, fontWeight: FontWeight.w800),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatKRW(row.amount),
+                    style: TextStyle(color: color, fontWeight: FontWeight.w800),
+                  ),
+                  if (row.balanceAfter != null)
+                    Text(
+                      formatKRW(row.balanceAfter!),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.75,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ),

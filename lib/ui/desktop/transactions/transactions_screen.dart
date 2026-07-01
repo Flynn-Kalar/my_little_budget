@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'widgets/filter_panel.dart';
 import 'widgets/inline_entry.dart';
@@ -19,17 +20,29 @@ class TransactionsScreen extends ConsumerWidget {
         width: double.infinity,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              '내역',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 20),
-            MonthNav(),
-            SizedBox(height: 16),
-            SummaryBar(),
-            SizedBox(height: 20),
+          children: [
             Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '내역',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                FilledButton.tonalIcon(
+                  key: const ValueKey('desktop-transactions-budget-button'),
+                  onPressed: () => context.go('/budget'),
+                  icon: const Icon(Icons.savings_outlined, size: 18),
+                  label: const Text('예산'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const MonthNav(),
+            const SizedBox(height: 16),
+            const SummaryBar(),
+            const SizedBox(height: 20),
+            const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TypeFilter(),
@@ -37,11 +50,11 @@ class TransactionsScreen extends ConsumerWidget {
                 Expanded(child: FilterPanel()),
               ],
             ),
-            SizedBox(height: 16),
-            InlineEntry(),
-            SizedBox(height: 8),
-            TransactionList(),
-            SizedBox(height: 40),
+            const SizedBox(height: 16),
+            const InlineEntry(),
+            const SizedBox(height: 8),
+            const TransactionList(),
+            const SizedBox(height: 40),
           ],
         ),
       ),

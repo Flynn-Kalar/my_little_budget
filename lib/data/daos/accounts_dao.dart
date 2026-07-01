@@ -5,6 +5,7 @@ import '../../features/accounts/validation.dart';
 import '../../features/investments/cost_basis.dart';
 import '../database.dart';
 import '../investment_mapping.dart';
+import '../sync_metadata.dart';
 import '../tables/accounts.dart';
 import '../tables/budget_groups.dart';
 import '../tables/investments.dart';
@@ -38,13 +39,15 @@ class AccountBalance {
   final int balance;
 }
 
-@DriftAccessor(tables: [
-  Accounts,
-  Transactions,
-  Investments,
-  BudgetGroups,
-  RecurringTransactions,
-])
+@DriftAccessor(
+  tables: [
+    Accounts,
+    Transactions,
+    Investments,
+    BudgetGroups,
+    RecurringTransactions,
+  ],
+)
 class AccountsDao extends DatabaseAccessor<AppDatabase>
     with _$AccountsDaoMixin {
   AccountsDao(super.db);
@@ -151,7 +154,12 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
         AS n
       ''',
       variables: List.filled(8, Variable<int>(id)),
-      readsFrom: {transactions, investments, budgetGroups, recurringTransactions},
+      readsFrom: {
+        transactions,
+        investments,
+        budgetGroups,
+        recurringTransactions,
+      },
     ).getSingle();
     return row.read<int>('n');
   }
@@ -169,7 +177,13 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
       if (draft.isInvestment) {
         final clearOthers = update(accounts);
         if (id != null) clearOthers.where((a) => a.id.isNotValue(id));
-        await clearOthers.write(const AccountsCompanion(isInvestment: Value(false)));
+        await clearOthers.write(
+          AccountsCompanion(
+            isInvestment: const Value(false),
+            updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
+          ),
+        );
       }
 
       if (id != null) {
@@ -183,6 +197,8 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
             color: Value(draft.color),
             excludeFromTotal: Value(draft.excludeFromTotal),
             isInvestment: Value(draft.isInvestment),
+            updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
             // initialBalance 는 의도적으로 건드리지 않음.
           ),
         );
@@ -216,15 +232,20 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> archiveAccount(int id) async {
     await customUpdate(
-      "UPDATE accounts SET archived_at = datetime('now') WHERE id = ?",
+      "UPDATE accounts SET archived_at = datetime('now'), updated_at = datetime('now'), sync_status = '$syncStatusPending' WHERE id = ?",
       variables: [Variable<int>(id)],
       updates: {accounts},
     );
   }
 
   Future<void> restoreAccount(int id) async {
-    await (update(accounts)..where((a) => a.id.equals(id)))
-        .write(const AccountsCompanion(archivedAt: Value(null)));
+    await (update(accounts)..where((a) => a.id.equals(id))).write(
+      AccountsCompanion(
+        archivedAt: const Value(null),
+        updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
+      ),
+    );
   }
 
   /// 참조 0건일 때만 영구 삭제. 사용 중이면 에러 메시지 반환, 성공 시 null. SPEC §4.2.
@@ -241,8 +262,15 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
   Future<void> updateAccountOrder(List<int> orderedIds) async {
     await transaction(() async {
       for (var i = 0; i < orderedIds.length; i++) {
-        await (update(accounts)..where((a) => a.id.equals(orderedIds[i])))
-            .write(AccountsCompanion(sortOrder: Value(i)));
+        await (update(
+          accounts,
+        )..where((a) => a.id.equals(orderedIds[i]))).write(
+          AccountsCompanion(
+            sortOrder: Value(i),
+            updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
+          ),
+        );
       }
     });
   }

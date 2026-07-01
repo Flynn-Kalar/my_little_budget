@@ -372,6 +372,8 @@ class _MemoAutocompleteFieldState extends State<MemoAutocompleteField> {
         widget.controller.selection = TextSelection.collapsed(
           offset: widget.controller.text.length,
         );
+        _navigatedOptions = false;
+        _focusNode.requestFocus();
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
         return Focus(

@@ -401,13 +401,20 @@ class _GeneralRow extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(width: 8),
-                Text(
-                  '$sign${formatKRW(row.amount)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: amountColor,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$sign${formatKRW(row.amount)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: amountColor,
+                      ),
+                    ),
+                    if (row.balanceAfter != null)
+                      _BalanceAfterText(balance: row.balanceAfter!),
+                  ],
                 ),
               ],
             ),
@@ -492,13 +499,20 @@ class _AdjustmentRow extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Text(
-                  '$sign${formatKRW(delta.abs())}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$sign${formatKRW(delta.abs())}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                    if (row.balanceAfter != null)
+                      _BalanceAfterText(balance: row.balanceAfter!),
+                  ],
                 ),
               ],
             ),
@@ -608,13 +622,20 @@ class _InvestmentVirtualRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(
-                  amountText,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: amountColor,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      amountText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: amountColor,
+                      ),
+                    ),
+                    if (row.balanceAfter != null)
+                      _BalanceAfterText(balance: row.balanceAfter!),
+                  ],
                 ),
               ],
             ),
@@ -646,6 +667,21 @@ class _TagChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text('#$name', style: TextStyle(fontSize: 10, color: c)),
+    );
+  }
+}
+
+class _BalanceAfterText extends StatelessWidget {
+  const _BalanceAfterText({required this.balance});
+  final int balance;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      formatKRW(balance),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 12, color: context.desktopMuted),
     );
   }
 }

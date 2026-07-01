@@ -6,6 +6,7 @@ import '../../features/investments/cost_basis.dart';
 import '../../features/transactions/validation.dart';
 import '../database.dart';
 import '../investment_mapping.dart';
+import '../sync_metadata.dart';
 import '../tables/accounts.dart';
 import '../tables/categories.dart';
 import '../tables/investments.dart';
@@ -53,6 +54,7 @@ class TransactionRow {
     this.originalAmount,
     this.costBasis,
     this.balanceImpact,
+    this.balanceAfter,
   });
 
   final int id;
@@ -80,6 +82,7 @@ class TransactionRow {
   final int? originalAmount;
   final int? costBasis;
   final int? balanceImpact;
+  final int? balanceAfter;
 }
 
 /// SPEC §4.5 — 지출 카테고리 도넛/범례.
@@ -97,6 +100,22 @@ class CategoryBreakdownRow {
 }
 
 /// SPEC §4.5 — 12개월 추세.
+class TagBreakdownRow {
+  const TagBreakdownRow({
+    required this.tagId,
+    required this.tagName,
+    required this.tagColor,
+    required this.total,
+    this.isUntagged = false,
+  });
+
+  final int? tagId;
+  final String tagName;
+  final String tagColor;
+  final int total;
+  final bool isUntagged;
+}
+
 class MonthlyTrendRow {
   const MonthlyTrendRow({
     required this.month,
@@ -230,8 +249,19 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 
     final catIds = filter.categoryIds;
     if (catIds != null && catIds.isNotEmpty) {
-      where.add('t.category_id IN (${_placeholders(catIds.length)})');
-      vars.addAll(catIds.map(Variable<int>.new));
+      final realCatIds = catIds.where((id) => id != 0).toList();
+      if (realCatIds.isEmpty) {
+        where.add('t.category_id IS NULL');
+      } else if (catIds.contains(0)) {
+        where.add(
+          '(t.category_id IN (${_placeholders(realCatIds.length)}) '
+          'OR t.category_id IS NULL)',
+        );
+        vars.addAll(realCatIds.map(Variable<int>.new));
+      } else {
+        where.add('t.category_id IN (${_placeholders(realCatIds.length)})');
+        vars.addAll(realCatIds.map(Variable<int>.new));
+      }
     }
 
     if (filter.untaggedOnly) {
@@ -356,6 +386,96 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// SPEC §4.5 — 최근 n개월(anchorMonth 포함) 수입/지출/순수입. 거래 없는 달은 0.
+  Future<List<TagBreakdownRow>> expenseByTag(
+    String month,
+    int categoryId,
+  ) async {
+    final b = monthRange(month);
+    final categoryWhere = categoryId == 0
+        ? 't.category_id IS NULL'
+        : 't.category_id = ?';
+    final categoryVariables = categoryId == 0
+        ? const <Variable>[]
+        : <Variable>[Variable<int>(categoryId)];
+
+    final taggedRows = await customSelect(
+      '''
+      WITH ranked_tags AS (
+        SELECT
+          t.id AS transaction_id,
+          t.amount AS amount,
+          tg.id AS id,
+          tg.name AS name,
+          tg.color AS color,
+          ROW_NUMBER() OVER (
+            PARTITION BY t.id
+            ORDER BY tg.sort_order, tg.id
+          ) AS priority
+        FROM transactions t
+        JOIN transaction_tags tt ON tt.transaction_id = t.id
+        JOIN tags tg ON tg.id = tt.tag_id
+        WHERE t.occurred_on BETWEEN ? AND ?
+          AND t.type = 'expense'
+          AND $categoryWhere
+      )
+      SELECT id, name, color, COALESCE(SUM(amount), 0) AS total
+      FROM ranked_tags
+      WHERE priority = 1
+      GROUP BY id, name, color
+      ''',
+      variables: [
+        Variable<String>(b.start),
+        Variable<String>(b.end),
+        ...categoryVariables,
+      ],
+      readsFrom: {transactions, transactionTags, tags},
+    ).get();
+
+    final untaggedRow = await customSelect(
+      '''
+      SELECT COALESCE(SUM(t.amount), 0) AS total
+      FROM transactions t
+      WHERE t.occurred_on BETWEEN ? AND ?
+        AND t.type = 'expense'
+        AND $categoryWhere
+        AND NOT EXISTS (
+          SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = t.id
+        )
+      ''',
+      variables: [
+        Variable<String>(b.start),
+        Variable<String>(b.end),
+        ...categoryVariables,
+      ],
+      readsFrom: {transactions, transactionTags},
+    ).getSingle();
+
+    final result = [
+      for (final r in taggedRows)
+        TagBreakdownRow(
+          tagId: r.read<int>('id'),
+          tagName: r.read<String>('name'),
+          tagColor: r.readNullable<String>('color') ?? '#64748b',
+          total: r.read<int>('total'),
+        ),
+    ];
+
+    final untaggedTotal = untaggedRow.read<int>('total');
+    if (untaggedTotal > 0) {
+      result.add(
+        TagBreakdownRow(
+          tagId: null,
+          tagName: '태그 없음',
+          tagColor: '#94a3b8',
+          total: untaggedTotal,
+          isUntagged: true,
+        ),
+      );
+    }
+
+    return result..sort((a, b) => b.total.compareTo(a.total));
+  }
+
   Future<List<MonthlyTrendRow>> monthlyTrend(int n, String anchorMonth) async {
     final ad = parseMonthKey(anchorMonth);
     final months = <String>[
@@ -477,6 +597,11 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   /// + 그 자산에 귀속된 투자 이벤트를 가상 행으로 끼워넣고 최신순 정렬.
   /// 같은 시각이면 일반 거래 > 투자 (안정 정렬).
   Future<List<TransactionRow>> listTransactionsByAccount(int accountId) async {
+    final account = await (select(
+      accounts,
+    )..where((a) => a.id.equals(accountId))).getSingleOrNull();
+    final initialBalance = account?.initialBalance ?? 0;
+
     final baseRows = await customSelect(
       '''
       SELECT
@@ -556,7 +681,28 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
         if (aInv != bInv) return aInv - bInv;
         return b.id.compareTo(a.id);
       });
-    return merged;
+
+    var runningBalance = initialBalance;
+    final balanceAfterByKey = <String, int>{};
+    final ledgerRows = [...merged]
+      ..sort((a, b) {
+        final d = a.occurredOn.compareTo(b.occurredOn);
+        if (d != 0) return d;
+        final t = a.occurredTime.compareTo(b.occurredTime);
+        if (t != 0) return t;
+        final aInv = a.source == 'investment' ? 1 : 0;
+        final bInv = b.source == 'investment' ? 1 : 0;
+        if (aInv != bInv) return aInv - bInv;
+        return a.id.compareTo(b.id);
+      });
+    for (final row in ledgerRows) {
+      runningBalance += _accountBalanceImpact(row, accountId);
+      balanceAfterByKey[_accountRowKey(row)] = runningBalance;
+    }
+    return [
+      for (final row in merged)
+        _rowWithBalanceAfter(row, balanceAfterByKey[_accountRowKey(row)]),
+    ];
   }
 
   /// 거래 저장 + 태그 이름 매핑 갱신. 검증을 통과한 draft 만 받는다. SPEC §4.1.
@@ -580,6 +726,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
             fromAccountId: Value(draft.fromAccountId),
             toAccountId: Value(draft.toAccountId),
             updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
           ),
         );
         txId = id;
@@ -648,7 +795,11 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       } else {
         ids.add(
           await into(tags).insert(
-            TagsCompanion.insert(name: name, color: Value(randomColor())),
+            TagsCompanion.insert(
+              name: name,
+              color: Value(randomColor()),
+              sortOrder: Value(await _nextTagSortOrder()),
+            ),
           ),
         );
       }
@@ -668,7 +819,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
         '''
         UPDATE tags
         SET usage_count = usage_count + 1,
-            last_used_at = datetime('now')
+            last_used_at = datetime('now'),
+            updated_at = datetime('now'),
+            sync_status = '$syncStatusPending'
         WHERE id IN (${_placeholders(ids.length)})
         ''',
         variables: ids.map(Variable<int>.new).toList(),
@@ -684,7 +837,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       'tg.color AS color FROM transaction_tags tt '
       'JOIN tags tg ON tg.id = tt.tag_id '
       'WHERE tt.transaction_id IN (${_placeholders(txIds.length)}) '
-      'ORDER BY tg.name',
+      'ORDER BY tg.sort_order, tg.id',
       variables: txIds.map(Variable<int>.new).toList(),
       readsFrom: {transactionTags, tags},
     ).get();
@@ -700,6 +853,14 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       );
     }
     return map;
+  }
+
+  Future<int> _nextTagSortOrder() async {
+    final row = await customSelect(
+      'SELECT COALESCE(MAX(sort_order), -1) AS m FROM tags',
+      readsFrom: {tags},
+    ).getSingle();
+    return row.read<int>('m') + 1;
   }
 
   TransactionRow _rowFromQuery(
@@ -726,9 +887,52 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       tags: tagMap[id] ?? const [],
     );
   }
+
+  TransactionRow _rowWithBalanceAfter(TransactionRow row, int? balanceAfter) {
+    return TransactionRow(
+      id: row.id,
+      type: row.type,
+      occurredOn: row.occurredOn,
+      occurredTime: row.occurredTime,
+      amount: row.amount,
+      memo: row.memo,
+      accountId: row.accountId,
+      accountName: row.accountName,
+      categoryId: row.categoryId,
+      categoryName: row.categoryName,
+      categoryColor: row.categoryColor,
+      fromAccountId: row.fromAccountId,
+      fromAccountName: row.fromAccountName,
+      toAccountId: row.toAccountId,
+      toAccountName: row.toAccountName,
+      tags: row.tags,
+      source: row.source,
+      investmentSide: row.investmentSide,
+      ticker: row.ticker,
+      quantity: row.quantity,
+      originalAmount: row.originalAmount,
+      costBasis: row.costBasis,
+      balanceImpact: row.balanceImpact,
+      balanceAfter: balanceAfter,
+    );
+  }
 }
 
 String _placeholders(int n) => List.filled(n, '?').join(', ');
+
+String _accountRowKey(TransactionRow row) =>
+    '${row.source ?? 'transaction'}:${row.id}';
+
+int _accountBalanceImpact(TransactionRow row, int accountId) {
+  if (row.source == 'investment') return row.balanceImpact ?? 0;
+  return switch (row.type) {
+    'income' => row.amount,
+    'expense' => -row.amount,
+    'transfer' => row.toAccountId == accountId ? row.amount : -row.amount,
+    'adjustment' => row.amount,
+    _ => 0,
+  };
+}
 
 List<String> _tagNamesFromSearch(String? raw) {
   if (raw == null || raw.isEmpty) return const [];

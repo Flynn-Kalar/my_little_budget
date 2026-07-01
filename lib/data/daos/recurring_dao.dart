@@ -6,6 +6,7 @@ import '../../core/date.dart';
 import '../../features/recurring/logic.dart';
 import '../../features/recurring/validation.dart';
 import '../database.dart';
+import '../sync_metadata.dart';
 import '../tables/accounts.dart';
 import '../tables/categories.dart';
 import '../tables/recurring_transactions.dart';
@@ -31,26 +32,29 @@ class RecurringListItem {
   final String? toAccountName;
 }
 
-@DriftAccessor(tables: [
-  RecurringTransactions,
-  Transactions,
-  Tags,
-  TransactionTags,
-  Accounts,
-  Categories,
-])
+@DriftAccessor(
+  tables: [
+    RecurringTransactions,
+    Transactions,
+    Tags,
+    TransactionTags,
+    Accounts,
+    Categories,
+  ],
+)
 class RecurringDao extends DatabaseAccessor<AppDatabase>
     with _$RecurringDaoMixin {
   RecurringDao(super.db);
 
   /// 활성 우선, id 순. 자산/카테고리명 동봉. SPEC §4.8.2.
   Future<List<RecurringListItem>> listRecurringTransactions() async {
-    final recs = await (select(recurringTransactions)
-          ..orderBy([
-            (r) => OrderingTerm(expression: r.active, mode: OrderingMode.desc),
-            (r) => OrderingTerm(expression: r.id),
-          ]))
-        .get();
+    final recs =
+        await (select(recurringTransactions)..orderBy([
+              (r) =>
+                  OrderingTerm(expression: r.active, mode: OrderingMode.desc),
+              (r) => OrderingTerm(expression: r.id),
+            ]))
+            .get();
 
     final accNames = {
       for (final a in await select(accounts).get()) a.id: a.name,
@@ -60,25 +64,31 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
     };
 
     return recs
-        .map((r) => RecurringListItem(
-              recurring: r,
-              accountName: r.accountId == null ? null : accNames[r.accountId],
-              categoryName:
-                  r.categoryId == null ? null : catNames[r.categoryId],
-              fromAccountName:
-                  r.fromAccountId == null ? null : accNames[r.fromAccountId],
-              toAccountName:
-                  r.toAccountId == null ? null : accNames[r.toAccountId],
-            ))
+        .map(
+          (r) => RecurringListItem(
+            recurring: r,
+            accountName: r.accountId == null ? null : accNames[r.accountId],
+            categoryName: r.categoryId == null ? null : catNames[r.categoryId],
+            fromAccountName: r.fromAccountId == null
+                ? null
+                : accNames[r.fromAccountId],
+            toAccountName: r.toAccountId == null
+                ? null
+                : accNames[r.toAccountId],
+          ),
+        )
         .toList();
   }
 
   Future<int> saveRecurring({int? id, required RecurringDraft draft}) async {
-    final tagNamesJson =
-        draft.tagNames.isEmpty ? null : jsonEncode(draft.tagNames);
+    final tagNamesJson = draft.tagNames.isEmpty
+        ? null
+        : jsonEncode(draft.tagNames);
 
     if (id != null) {
-      await (update(recurringTransactions)..where((r) => r.id.equals(id))).write(
+      await (update(
+        recurringTransactions,
+      )..where((r) => r.id.equals(id))).write(
         RecurringTransactionsCompanion(
           name: Value(draft.name),
           type: Value(draft.type),
@@ -96,6 +106,7 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
           endDate: Value(draft.endDate),
           tagNames: Value(tagNamesJson),
           updatedAt: Value(sqlNow()),
+          syncStatus: const Value(syncStatusPending),
         ),
       );
       return id;
@@ -130,6 +141,7 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
       RecurringTransactionsCompanion(
         active: Value(active),
         updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
       ),
     );
   }
@@ -137,9 +149,9 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
   /// SPEC §5.1 — 활성 반복거래의 lastGeneratedOn 이후 ~ horizon 누락분을
   /// transactions 에 backfill (멱등). 생성 건수 반환. 순수 dueOccurrences 재사용.
   Future<int> generateDueRecurringTransactions(String horizon) async {
-    final recs = await (select(recurringTransactions)
-          ..where((r) => r.active.equals(true)))
-        .get();
+    final recs = await (select(
+      recurringTransactions,
+    )..where((r) => r.active.equals(true))).get();
 
     var generated = 0;
     await transaction(() async {
@@ -198,12 +210,17 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
           }
 
           for (final name in tagNames) {
-            final existing =
-                await (select(tags)..where((t) => t.name.equals(name)))
-                    .getSingleOrNull();
-            final tagId = existing?.id ??
+            final existing = await (select(
+              tags,
+            )..where((t) => t.name.equals(name))).getSingleOrNull();
+            final tagId =
+                existing?.id ??
                 await into(tags).insert(
-                  TagsCompanion.insert(name: name, color: const Value('#64748b')),
+                  TagsCompanion.insert(
+                    name: name,
+                    color: const Value('#64748b'),
+                    sortOrder: Value(await _nextTagSortOrder()),
+                  ),
                 );
             await into(transactionTags).insert(
               TransactionTagsCompanion.insert(
@@ -216,11 +233,15 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
           generated++;
         }
 
-        await (update(recurringTransactions)..where((x) => x.id.equals(r.id)))
-            .write(RecurringTransactionsCompanion(
-          lastGeneratedOn: Value(occurrences.last),
-          updatedAt: Value(sqlNow()),
-        ));
+        await (update(
+          recurringTransactions,
+        )..where((x) => x.id.equals(r.id))).write(
+          RecurringTransactionsCompanion(
+            lastGeneratedOn: Value(occurrences.last),
+            updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
+          ),
+        );
       }
     });
     return generated;
@@ -241,5 +262,13 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
       // ignore
     }
     return const [];
+  }
+
+  Future<int> _nextTagSortOrder() async {
+    final row = await customSelect(
+      'SELECT COALESCE(MAX(sort_order), -1) AS m FROM tags',
+      readsFrom: {tags},
+    ).getSingle();
+    return row.read<int>('m') + 1;
   }
 }

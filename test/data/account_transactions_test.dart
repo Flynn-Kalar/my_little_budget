@@ -16,8 +16,9 @@ void main() {
       final accts = await db.accountsDao.getActiveAccounts();
       final mainAcc = accts.first; // 주거래
       final invAcc = accts.firstWhere((a) => a.name == '투자');
-      final catId =
-          (await db.categoriesDao.getActiveCategories('expense')).first.id;
+      final catId = (await db.categoriesDao.getActiveCategories(
+        'expense',
+      )).first.id;
 
       // 일반 거래 1개
       await db.transactionsDao.saveTransaction(
@@ -46,26 +47,36 @@ void main() {
       );
       await db.investmentsDao.saveInvestment(
         draft: validateInvestment(
-          side: 'buy', occurredOn: '2026-05-01', occurredTime: '09:00',
-          ticker: 'AAPL', quantity: 10, totalAmount: 100000,
+          side: 'buy',
+          occurredOn: '2026-05-01',
+          occurredTime: '09:00',
+          ticker: 'AAPL',
+          quantity: 10,
+          totalAmount: 100000,
         ).value!,
       );
       await db.investmentsDao.saveInvestment(
         draft: validateInvestment(
-          side: 'sell', occurredOn: '2026-05-15', occurredTime: '09:00',
-          ticker: 'AAPL', quantity: 4, totalAmount: 50000,
+          side: 'sell',
+          occurredOn: '2026-05-15',
+          occurredTime: '09:00',
+          ticker: 'AAPL',
+          quantity: 4,
+          totalAmount: 50000,
         ).value!,
       );
 
       // 일반 자산 상세: 일반 거래 1개만, 투자 가상 행은 0개
-      final mainRows =
-          await db.transactionsDao.listTransactionsByAccount(mainAcc.id);
+      final mainRows = await db.transactionsDao.listTransactionsByAccount(
+        mainAcc.id,
+      );
       expect(mainRows.length, 1);
       expect(mainRows.first.source, isNull);
 
       // 투자 자산 상세: buy(가상) + sell(가상) = 2개, 매도 행은 source=investment
-      final invRows =
-          await db.transactionsDao.listTransactionsByAccount(invAcc.id);
+      final invRows = await db.transactionsDao.listTransactionsByAccount(
+        invAcc.id,
+      );
       expect(invRows.length, 2);
       expect(invRows.every((r) => r.source == 'investment'), true);
 
@@ -77,13 +88,62 @@ void main() {
       expect(invRows.first.amount, 10000);
       expect(invRows.first.balanceImpact, 10000);
     });
+
+    test('adds balance after each account transaction', () async {
+      final accts = await db.accountsDao.getActiveAccounts();
+      final fromAcc = accts.first;
+      final toAcc = accts.firstWhere((a) => a.id != fromAcc.id);
+      final incomeCatId = (await db.categoriesDao.getActiveCategories(
+        'income',
+      )).first.id;
+      final expenseCatId = (await db.categoriesDao.getActiveCategories(
+        'expense',
+      )).first.id;
+
+      await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'income',
+          amount: 10000,
+          occurredOn: '2026-05-01',
+          occurredTime: '09:00',
+          accountId: fromAcc.id,
+          categoryId: incomeCatId,
+        ),
+      );
+      await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'expense',
+          amount: 3000,
+          occurredOn: '2026-05-02',
+          occurredTime: '09:00',
+          accountId: fromAcc.id,
+          categoryId: expenseCatId,
+        ),
+      );
+      await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'transfer',
+          amount: 2000,
+          occurredOn: '2026-05-03',
+          occurredTime: '09:00',
+          fromAccountId: fromAcc.id,
+          toAccountId: toAcc.id,
+        ),
+      );
+
+      final rows = await db.transactionsDao.listTransactionsByAccount(
+        fromAcc.id,
+      );
+      expect(rows.map((row) => row.balanceAfter), [5000, 7000, 10000]);
+    });
   });
 
   group('getRecentMemos (SPEC §4.1)', () {
     test('최근 거래의 distinct trim memo', () async {
       final accId = (await db.accountsDao.getActiveAccounts()).first.id;
-      final catId =
-          (await db.categoriesDao.getActiveCategories('expense')).first.id;
+      final catId = (await db.categoriesDao.getActiveCategories(
+        'expense',
+      )).first.id;
       Future<void> add(String memo, String on) =>
           db.transactionsDao.saveTransaction(
             draft: TransactionDraft(

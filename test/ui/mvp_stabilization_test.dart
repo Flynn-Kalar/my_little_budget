@@ -116,6 +116,50 @@ void main() {
     },
   );
 
+  testWidgets('Desktop investments switches from monthly to yearly data', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await _seedInvestments(db);
+    final now = DateTime.now();
+    final otherMonth = now.month == 1 ? 2 : 1;
+    final yearlyId = await db.investmentsDao.saveInvestment(
+      draft: InvestmentDraft(
+        side: 'buy',
+        occurredOn: '${now.year}-${otherMonth.toString().padLeft(2, '0')}-15',
+        occurredTime: '12:00',
+        ticker: 'YEARLY',
+        quantity: 1,
+        totalAmount: 10000,
+      ),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    GoRouter.of(
+      tester.element(find.text('my_little_budget')),
+    ).go('/investments');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(ValueKey('investment-edit-$yearlyId')), findsNothing);
+    expect(find.text('월간 투자 거래'), findsOneWidget);
+
+    await tester.tap(find.text('연'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(ValueKey('investment-edit-$yearlyId')), findsOneWidget);
+    expect(find.text('연간 투자 거래'), findsOneWidget);
+    expect(find.text('연간 실현손익'), findsOneWidget);
+  });
+
   testWidgets('Stats monthly category detail panel renders transactions', (
     tester,
   ) async {
@@ -138,12 +182,15 @@ void main() {
     await tester.tap(find.text(seeded.categoryName).first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Stats lunch'), findsOneWidget);
+    expect(find.text('카테고리별'), findsOneWidget);
+    expect(find.text('태그별'), findsOneWidget);
+    expect(find.text('Stats lunch'), findsWidgets);
     expect(find.text(seeded.accountName), findsWidgets);
-    expect(find.text('#stats-tag'), findsOneWidget);
+    expect(find.text('#stats-tag'), findsWidgets);
     expect(find.text(formatKRW(12345)), findsWidgets);
+    expect(find.text('Previous month stats lunch'), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.close).first);
+    await tester.tap(find.byTooltip('상세 닫기'));
     await tester.pumpAndSettle();
 
     expect(find.text('Stats lunch'), findsNothing);
@@ -570,6 +617,7 @@ Future<({String categoryName, String accountName})> _seedStats(
 ) async {
   final month = currentMonthKey();
   final day = '$month-01';
+  final previousMonth = shiftMonth(month, -1);
   final account = (await db.accountsDao.getActiveAccounts()).first;
   final category = (await db.categoriesDao.getActiveCategories(
     'expense',
@@ -586,6 +634,18 @@ Future<({String categoryName, String accountName})> _seedStats(
       memo: 'Stats lunch',
     ),
     tagNames: const ['stats-tag'],
+  );
+
+  await db.transactionsDao.saveTransaction(
+    draft: TransactionDraft(
+      type: 'expense',
+      amount: 99999,
+      occurredOn: '$previousMonth-01',
+      occurredTime: '12:30',
+      accountId: account.id,
+      categoryId: category.id,
+      memo: 'Previous month stats lunch',
+    ),
   );
 
   return (categoryName: category.name, accountName: account.name);

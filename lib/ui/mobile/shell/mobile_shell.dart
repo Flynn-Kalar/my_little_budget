@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shell/sidebar_shell.dart';
+import '../../shared/notes_providers.dart';
 import '../responsive_page.dart';
 
 class ResponsiveShell extends StatelessWidget {
@@ -22,23 +24,25 @@ class ResponsiveShell extends StatelessWidget {
   }
 }
 
-class MobileShell extends StatelessWidget {
+class MobileShell extends ConsumerWidget {
   const MobileShell({super.key, required this.child});
 
   final Widget child;
 
   static const _items = [
     _MobileNavItem('/transactions', '내역', Icons.receipt_long_outlined),
-    _MobileNavItem('/budget', '예산', Icons.savings_outlined),
     _MobileNavItem('/stats', '통계', Icons.bar_chart_outlined),
     _MobileNavItem('/accounts', '자산', Icons.account_balance_wallet_outlined),
     _MobileNavItem('/investments', '투자', Icons.trending_up),
+    _MobileNavItem('/notes', '메모', Icons.note_alt_outlined),
     _MobileNavItem('/settings', '설정', Icons.settings_outlined),
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).matchedLocation;
+    final pendingReminders =
+        ref.watch(pendingReminderCountProvider).asData?.value ?? 0;
     final selectedIndex = _items.indexWhere(
       (item) => location == item.path || location.startsWith('${item.path}/'),
     );
@@ -60,7 +64,15 @@ class MobileShell extends StatelessWidget {
           onDestinationSelected: (index) => context.go(_items[index].path),
           destinations: [
             for (final item in _items)
-              NavigationDestination(icon: Icon(item.icon), label: item.label),
+              NavigationDestination(
+                icon: item.path == '/notes' && pendingReminders > 0
+                    ? Badge(
+                        label: Text('$pendingReminders'),
+                        child: Icon(item.icon),
+                      )
+                    : Icon(item.icon),
+                label: item.label,
+              ),
           ],
         ),
       ),

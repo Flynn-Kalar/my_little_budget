@@ -5,10 +5,16 @@ import '../../core/date.dart';
 import '../../core/theme/app_theme.dart';
 
 class MobilePage extends StatelessWidget {
-  const MobilePage({super.key, required this.title, required this.children});
+  const MobilePage({
+    super.key,
+    required this.title,
+    required this.children,
+    this.actions = const [],
+  });
 
   final String title;
   final List<Widget> children;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -16,13 +22,20 @@ class MobilePage extends StatelessWidget {
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.onSurface,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            ...actions,
+          ],
         ),
         const SizedBox(height: 16),
         ...children,
@@ -39,18 +52,20 @@ class MobilePageScaffold extends StatelessWidget {
     required this.children,
     this.onAdd,
     this.addTooltip = '추가',
+    this.actions = const [],
   });
 
   final String title;
   final List<Widget> children;
   final VoidCallback? onAdd;
   final String addTooltip;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: MobilePage(title: title, children: children),
+      body: MobilePage(title: title, actions: actions, children: children),
       floatingActionButton: onAdd == null
           ? null
           : SafeArea(

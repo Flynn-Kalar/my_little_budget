@@ -1,19 +1,24 @@
 import 'package:drift/drift.dart';
 
+import '../../core/date.dart';
 import '../database.dart';
+import '../sync_metadata.dart';
 import '../tables/tags.dart';
+import '../tables/transactions.dart';
 
 part 'tags_dao.g.dart';
 
 /// SPEC §3.8 / §4.8.3 — 태그 CRUD + 거래-태그 매핑(id 기준).
-@DriftAccessor(tables: [Tags, TransactionTags])
+@DriftAccessor(tables: [Tags, TransactionTags, Transactions])
 class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   TagsDao(super.db);
 
   Future<List<Tag>> getTags() {
-    return (select(
-      tags,
-    )..orderBy([(t) => OrderingTerm(expression: t.name)])).get();
+    return (select(tags)..orderBy([
+          (t) => OrderingTerm(expression: t.sortOrder),
+          (t) => OrderingTerm(expression: t.id),
+        ]))
+        .get();
   }
 
   Future<List<Tag>> getRecommendedTags({int? limit}) {
@@ -22,34 +27,65 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
         (t) => OrderingTerm.desc(t.isPinned),
         (t) => OrderingTerm.desc(t.usageCount),
         (t) => OrderingTerm.desc(t.lastUsedAt),
-        (t) => OrderingTerm(expression: t.name),
+        (t) => OrderingTerm(expression: t.sortOrder),
+        (t) => OrderingTerm(expression: t.id),
       ]);
     if (limit != null) query.limit(limit);
     return query.get();
   }
 
   Stream<List<Tag>> watchTags() {
-    return (select(
-      tags,
-    )..orderBy([(t) => OrderingTerm(expression: t.name)])).watch();
+    return (select(tags)..orderBy([
+          (t) => OrderingTerm(expression: t.sortOrder),
+          (t) => OrderingTerm(expression: t.id),
+        ]))
+        .watch();
   }
 
-  Future<int> createTag(String name, String color) {
-    return into(
-      tags,
-    ).insert(TagsCompanion.insert(name: name, color: Value(color)));
+  Future<int> createTag(String name, String color) async {
+    final nextOrder = await _nextSortOrder();
+    return into(tags).insert(
+      TagsCompanion.insert(
+        name: name,
+        color: Value(color),
+        sortOrder: Value(nextOrder),
+      ),
+    );
   }
 
   Future<void> updateTag(int id, String name, String color) async {
     await (update(tags)..where((t) => t.id.equals(id))).write(
-      TagsCompanion(name: Value(name), color: Value(color)),
+      TagsCompanion(
+        name: Value(name),
+        color: Value(color),
+        updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
+      ),
     );
   }
 
   Future<void> setTagPinned(int id, bool pinned) async {
     await (update(tags)..where((t) => t.id.equals(id))).write(
-      TagsCompanion(isPinned: Value(pinned)),
+      TagsCompanion(
+        isPinned: Value(pinned),
+        updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
+      ),
     );
+  }
+
+  Future<void> updateTagOrder(List<int> orderedIds) async {
+    await transaction(() async {
+      for (var i = 0; i < orderedIds.length; i++) {
+        await (update(tags)..where((t) => t.id.equals(orderedIds[i]))).write(
+          TagsCompanion(
+            sortOrder: Value(i),
+            updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> deleteTag(int id) async {
@@ -71,6 +107,22 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
           mode: InsertMode.insertOrIgnore,
         );
       }
+      await (update(
+        transactions,
+      )..where((t) => t.id.equals(transactionId))).write(
+        TransactionsCompanion(
+          updatedAt: Value(sqlNow()),
+          syncStatus: const Value(syncStatusPending),
+        ),
+      );
     });
+  }
+
+  Future<int> _nextSortOrder() async {
+    final row = await customSelect(
+      'SELECT COALESCE(MAX(sort_order), -1) AS m FROM tags',
+      readsFrom: {tags},
+    ).getSingle();
+    return row.read<int>('m') + 1;
   }
 }

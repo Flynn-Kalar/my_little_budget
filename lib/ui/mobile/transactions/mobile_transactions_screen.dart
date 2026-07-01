@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
 import '../../../core/money.dart';
@@ -27,6 +28,14 @@ class MobileTransactionsScreen extends ConsumerWidget {
 
     return MobilePageScaffold(
       title: '내역',
+      actions: [
+        FilledButton.tonalIcon(
+          key: const ValueKey('mobile-transactions-budget-button'),
+          onPressed: () => context.go('/budget'),
+          icon: const Icon(Icons.savings_outlined, size: 18),
+          label: const Text('예산'),
+        ),
+      ],
       onAdd: () => _TransactionSheet.show(context),
       addTooltip: '거래 추가',
       children: [
@@ -35,8 +44,7 @@ class MobileTransactionsScreen extends ConsumerWidget {
           onChanged: (value) =>
               ref.read(selectedMonthProvider.notifier).state = value,
         ),
-        const _SearchCard(),
-        const _AdvancedFilterCard(),
+        const _SearchFilterBar(),
         _TypeFilter(type: type),
         MobileAsync(
           value: summary,
@@ -54,14 +62,14 @@ class MobileTransactionsScreen extends ConsumerWidget {
   }
 }
 
-class _SearchCard extends ConsumerStatefulWidget {
-  const _SearchCard();
+class _SearchFilterBar extends ConsumerStatefulWidget {
+  const _SearchFilterBar();
 
   @override
-  ConsumerState<_SearchCard> createState() => _SearchCardState();
+  ConsumerState<_SearchFilterBar> createState() => _SearchFilterBarState();
 }
 
-class _SearchCardState extends ConsumerState<_SearchCard> {
+class _SearchFilterBarState extends ConsumerState<_SearchFilterBar> {
   late final TextEditingController _controller;
 
   @override
@@ -96,7 +104,9 @@ class _SearchCardState extends ConsumerState<_SearchCard> {
 
   @override
   Widget build(BuildContext context) {
-    final query = ref.watch(searchFilterProvider).q ?? '';
+    final filter = ref.watch(searchFilterProvider);
+    final query = filter.q ?? '';
+    final filterActive = _hasAdvancedTransactionFilter(filter);
     if (_controller.text != query) {
       _controller.value = TextEditingValue(
         text: query,
@@ -105,28 +115,58 @@ class _SearchCardState extends ConsumerState<_SearchCard> {
     }
 
     return MobileCard(
-      child: TextField(
-        controller: _controller,
-        onChanged: _setQuery,
-        decoration: InputDecoration(
-          hintText: '메모, 카테고리, 계좌명 검색',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: query.isEmpty
-              ? null
-              : IconButton(
-                  onPressed: () {
-                    _controller.clear();
-                    _setQuery('');
-                  },
-                  icon: const Icon(Icons.close),
-                  tooltip: '검색어 지우기',
-                ),
-          border: const OutlineInputBorder(),
-          isDense: true,
-        ),
+      child: Row(
+        key: const ValueKey('mobile-transactions-search-filter-bar'),
+        children: [
+          Expanded(
+            child: TextField(
+              key: const ValueKey('mobile-transactions-search-field'),
+              controller: _controller,
+              onChanged: _setQuery,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: '메모, 카테고리, 계좌명 검색',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        key: const ValueKey('mobile-transactions-search-clear'),
+                        onPressed: () {
+                          _controller.clear();
+                          _setQuery('');
+                        },
+                        icon: const Icon(Icons.close),
+                        tooltip: '검색어 지우기',
+                      ),
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton.filledTonal(
+            key: const ValueKey('mobile-transactions-filter-button'),
+            onPressed: () => _AdvancedFilterSheet.show(context),
+            isSelected: filterActive,
+            selectedIcon: const Icon(Icons.filter_alt),
+            icon: const Icon(Icons.tune),
+            tooltip: filterActive ? '필터 적용됨' : '필터',
+          ),
+        ],
       ),
     );
   }
+}
+
+bool _hasAdvancedTransactionFilter(TransactionFilter filter) {
+  return filter.minAmount != null ||
+      filter.maxAmount != null ||
+      filter.accountId != null ||
+      (filter.categoryIds?.isNotEmpty ?? false) ||
+      (filter.tagIds?.isNotEmpty ?? false) ||
+      filter.untaggedOnly ||
+      filter.fromDate != null ||
+      filter.toDate != null;
 }
 
 class _TypeFilter extends ConsumerWidget {
@@ -155,47 +195,6 @@ class _TypeFilter extends ConsumerWidget {
               onSelected: (_) =>
                   ref.read(typeFilterProvider.notifier).state = option.$1,
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdvancedFilterCard extends ConsumerWidget {
-  const _AdvancedFilterCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(searchFilterProvider);
-    final active =
-        hasActiveTransactionFilter(filter) &&
-        !(filter.q?.trim().isNotEmpty == true &&
-            filter.minAmount == null &&
-            filter.maxAmount == null &&
-            filter.accountId == null &&
-            (filter.categoryIds?.isEmpty ?? true) &&
-            (filter.tagIds?.isEmpty ?? true) &&
-            !filter.untaggedOnly &&
-            filter.fromDate == null &&
-            filter.toDate == null);
-    return MobileCard(
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              active ? '필터가 적용되어 있습니다' : '기간, 계좌, 카테고리, 태그 필터',
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          TextButton.icon(
-            onPressed: () => _AdvancedFilterSheet.show(context),
-            icon: const Icon(Icons.tune, size: 18),
-            label: const Text('필터'),
-          ),
         ],
       ),
     );

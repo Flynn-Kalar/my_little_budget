@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'database.dart';
+import 'sync_metadata.dart';
 
 /// SPEC §5.2 — 백업 JSON 모델 + 파싱.
 
@@ -20,6 +21,8 @@ class Backup {
     required this.transactionTags,
     required this.monthlyIncome,
     required this.recurringTransactions,
+    this.notes = const [],
+    this.noteChecklistItems = const [],
   });
 
   final String exportedAt;
@@ -33,6 +36,8 @@ class Backup {
   final List<TransactionTagLink> transactionTags;
   final List<MonthlyIncomeRow> monthlyIncome;
   final List<RecurringTransaction> recurringTransactions;
+  final List<Note> notes;
+  final List<NoteChecklistItem> noteChecklistItems;
 
   Map<String, dynamic> toJson() => {
     'version': backupVersion,
@@ -53,6 +58,8 @@ class Backup {
       'recurringTransactions': recurringTransactions
           .map((e) => e.toJson())
           .toList(),
+      'notes': notes.map(_noteBackupJson).toList(),
+      'noteChecklistItems': noteChecklistItems.map((e) => e.toJson()).toList(),
     },
   };
 
@@ -96,35 +103,53 @@ BackupParseResult parseBackup(String jsonString) {
         accounts: _list(data['accounts'])
             .map(
               (j) => Account.fromJson(
-                _bools(j, const ['excludeFromTotal', 'isInvestment']),
+                _withSyncFields(
+                  _bools(j, const ['excludeFromTotal', 'isInvestment']),
+                ),
               ),
             )
             .toList(),
-        categories: _list(data['categories']).map(Category.fromJson).toList(),
+        categories: _list(
+          data['categories'],
+        ).map((j) => Category.fromJson(_withSyncFields(j))).toList(),
         budgetGroups: _list(data['budgetGroups'])
-            .map((j) => BudgetGroup.fromJson(_bools(j, const ['carryForward'])))
+            .map(
+              (j) => BudgetGroup.fromJson(
+                _withSyncFields(_bools(j, const ['carryForward'])),
+              ),
+            )
             .toList(),
         budgetGroupCategories: _list(
           data['budgetGroupCategories'],
         ).map(BudgetGroupCategoryLink.fromJson).toList(),
         transactions: _list(
           data['transactions'],
-        ).map(Transaction.fromJson).toList(),
+        ).map((j) => Transaction.fromJson(_withSyncFields(j))).toList(),
         investments: _list(
           data['investments'],
-        ).map(Investment.fromJson).toList(),
+        ).map((j) => Investment.fromJson(_withSyncFields(j))).toList(),
         tags: _list(
           data['tags'],
-        ).map((j) => Tag.fromJson(_tagJson(j))).toList(),
+        ).map((j) => Tag.fromJson(_withSyncFields(_tagJson(j)))).toList(),
         transactionTags: _list(
           data['transactionTags'],
         ).map(TransactionTagLink.fromJson).toList(),
         monthlyIncome: _list(
           data['monthlyIncome'],
-        ).map(MonthlyIncomeRow.fromJson).toList(),
+        ).map((j) => MonthlyIncomeRow.fromJson(_withSyncFields(j))).toList(),
         recurringTransactions: _list(data['recurringTransactions'])
             .map(
-              (j) => RecurringTransaction.fromJson(_bools(j, const ['active'])),
+              (j) => RecurringTransaction.fromJson(
+                _withSyncFields(_bools(j, const ['active'])),
+              ),
+            )
+            .toList(),
+        notes: _list(
+          data['notes'],
+        ).map((j) => Note.fromJson(_noteJson(j))).toList(),
+        noteChecklistItems: _list(data['noteChecklistItems'])
+            .map(
+              (j) => NoteChecklistItem.fromJson(_bools(j, const ['isChecked'])),
             )
             .toList(),
       ),
@@ -159,4 +184,42 @@ Map<String, Object?> _tagJson(Map<String, dynamic> m) {
   m['usageCount'] ??= 0;
   m['isPinned'] ??= false;
   return _bools(m, const ['isPinned']);
+}
+
+Map<String, Object?> _noteJson(Map<String, dynamic> m) {
+  m['scheduleType'] ??= m['reminderAt'] == null ? 'none' : 'once';
+  m['notificationEnabled'] ??= m['reminderAt'] != null;
+  m['notificationDaysBefore'] ??= 0;
+  m['notificationExtraDaysBefore'] ??= '';
+  m['notificationLeadMinutes'] ??= '';
+  m['snoozeMinutes'] ??= 0;
+  m['alarmSoundKind'] ??= 'system';
+  m['alarmClipStartMs'] ??= 0;
+  m['alarmVibrationEnabled'] ??= true;
+  return _bools(m, const [
+    'completed',
+    'pinned',
+    'notificationEnabled',
+    'alarmVibrationEnabled',
+  ]);
+}
+
+Map<String, Object?> _noteBackupJson(Note note) {
+  final json = note.toJson();
+  if (note.alarmSoundKind == 'custom') {
+    json['alarmSoundKind'] = 'system';
+    json['alarmSoundUri'] = null;
+    json['alarmSoundName'] = null;
+    json['alarmClipStartMs'] = 0;
+    json['alarmClipEndMs'] = null;
+  }
+  return json;
+}
+
+Map<String, Object?> _withSyncFields(Map<String, dynamic> m) {
+  m['uuid'] ??= newSyncUuid();
+  m['updatedAt'] ??=
+      m['createdAt'] as String? ?? DateTime.now().toUtc().toIso8601String();
+  m['syncStatus'] ??= syncStatusPending;
+  return m;
 }

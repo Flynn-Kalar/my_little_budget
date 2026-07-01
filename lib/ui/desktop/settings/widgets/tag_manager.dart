@@ -19,8 +19,58 @@ class TagManager extends ConsumerStatefulWidget {
 
 class _TagManagerState extends ConsumerState<TagManager> {
   bool _showAdd = false;
+  bool _reorderMode = false;
+  bool _saving = false;
   int? _editingId;
   int? _busyId;
+  List<Tag> _draft = const [];
+
+  void _startReorder() {
+    setState(() {
+      _showAdd = false;
+      _editingId = null;
+      _draft = List.of(widget.tags);
+      _reorderMode = true;
+    });
+  }
+
+  void _swap(int i, int j) {
+    if (i < 0 || j < 0 || i >= _draft.length || j >= _draft.length) return;
+    setState(() {
+      final next = List.of(_draft);
+      final tmp = next[i];
+      next[i] = next[j];
+      next[j] = tmp;
+      _draft = next;
+    });
+  }
+
+  Future<void> _saveReorder() async {
+    final same =
+        _draft.length == widget.tags.length &&
+        List.generate(
+          _draft.length,
+          (i) => _draft[i].id == widget.tags[i].id,
+        ).every((x) => x);
+    if (same) {
+      setState(() => _reorderMode = false);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(tagsDaoProvider)
+          .updateTagOrder(_draft.map((tag) => tag.id).toList());
+      refreshTags(ref);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _reorderMode = false;
+        });
+      }
+    }
+  }
 
   Future<void> _delete(Tag tag) async {
     final ok = await showDialog<bool>(
@@ -52,10 +102,41 @@ class _TagManagerState extends ConsumerState<TagManager> {
 
   @override
   Widget build(BuildContext context) {
+    final visible = _reorderMode ? _draft : widget.tags;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.tags.isEmpty && !_showAdd)
+        Row(
+          children: [
+            const Spacer(),
+            if (widget.tags.length > 1)
+              _reorderMode
+                  ? Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () => setState(() => _reorderMode = false),
+                          icon: Icon(Icons.close, size: 14),
+                          label: Text('취소'),
+                        ),
+                        SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed: _saving ? null : _saveReorder,
+                          icon: Icon(Icons.check, size: 14),
+                          label: Text(_saving ? '저장 중...' : '순서 저장'),
+                        ),
+                      ],
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: _startReorder,
+                      icon: Icon(Icons.swap_vert, size: 14),
+                      label: Text('순서 편집'),
+                    ),
+          ],
+        ),
+        if (widget.tags.length > 1) SizedBox(height: 10),
+        if (visible.isEmpty && !_showAdd)
           Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Text(
@@ -63,40 +144,49 @@ class _TagManagerState extends ConsumerState<TagManager> {
               style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
           ),
-        for (final tag in widget.tags)
+        for (var i = 0; i < visible.length; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: _editingId == tag.id
+            child: _editingId == visible[i].id && !_reorderMode
                 ? TagForm(
-                    tag: tag,
+                    tag: visible[i],
                     onDone: () => setState(() => _editingId = null),
                   )
+                : _reorderMode
+                ? _ReorderTagRow(
+                    tag: visible[i],
+                    isFirst: i == 0,
+                    isLast: i == visible.length - 1,
+                    onUp: () => _swap(i, i - 1),
+                    onDown: () => _swap(i, i + 1),
+                  )
                 : _TagRow(
-                    tag: tag,
-                    busy: _busyId == tag.id,
+                    tag: visible[i],
+                    busy: _busyId == visible[i].id,
                     onEdit: () => setState(() {
                       _showAdd = false;
-                      _editingId = tag.id;
+                      _editingId = visible[i].id;
                     }),
-                    onDelete: () => _delete(tag),
+                    onDelete: () => _delete(visible[i]),
                   ),
           ),
-        _showAdd
-            ? TagForm(onDone: () => setState(() => _showAdd = false))
-            : Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => setState(() {
-                    _editingId = null;
-                    _showAdd = true;
-                  }),
-                  icon: Icon(Icons.add, size: 16),
-                  label: Text('태그 추가'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.desktopMuted,
+        if (!_reorderMode)
+          _showAdd
+              ? TagForm(onDone: () => setState(() => _showAdd = false))
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() {
+                      _editingId = null;
+                      _showAdd = true;
+                    }),
+                    icon: Icon(Icons.add, size: 16),
+                    label: Text('태그 추가'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.desktopMuted,
+                    ),
                   ),
                 ),
-              ),
       ],
     );
   }
@@ -148,6 +238,58 @@ class _TagRow extends StatelessWidget {
             tooltip: '삭제',
             color: context.desktopWarning,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReorderTagRow extends StatelessWidget {
+  const _ReorderTagRow({
+    required this.tag,
+    required this.isFirst,
+    required this.isLast,
+    required this.onUp,
+    required this.onDown,
+  });
+
+  final Tag tag;
+  final bool isFirst;
+  final bool isLast;
+  final VoidCallback onUp;
+  final VoidCallback onDown;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
+      decoration: BoxDecoration(
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: isFirst ? null : onUp,
+            icon: Icon(Icons.arrow_upward, size: 14),
+            visualDensity: VisualDensity.compact,
+          ),
+          IconButton(
+            onPressed: isLast ? null : onDown,
+            icon: Icon(Icons.arrow_downward, size: 14),
+            visualDensity: VisualDensity.compact,
+          ),
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colorFromHex(tag.color),
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(child: Text('#${tag.name}', style: TextStyle(fontSize: 14))),
         ],
       ),
     );

@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../core/date.dart';
 import '../../features/budget/logic.dart';
 import '../database.dart';
+import '../sync_metadata.dart';
 import '../tables/accounts.dart';
 import '../tables/budget_groups.dart';
 import '../tables/categories.dart';
@@ -112,11 +113,13 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
         month: month,
         expectedIncome: Value(income),
         updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
       ),
       onConflict: DoUpdate(
         (_) => MonthlyIncomeCompanion(
           expectedIncome: Value(income),
           updatedAt: Value(sqlNow()),
+          syncStatus: const Value(syncStatusPending),
         ),
         target: [monthlyIncome.month],
       ),
@@ -247,25 +250,43 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
 
   Future<void> _patch(int groupId, BudgetGroupsCompanion patch) async {
     await (update(budgetGroups)..where((g) => g.id.equals(groupId))).write(
-      patch.copyWith(updatedAt: Value(sqlNow())),
+      patch.copyWith(
+        updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
+      ),
     );
   }
 
   Future<void> addCategoryToGroup(int groupId, int categoryId) async {
-    await into(budgetGroupCategories).insert(
-      BudgetGroupCategoriesCompanion.insert(
-        groupId: groupId,
-        categoryId: categoryId,
-      ),
-      mode: InsertMode.insertOrIgnore,
-    );
+    await transaction(() async {
+      await into(budgetGroupCategories).insert(
+        BudgetGroupCategoriesCompanion.insert(
+          groupId: groupId,
+          categoryId: categoryId,
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+      await _markBudgetGroupPending(groupId);
+    });
   }
 
   Future<void> removeCategoryFromGroup(int groupId, int categoryId) async {
-    await (delete(budgetGroupCategories)..where(
-          (m) => m.groupId.equals(groupId) & m.categoryId.equals(categoryId),
-        ))
-        .go();
+    await transaction(() async {
+      await (delete(budgetGroupCategories)..where(
+            (m) => m.groupId.equals(groupId) & m.categoryId.equals(categoryId),
+          ))
+          .go();
+      await _markBudgetGroupPending(groupId);
+    });
+  }
+
+  Future<void> _markBudgetGroupPending(int groupId) async {
+    await (update(budgetGroups)..where((g) => g.id.equals(groupId))).write(
+      BudgetGroupsCompanion(
+        updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
+      ),
+    );
   }
 
   Future<void> deleteBudgetGroup(int groupId) async {

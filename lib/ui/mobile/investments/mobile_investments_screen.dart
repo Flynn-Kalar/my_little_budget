@@ -100,16 +100,17 @@ class _MobileInvestmentsScreenState
           value: _tab,
           onChanged: (value) => setState(() => _tab = value),
         ),
-        _InvestmentSearch(
+        _InvestmentSearchFilterBar(
           controller: _search,
           onChanged: (value) => setState(() => _query = value),
           onClear: () {
             _search.clear();
             setState(() => _query = '');
           },
+          showFilter: _tab == _InvestmentTab.transactions,
+          filterActive: filter.isActive,
+          onFilter: () => _InvestmentSideFilterSheet.show(context),
         ),
-        if (_tab == _InvestmentTab.transactions)
-          _InvestmentFilter(filter: filter),
         MobileAsync(
           value: holdings,
           builder: (holdingRows) {
@@ -347,36 +348,63 @@ class _InvestmentTabs extends StatelessWidget {
   }
 }
 
-class _InvestmentSearch extends StatelessWidget {
-  const _InvestmentSearch({
+class _InvestmentSearchFilterBar extends StatelessWidget {
+  const _InvestmentSearchFilterBar({
     required this.controller,
     required this.onChanged,
     required this.onClear,
+    required this.showFilter,
+    required this.filterActive,
+    required this.onFilter,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
+  final bool showFilter;
+  final bool filterActive;
+  final VoidCallback onFilter;
 
   @override
   Widget build(BuildContext context) {
     return MobileCard(
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        textInputAction: TextInputAction.search,
-        decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.search),
-          hintText: '종목, 계좌, 메모 검색',
-          border: const OutlineInputBorder(),
-          suffixIcon: controller.text.isEmpty
-              ? null
-              : IconButton(
-                  onPressed: onClear,
-                  icon: const Icon(Icons.close),
-                  tooltip: '검색어 지우기',
-                ),
-        ),
+      child: Row(
+        key: const ValueKey('mobile-investments-search-filter-bar'),
+        children: [
+          Expanded(
+            child: TextField(
+              key: const ValueKey('mobile-investments-search-field'),
+              controller: controller,
+              onChanged: onChanged,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: '종목, 계좌, 메모 검색',
+                border: const OutlineInputBorder(),
+                isDense: true,
+                suffixIcon: controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        key: const ValueKey('mobile-investments-search-clear'),
+                        onPressed: onClear,
+                        icon: const Icon(Icons.close),
+                        tooltip: '검색어 지우기',
+                      ),
+              ),
+            ),
+          ),
+          if (showFilter) ...[
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              key: const ValueKey('mobile-investments-filter-button'),
+              onPressed: onFilter,
+              isSelected: filterActive,
+              selectedIcon: const Icon(Icons.filter_alt),
+              icon: const Icon(Icons.tune),
+              tooltip: filterActive ? '필터 적용됨' : '필터',
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -415,51 +443,94 @@ List<RealizedPnL> _filterPnlRows(List<RealizedPnL> rows, String rawQuery) {
   return rows.where((row) => row.ticker.toLowerCase().contains(query)).toList();
 }
 
-class _InvestmentFilter extends ConsumerWidget {
-  const _InvestmentFilter({required this.filter});
+class _InvestmentSideFilterSheet extends ConsumerStatefulWidget {
+  const _InvestmentSideFilterSheet();
 
-  final InvestmentFilter filter;
+  static Future<void> show(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      builder: (_) => const _InvestmentSideFilterSheet(),
+    );
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    void setSide(String? side) {
-      ref.read(investmentFilterProvider.notifier).state = filter.copyWith(
-        side: side,
-      );
-    }
+  ConsumerState<_InvestmentSideFilterSheet> createState() =>
+      _InvestmentSideFilterSheetState();
+}
 
-    return MobileCard(
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+class _InvestmentSideFilterSheetState
+    extends ConsumerState<_InvestmentSideFilterSheet> {
+  late String? _side;
+
+  @override
+  void initState() {
+    super.initState();
+    _side = ref.read(investmentFilterProvider).side;
+  }
+
+  void _apply() {
+    final filter = ref.read(investmentFilterProvider);
+    ref.read(investmentFilterProvider.notifier).state = filter.copyWith(
+      side: _side,
+    );
+    Navigator.pop(context);
+  }
+
+  void _reset() {
+    ref.read(investmentFilterProvider.notifier).state =
+        const InvestmentFilter();
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const options = [
+      (null, '전체'),
+      ('buy', '매수'),
+      ('sell', '매도'),
+      ('dividend', '배당'),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ChoiceChip(
-            label: const Text('전체'),
-            selected: filter.side == null,
-            onSelected: (_) => setSide(null),
+          const Text(
+            '거래 유형 필터',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          ChoiceChip(
-            label: const Text('매수'),
-            selected: filter.side == 'buy',
-            onSelected: (_) => setSide('buy'),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final option in options)
+                ChoiceChip(
+                  label: Text(option.$2),
+                  selected: _side == option.$1,
+                  onSelected: (_) => setState(() => _side = option.$1),
+                ),
+            ],
           ),
-          ChoiceChip(
-            label: const Text('매도'),
-            selected: filter.side == 'sell',
-            onSelected: (_) => setSide('sell'),
-          ),
-          ChoiceChip(
-            label: const Text('배당'),
-            selected: filter.side == 'dividend',
-            onSelected: (_) => setSide('dividend'),
-          ),
-          TextButton.icon(
-            onPressed: filter.isActive
-                ? () => ref.read(investmentFilterProvider.notifier).state =
-                      const InvestmentFilter()
-                : null,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('초기화'),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: _reset,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('초기화'),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(onPressed: _apply, child: const Text('적용')),
+            ],
           ),
         ],
       ),

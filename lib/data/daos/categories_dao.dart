@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart';
 
+import '../../core/date.dart';
 import '../../features/categories/validation.dart';
 import '../database.dart';
+import '../sync_metadata.dart';
 import '../tables/budget_groups.dart';
 import '../tables/categories.dart';
 import '../tables/recurring_transactions.dart';
@@ -10,12 +12,14 @@ import '../tables/transactions.dart';
 part 'categories_dao.g.dart';
 
 /// SPEC §3.2 / §4.8.1 — 카테고리 조회·CRUD.
-@DriftAccessor(tables: [
-  Categories,
-  Transactions,
-  BudgetGroupCategories,
-  RecurringTransactions,
-])
+@DriftAccessor(
+  tables: [
+    Categories,
+    Transactions,
+    BudgetGroupCategories,
+    RecurringTransactions,
+  ],
+)
 class CategoriesDao extends DatabaseAccessor<AppDatabase>
     with _$CategoriesDaoMixin {
   CategoriesDao(super.db);
@@ -23,9 +27,11 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
   /// 활성 카테고리 (보관 제외). type 지정 시 필터. sortOrder, id 순.
   Future<List<Category>> getActiveCategories([String? type]) {
     final q = select(categories)
-      ..where((c) => type == null
-          ? c.archivedAt.isNull()
-          : c.archivedAt.isNull() & c.type.equals(type))
+      ..where(
+        (c) => type == null
+            ? c.archivedAt.isNull()
+            : c.archivedAt.isNull() & c.type.equals(type),
+      )
       ..orderBy([
         (c) => OrderingTerm(expression: c.sortOrder),
         (c) => OrderingTerm(expression: c.id),
@@ -35,9 +41,11 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<Category>> watchActiveCategories([String? type]) {
     final q = select(categories)
-      ..where((c) => type == null
-          ? c.archivedAt.isNull()
-          : c.archivedAt.isNull() & c.type.equals(type))
+      ..where(
+        (c) => type == null
+            ? c.archivedAt.isNull()
+            : c.archivedAt.isNull() & c.type.equals(type),
+      )
       ..orderBy([
         (c) => OrderingTerm(expression: c.sortOrder),
         (c) => OrderingTerm(expression: c.id),
@@ -46,11 +54,10 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<List<Category>> getAllCategories() {
-    return (select(categories)
-          ..orderBy([
-            (c) => OrderingTerm(expression: c.sortOrder),
-            (c) => OrderingTerm(expression: c.id),
-          ]))
+    return (select(categories)..orderBy([
+          (c) => OrderingTerm(expression: c.sortOrder),
+          (c) => OrderingTerm(expression: c.id),
+        ]))
         .get();
   }
 
@@ -79,6 +86,8 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
         CategoriesCompanion(
           name: Value(draft.name),
           color: Value(draft.color),
+          updatedAt: Value(sqlNow()),
+          syncStatus: const Value(syncStatusPending),
         ),
       );
     } else {
@@ -104,22 +113,33 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
       for (var i = 0; i < orderedIds.length; i++) {
         await (update(categories)
               ..where((c) => c.id.equals(orderedIds[i]) & c.type.equals(type)))
-            .write(CategoriesCompanion(sortOrder: Value(i)));
+            .write(
+              CategoriesCompanion(
+                sortOrder: Value(i),
+                updatedAt: Value(sqlNow()),
+                syncStatus: const Value(syncStatusPending),
+              ),
+            );
       }
     });
   }
 
   Future<void> archiveCategory(int id) async {
     await customUpdate(
-      "UPDATE categories SET archived_at = datetime('now') WHERE id = ?",
+      "UPDATE categories SET archived_at = datetime('now'), updated_at = datetime('now'), sync_status = '$syncStatusPending' WHERE id = ?",
       variables: [Variable<int>(id)],
       updates: {categories},
     );
   }
 
   Future<void> restoreCategory(int id) async {
-    await (update(categories)..where((c) => c.id.equals(id)))
-        .write(const CategoriesCompanion(archivedAt: Value(null)));
+    await (update(categories)..where((c) => c.id.equals(id))).write(
+      CategoriesCompanion(
+        archivedAt: const Value(null),
+        updatedAt: Value(sqlNow()),
+        syncStatus: const Value(syncStatusPending),
+      ),
+    );
   }
 
   /// 참조 0건일 때만 영구 삭제. 사용 중이면 메시지 반환, 성공 시 null. SPEC §4.8.1.

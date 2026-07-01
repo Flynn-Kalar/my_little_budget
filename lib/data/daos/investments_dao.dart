@@ -5,6 +5,7 @@ import '../../features/investments/cost_basis.dart';
 import '../../features/investments/validation.dart';
 import '../database.dart';
 import '../investment_mapping.dart';
+import '../sync_metadata.dart';
 import '../tables/accounts.dart';
 import '../tables/investments.dart';
 
@@ -165,6 +166,7 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
           accountId: Value(accountId),
           memo: Value(draft.memo),
           updatedAt: Value(sqlNow()),
+          syncStatus: const Value(syncStatusPending),
         ),
       );
       return id;

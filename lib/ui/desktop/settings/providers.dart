@@ -43,6 +43,8 @@ void refreshTags(WidgetRef ref) {
   ref.invalidate(settingsTagsProvider);
   ref.invalidate(transactions_providers.allTagsProvider);
   ref.invalidate(transactions_providers.transactionsListProvider);
+  ref.invalidate(stats_providers.statsTagBreakdownProvider);
+  ref.invalidate(stats_providers.statsTagTransactionsProvider);
 }
 
 void refreshRecurring(WidgetRef ref) {

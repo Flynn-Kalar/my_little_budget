@@ -493,7 +493,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                       child: TextField(
                         controller: _amountCtrl,
                         focusNode: _amountFocus,
-                        keyboardType: TextInputType.number,
+                        keyboardType: TextInputType.text,
                         textAlign: TextAlign.right,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(

@@ -16,7 +16,12 @@ void main() {
   Future<int> incomeCat([int idx = 0]) async =>
       (await db.categoriesDao.getActiveCategories('income'))[idx].id;
 
-  Future<void> addExpense(int catId, int amount, String on) async {
+  Future<void> addExpense(
+    int catId,
+    int amount,
+    String on, {
+    List<String> tagNames = const [],
+  }) async {
     final accId = await accountId();
     await db.transactionsDao.saveTransaction(
       draft: TransactionDraft(
@@ -27,6 +32,7 @@ void main() {
         accountId: accId,
         categoryId: catId,
       ),
+      tagNames: tagNames,
     );
   }
 
@@ -61,6 +67,39 @@ void main() {
     });
   });
 
+  group('expenseByTag', () {
+    test(
+      'uses tag order priority for transactions with multiple tags',
+      () async {
+        final c1 = await expenseCat(0);
+        final c2 = await expenseCat(1);
+        await addExpense(c1, 5000, '2026-05-02', tagNames: const ['beta']);
+        await addExpense(
+          c1,
+          10000,
+          '2026-05-01',
+          tagNames: const ['beta', 'alpha'],
+        );
+        await addExpense(c1, 3000, '2026-05-03');
+        await addExpense(c1, 9000, '2026-04-01', tagNames: const ['alpha']);
+        await addExpense(c2, 7000, '2026-05-01', tagNames: const ['alpha']);
+        final tags = await db.tagsDao.getTags();
+        final alphaId = tags.singleWhere((tag) => tag.name == 'alpha').id;
+        final betaId = tags.singleWhere((tag) => tag.name == 'beta').id;
+        await db.tagsDao.updateTagOrder([alphaId, betaId]);
+
+        final rows = await db.transactionsDao.expenseByTag('2026-05', c1);
+        final byName = {for (final row in rows) row.tagName: row};
+
+        expect(byName['alpha']!.total, 10000);
+        expect(byName['beta']!.total, 5000);
+        expect(byName['태그 없음']!.total, 3000);
+        expect(byName['태그 없음']!.isUntagged, isTrue);
+        expect(rows.fold<int>(0, (sum, row) => sum + row.total), 18000);
+      },
+    );
+  });
+
   group('monthlyTrend (SPEC §4.5)', () {
     test('지정 anchor 월부터 거꾸로 n개월, 거래 없는 달은 0', () async {
       final c = await expenseCat();
@@ -71,8 +110,12 @@ void main() {
 
       final rows = await db.transactionsDao.monthlyTrend(4, '2026-05');
       expect(rows.length, 4);
-      expect(rows.map((r) => r.month).toList(),
-          ['2026-02', '2026-03', '2026-04', '2026-05']);
+      expect(rows.map((r) => r.month).toList(), [
+        '2026-02',
+        '2026-03',
+        '2026-04',
+        '2026-05',
+      ]);
       expect(rows[0].income, 0);
       expect(rows[0].expense, 0);
       expect(rows[1].expense, 5000);
@@ -90,7 +133,10 @@ void main() {
       await addExpense(c1, 3000, '2026-05-20'); // 5월
       await addExpense(c2, 20000, '2026-07-01'); // 7월
 
-      final rows = await db.transactionsDao.yearlyCategoryPivot(2026, 'expense');
+      final rows = await db.transactionsDao.yearlyCategoryPivot(
+        2026,
+        'expense',
+      );
       expect(rows.length, 2);
       // 총액 큰 게 먼저
       expect(rows.first.categoryId, c2);
@@ -107,7 +153,10 @@ void main() {
       final c = await expenseCat();
       await addExpense(c, 100, '2024-01-01');
       await addExpense(c, 100, '2026-06-01');
-      expect(await db.transactionsDao.availableTransactionYears(), [2024, 2026]);
+      expect(await db.transactionsDao.availableTransactionYears(), [
+        2024,
+        2026,
+      ]);
     });
   });
 }

@@ -18,7 +18,11 @@ class StatsScreen extends ConsumerWidget {
     final breakdown = ref.watch(statsExpenseBreakdownProvider);
     final trend = ref.watch(statsMonthlyTrendProvider);
     final selectedCategory = ref.watch(statsSelectedCategoryProvider);
+    final selectedTag = ref.watch(statsSelectedTagProvider);
+    final detailPanelOpen = ref.watch(statsDetailPanelOpenProvider);
     final selectedTransactions = ref.watch(statsCategoryTransactionsProvider);
+    final tagBreakdown = ref.watch(statsTagBreakdownProvider);
+    final tagTransactions = ref.watch(statsTagTransactionsProvider);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 1100),
@@ -36,30 +40,42 @@ class StatsScreen extends ConsumerWidget {
             _MonthlyInsightCard(breakdown: breakdown, trend: trend),
             SizedBox(height: 16),
             breakdown.when(
-              data: (rows) => _ExpenseBreakdownCard(
-                rows: rows,
-                netAmount: _netForMonth(trend, month),
-                selectedCategoryId: selectedCategory?.categoryId,
-              ),
+              data: (rows) {
+                final effectiveCategory =
+                    selectedCategory ?? (rows.isEmpty ? null : rows.first);
+                return _ExpenseBreakdownCard(
+                  rows: rows,
+                  tagRows: tagBreakdown,
+                  netAmount: _netForMonth(trend, month),
+                  selectedCategoryId: effectiveCategory?.categoryId,
+                  selectedTag: selectedTag,
+                );
+              },
               loading: () => const _StatsCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            if (selectedCategory != null) ...[
-              SizedBox(height: 16),
-              selectedTransactions.when(
-                data: (rows) => _CategoryDetailCard(
-                  category: selectedCategory,
-                  rows: rows,
-                  month: month,
-                ),
-                loading: () => const _StatsCard(
-                  child: LinearProgressIndicator(minHeight: 3),
-                ),
-                error: (error, _) => _ErrorCard(message: error.toString()),
+            if (detailPanelOpen)
+              breakdown.maybeWhen(
+                data: (rows) {
+                  final effectiveCategory =
+                      selectedCategory ?? (rows.isEmpty ? null : rows.first);
+                  if (effectiveCategory == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: _CategoryAndTagDetailCard(
+                      category: effectiveCategory,
+                      categoryRows: selectedTransactions,
+                      tagRows: tagTransactions,
+                      tagBreakdown: tagBreakdown,
+                      selectedTag: selectedTag,
+                      month: month,
+                    ),
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
               ),
-            ],
             SizedBox(height: 16),
             trend.when(
               data: (rows) => _TrendCard(rows: rows),
@@ -102,6 +118,8 @@ class _StatsMonthNav extends ConsumerWidget {
     void shift(int delta) {
       ref.read(statsMonthProvider.notifier).state = shiftMonth(month, delta);
       ref.read(statsSelectedCategoryProvider.notifier).state = null;
+      ref.read(statsSelectedTagProvider.notifier).state = null;
+      ref.read(statsDetailPanelOpenProvider.notifier).state = false;
     }
 
     return Row(
@@ -116,9 +134,11 @@ class _StatsMonthNav extends ConsumerWidget {
           onPressed: () {
             ref.read(statsMonthProvider.notifier).state = currentMonthKey();
             ref.read(statsSelectedCategoryProvider.notifier).state = null;
+            ref.read(statsSelectedTagProvider.notifier).state = null;
+            ref.read(statsDetailPanelOpenProvider.notifier).state = false;
           },
           icon: Icon(Icons.calendar_month, size: 18),
-          label: Text('${d.year}년 ${d.month}월'),
+          label: Text('${d.year}-${d.month.toString().padLeft(2, '0')}'),
         ),
         IconButton(
           onPressed: () => shift(1),
@@ -195,7 +215,7 @@ class _MonthlyInsightCard extends StatelessWidget {
                 Expanded(
                   child: _InsightTile(
                     icon: Icons.category_outlined,
-                    label: '최대 카테고리',
+                    label: '최다 지출 카테고리',
                     value: topCategory == null
                         ? '-'
                         : '${topCategory.categoryName} · ${formatKRW(topCategory.total)}',
@@ -278,13 +298,17 @@ class _InsightTile extends StatelessWidget {
 class _ExpenseBreakdownCard extends ConsumerWidget {
   const _ExpenseBreakdownCard({
     required this.rows,
+    required this.tagRows,
     required this.netAmount,
     required this.selectedCategoryId,
+    required this.selectedTag,
   });
 
   final List<CategoryBreakdownRow> rows;
+  final AsyncValue<List<TagBreakdownRow>> tagRows;
   final int? netAmount;
   final int? selectedCategoryId;
+  final TagBreakdownRow? selectedTag;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -295,63 +319,133 @@ class _ExpenseBreakdownCard extends ConsumerWidget {
     );
 
     return _StatsCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '지출 카테고리',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          if (rows.isEmpty)
-            const _EmptyState(message: '이번 달 지출 내역이 없습니다.')
-          else
-            Row(
+      child: rows.isEmpty
+          ? const _EmptyState(message: '선택한 월에 지출 내역이 없습니다.')
+          : Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Column(
-                    children: [
-                      for (final row in rows)
-                        _BreakdownRow(
-                          row: row,
-                          total: total,
-                          maxTotal: maxCategoryTotal,
-                          selected: selectedCategoryId == row.categoryId,
-                          onTap: () {
-                            final current = ref.read(
-                              statsSelectedCategoryProvider,
-                            );
-                            ref
-                                .read(statsSelectedCategoryProvider.notifier)
-                                .state = current?.categoryId == row.categoryId
-                                ? null
-                                : row;
-                          },
-                        ),
-                    ],
+                  child: _CategoryBreakdownPane(
+                    rows: rows,
+                    total: total,
+                    maxCategoryTotal: maxCategoryTotal,
+                    netAmount: netAmount,
+                    selectedCategoryId: selectedCategoryId,
                   ),
                 ),
                 SizedBox(width: 20),
-                SizedBox(
-                  width: 280,
-                  height: 240,
-                  child: _CategoryDonutChart(
-                    rows: rows,
-                    total: total,
-                    netAmount: netAmount,
+                Expanded(
+                  child: tagRows.when(
+                    data: (rows) =>
+                        _TagBreakdownPane(rows: rows, selectedTag: selectedTag),
+                    loading: () => const LinearProgressIndicator(minHeight: 3),
+                    error: (error, _) =>
+                        _ErrorInline(message: error.toString()),
                   ),
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _CategoryBreakdownPane extends ConsumerWidget {
+  const _CategoryBreakdownPane({
+    required this.rows,
+    required this.total,
+    required this.maxCategoryTotal,
+    required this.netAmount,
+    required this.selectedCategoryId,
+  });
+
+  final List<CategoryBreakdownRow> rows;
+  final int total;
+  final int maxCategoryTotal;
+  final int? netAmount;
+  final int? selectedCategoryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '카테고리별',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 12),
+        SizedBox(
+          height: 220,
+          child: _CategoryDonutChart(
+            rows: rows,
+            total: total,
+            netAmount: netAmount,
+          ),
+        ),
+        SizedBox(height: 12),
+        for (final row in rows)
+          _BreakdownRow(
+            row: row,
+            total: total,
+            maxTotal: maxCategoryTotal,
+            selected: selectedCategoryId == row.categoryId,
+            onTap: () {
+              final current = ref.read(statsSelectedCategoryProvider);
+              ref.read(statsSelectedCategoryProvider.notifier).state =
+                  current?.categoryId == row.categoryId ? null : row;
+              ref.read(statsSelectedTagProvider.notifier).state = null;
+              ref.read(statsDetailPanelOpenProvider.notifier).state = true;
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class _TagBreakdownPane extends ConsumerWidget {
+  const _TagBreakdownPane({required this.rows, required this.selectedTag});
+
+  final List<TagBreakdownRow> rows;
+  final TagBreakdownRow? selectedTag;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final total = rows.fold<int>(0, (sum, row) => sum + row.total);
+    final maxTotal = rows.fold<int>(
+      0,
+      (max, row) => row.total > max ? row.total : max,
+    );
+    final effectiveTag = _effectiveSelectedTag(rows, selectedTag);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '태그별',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 12),
+        if (rows.isEmpty)
+          const _EmptyState(message: '선택한 카테고리에 태그가 붙은 지출 내역이 없습니다.')
+        else ...[
+          SizedBox(
+            height: 220,
+            child: _TagDonutChart(rows: rows, total: total),
+          ),
+          SizedBox(height: 12),
+          for (final row in rows)
+            _TagBreakdownRow(
+              row: row,
+              total: total,
+              maxTotal: maxTotal,
+              selected: _sameTag(row, effectiveTag),
+              onTap: () {
+                ref.read(statsSelectedTagProvider.notifier).state = row;
+                ref.read(statsDetailPanelOpenProvider.notifier).state = true;
+              },
+            ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -375,7 +469,7 @@ class _CategoryDonutChart extends StatelessWidget {
       children: [
         PieChart(
           PieChartData(
-            centerSpaceRadius: 70,
+            centerSpaceRadius: 58,
             sectionsSpace: 2,
             startDegreeOffset: -90,
             sections: [
@@ -396,18 +490,23 @@ class _CategoryDonutChart extends StatelessWidget {
               '총 지출',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.desktopMuted, fontSize: 12),
+              style: TextStyle(color: context.desktopMuted, fontSize: 10),
             ),
             SizedBox(height: 4),
-            Text(
-              formatKRW(total),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: context.desktopExpense,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
+            SizedBox(
+              width: 96,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  formatKRW(total),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: context.desktopExpense,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ),
             SizedBox(height: 5),
@@ -415,20 +514,86 @@ class _CategoryDonutChart extends StatelessWidget {
               '순액',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.desktopMuted, fontSize: 12),
+              style: TextStyle(color: context.desktopMuted, fontSize: 10),
             ),
             SizedBox(height: 2),
+            SizedBox(
+              width: 96,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  netAmount == null ? '-' : formatKRW(netAmount!),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: netAmount == null || netAmount! >= 0
+                        ? context.desktopIncome
+                        : context.desktopExpense,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _TagDonutChart extends StatelessWidget {
+  const _TagDonutChart({required this.rows, required this.total});
+
+  final List<TagBreakdownRow> rows;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    if (total == 0) return const SizedBox.shrink();
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        PieChart(
+          PieChartData(
+            centerSpaceRadius: 58,
+            sectionsSpace: 2,
+            startDegreeOffset: -90,
+            sections: [
+              for (final row in rows.take(8))
+                PieChartSectionData(
+                  value: row.total.toDouble(),
+                  color: _parseColor(row.tagColor, context.desktopMuted),
+                  radius: 28,
+                  showTitle: false,
+                ),
+            ],
+          ),
+        ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Text(
-              netAmount == null ? '-' : formatKRW(netAmount!),
-              textAlign: TextAlign.center,
+              '태그 합계',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: netAmount == null || netAmount! >= 0
-                    ? context.desktopIncome
-                    : context.desktopExpense,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
+              style: TextStyle(color: context.desktopMuted, fontSize: 10),
+            ),
+            SizedBox(height: 4),
+            SizedBox(
+              width: 96,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  formatKRW(total),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: context.desktopExpense,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
             ),
           ],
@@ -524,52 +689,218 @@ class _BreakdownRow extends StatelessWidget {
   }
 }
 
-class _CategoryDetailCard extends ConsumerWidget {
-  const _CategoryDetailCard({
+class _TagBreakdownRow extends StatelessWidget {
+  const _TagBreakdownRow({
+    required this.row,
+    required this.total,
+    required this.maxTotal,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final TagBreakdownRow row;
+  final int total;
+  final int maxTotal;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = total == 0 ? 0 : (row.total * 100 / total).round();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: selected ? context.desktopSelectedSurface : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _ColorDot(
+                      color: _parseColor(row.tagColor, context.desktopMuted),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        row.isUntagged ? row.tagName : '#${row.tagName}',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      '$percent%',
+                      style: TextStyle(color: context.desktopMuted),
+                    ),
+                    SizedBox(width: 16),
+                    SizedBox(
+                      width: 120,
+                      child: Text(
+                        formatKRW(row.total),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: maxTotal == 0 ? 0 : row.total / maxTotal,
+                    minHeight: 6,
+                    backgroundColor: context.desktopBorder,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _parseColor(row.tagColor, context.desktopMuted),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+TagBreakdownRow? _effectiveSelectedTag(
+  List<TagBreakdownRow> rows,
+  TagBreakdownRow? selected,
+) {
+  if (rows.isEmpty) return null;
+  if (selected == null) return rows.first;
+  for (final row in rows) {
+    if (_sameTag(row, selected)) return row;
+  }
+  return rows.first;
+}
+
+bool _sameTag(TagBreakdownRow? a, TagBreakdownRow? b) {
+  if (a == null || b == null) return false;
+  return a.isUntagged == b.isUntagged && a.tagId == b.tagId;
+}
+
+class _CategoryAndTagDetailCard extends ConsumerWidget {
+  const _CategoryAndTagDetailCard({
     required this.category,
-    required this.rows,
+    required this.categoryRows,
+    required this.tagRows,
+    required this.tagBreakdown,
+    required this.selectedTag,
     required this.month,
   });
 
   final CategoryBreakdownRow category;
-  final List<TransactionRow> rows;
+  final AsyncValue<List<TransactionRow>> categoryRows;
+  final AsyncValue<List<TransactionRow>> tagRows;
+  final AsyncValue<List<TagBreakdownRow>> tagBreakdown;
+  final TagBreakdownRow? selectedTag;
   final String month;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final d = parseMonthKey(month);
+    final effectiveTag = tagBreakdown.maybeWhen(
+      data: (rows) => _effectiveSelectedTag(rows, selectedTag),
+      orElse: () => null,
+    );
+
     return _StatsCard(
       child: Column(
+        children: [
+          Row(
+            children: [
+              Spacer(),
+              IconButton(
+                tooltip: '상세 닫기',
+                onPressed: () =>
+                    ref.read(statsDetailPanelOpenProvider.notifier).state =
+                        false,
+                icon: Icon(Icons.close),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _DetailPane(
+                  title:
+                      '${d.year}-${d.month.toString().padLeft(2, '0')} ${category.categoryName} 상세',
+                  leadingColor: _parseColor(
+                    category.categoryColor,
+                    context.desktopMuted,
+                  ),
+                  rows: categoryRows,
+                  emptyMessage: '선택한 카테고리의 지출 내역이 없습니다.',
+                ),
+              ),
+              SizedBox(width: 20),
+              Expanded(
+                child: _DetailPane(
+                  title: effectiveTag == null
+                      ? '${category.categoryName} 태그 상세'
+                      : '${effectiveTag.isUntagged ? effectiveTag.tagName : '#${effectiveTag.tagName}'} 상세',
+                  leadingColor: _parseColor(
+                    effectiveTag?.tagColor ?? '#94a3b8',
+                    context.desktopMuted,
+                  ),
+                  rows: tagRows,
+                  emptyMessage: '선택한 태그의 지출 내역이 없습니다.',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailPane extends StatelessWidget {
+  const _DetailPane({
+    required this.title,
+    required this.leadingColor,
+    required this.rows,
+    required this.emptyMessage,
+  });
+
+  final String title;
+  final Color leadingColor;
+  final AsyncValue<List<TransactionRow>> rows;
+  final String emptyMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return rows.when(
+      data: (rows) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _ColorDot(
-                color: _parseColor(
-                  category.categoryColor,
-                  context.desktopMuted,
-                ),
-              ),
+              _ColorDot(color: leadingColor),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${d.year}년 ${d.month}월 ${category.categoryName} 상세',
+                  title,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-              ),
-              IconButton(
-                tooltip: '선택 해제',
-                onPressed: () =>
-                    ref.read(statsSelectedCategoryProvider.notifier).state =
-                        null,
-                icon: Icon(Icons.close),
               ),
             ],
           ),
           SizedBox(height: 12),
           if (rows.isEmpty)
-            const _EmptyState(message: '선택한 카테고리의 거래가 없습니다.')
+            _EmptyState(message: emptyMessage)
           else
             Column(
               children: [
@@ -580,6 +911,8 @@ class _CategoryDetailCard extends ConsumerWidget {
             ),
         ],
       ),
+      loading: () => const LinearProgressIndicator(minHeight: 3),
+      error: (error, _) => _ErrorInline(message: error.toString()),
     );
   }
 }
@@ -680,7 +1013,7 @@ class _TrendCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '(단위: 만원)',
+                '(만원 단위)',
                 style: TextStyle(color: context.desktopMuted, fontSize: 12),
               ),
             ],
@@ -807,11 +1140,10 @@ class _TrendChart extends StatelessWidget {
                 if (index < 0 || index >= rows.length) {
                   return const SizedBox.shrink();
                 }
-                final month = parseMonthKey(rows[index].month).month;
                 return SideTitleWidget(
                   meta: meta,
                   child: Text(
-                    '$month월',
+                    '',
                     style: TextStyle(color: context.desktopMuted, fontSize: 11),
                   ),
                 );
@@ -998,7 +1330,7 @@ class _YearlyTodoCard extends StatelessWidget {
                 Text('연간 통계', style: TextStyle(fontWeight: FontWeight.bold)),
                 SizedBox(height: 2),
                 Text(
-                  '월별 수입/지출/순액과 카테고리별 연간 지출을 확인합니다.',
+                  '연도별 월간 수입/지출과 카테고리별 지출 흐름을 확인합니다.',
                   style: TextStyle(color: context.desktopMuted),
                 ),
               ],
@@ -1008,7 +1340,7 @@ class _YearlyTodoCard extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: () => context.go('/stats/yearly'),
             icon: Icon(Icons.open_in_new, size: 18),
-            label: Text('연간 통계 보기'),
+            label: Text('연간 통계 열기'),
           ),
         ],
       ),
@@ -1040,6 +1372,20 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _StatsCard(
+      child: Text(message, style: TextStyle(color: context.desktopExpense)),
+    );
+  }
+}
+
+class _ErrorInline extends StatelessWidget {
+  const _ErrorInline({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
       child: Text(message, style: TextStyle(color: context.desktopExpense)),
     );
   }

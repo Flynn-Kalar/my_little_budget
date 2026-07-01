@@ -89,11 +89,45 @@ final investmentRowsProvider = FutureProvider.autoDispose<List<Investment>>((
   }).toList();
 });
 
+final investmentYearlyRowsProvider = FutureProvider.autoDispose
+    .family<List<Investment>, int>((ref, year) async {
+      final filter = ref.watch(investmentFilterProvider);
+      final rows = await ref
+          .watch(investmentsDaoProvider)
+          .listInvestmentsByYear(year);
+      return rows.where((row) {
+        if (filter.side != null && row.side != filter.side) return false;
+        if (filter.accountId != null && row.accountId != filter.accountId) {
+          return false;
+        }
+        final ticker = filter.ticker?.trim().toLowerCase();
+        if (ticker != null &&
+            ticker.isNotEmpty &&
+            !row.ticker.toLowerCase().contains(ticker)) {
+          return false;
+        }
+        if (filter.fromDate != null &&
+            row.occurredOn.compareTo(filter.fromDate!) < 0) {
+          return false;
+        }
+        if (filter.toDate != null &&
+            row.occurredOn.compareTo(filter.toDate!) > 0) {
+          return false;
+        }
+        return true;
+      }).toList();
+    });
+
 final investmentMonthlySummaryProvider =
     FutureProvider.autoDispose<InvestmentSummary>((ref) async {
       final month = ref.watch(investmentMonthProvider);
       final dao = ref.watch(investmentsDaoProvider);
       return dao.investmentMonthlySummary(month);
+    });
+
+final investmentYearlySummaryProvider = FutureProvider.autoDispose
+    .family<InvestmentSummary, int>((ref, year) {
+      return ref.watch(investmentsDaoProvider).investmentYearlySummary(year);
     });
 
 final investmentAccountProvider = FutureProvider.autoDispose<Account?>((ref) {
@@ -116,12 +150,22 @@ final realizedPnlProvider = FutureProvider.autoDispose<List<RealizedPnL>>((
   return dao.getRealizedPnL(range.start, range.end);
 });
 
+final investmentYearlyRealizedPnlProvider = FutureProvider.autoDispose
+    .family<List<RealizedPnL>, int>((ref, year) {
+      return ref
+          .watch(investmentsDaoProvider)
+          .getRealizedPnL('$year-01-01', '$year-12-31');
+    });
+
 void refreshInvestments(WidgetRef ref, {int? accountId}) {
   ref.invalidate(investmentRowsProvider);
   ref.invalidate(investmentMonthlySummaryProvider);
   ref.invalidate(currentHoldingsProvider);
   ref.invalidate(investmentAccountProvider);
   ref.invalidate(realizedPnlProvider);
+  ref.invalidate(investmentYearlyRowsProvider);
+  ref.invalidate(investmentYearlySummaryProvider);
+  ref.invalidate(investmentYearlyRealizedPnlProvider);
   ref.invalidate(accountBalancesProvider);
   if (accountId != null) {
     ref.invalidate(accountByIdProvider(accountId));

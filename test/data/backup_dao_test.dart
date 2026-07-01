@@ -2,7 +2,9 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_little_budget/data/backup.dart';
 import 'package:my_little_budget/data/database.dart';
+import 'package:my_little_budget/data/sync_metadata.dart';
 import 'package:my_little_budget/features/accounts/validation.dart';
+import 'package:my_little_budget/features/notes/checklist.dart';
 import 'package:my_little_budget/features/recurring/validation.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
 
@@ -42,10 +44,22 @@ void main() {
       await addExpense(5000, '2026-05-10', memo: '점심');
       await addExpense(3000, '2026-05-15', memo: '카페');
 
+      await db.notesDao.saveNote(
+        title: '백업할 메모',
+        content: '메모 내용',
+        reminderAt: DateTime.utc(2026, 6, 21, 9),
+        pinned: true,
+        checklistItems: const [
+          ChecklistItemDraft(text: '백업 항목', isChecked: true),
+        ],
+      );
+
       final original = await db.backupDao.exportBackup();
       expect(original.transactions.length, 2);
       expect(original.accounts.length, 5);
       expect(original.categories.length, 14);
+      expect(original.notes.length, 1);
+      expect(original.noteChecklistItems.length, 1);
 
       final json = original.toJsonString();
       final parsed = parseBackup(json);
@@ -60,6 +74,14 @@ void main() {
       expect(rows.map((r) => r.amount).toSet(), {5000, 3000});
       expect((await db2.accountsDao.getActiveAccounts()).length, 5);
       expect((await db2.categoriesDao.getAllCategories()).length, 14);
+      final restoredNotes = await db2.notesDao.watchNotes().first;
+      expect(restoredNotes.single.title, '백업할 메모');
+      expect(restoredNotes.single.pinned, isTrue);
+      final restoredEntry = await db2.notesDao.getNoteWithChecklist(
+        restoredNotes.single.id,
+      );
+      expect(restoredEntry!.items.single.itemText, '백업 항목');
+      expect(restoredEntry.items.single.isChecked, isTrue);
     });
 
     test('bool 필드 0/1 호환 (구 Tauri export 호환)', () {
@@ -85,6 +107,46 @@ void main() {
       final acc = r.backup!.accounts.single;
       expect(acc.excludeFromTotal, false);
       expect(acc.isInvestment, true);
+    });
+
+    test('sync metadata 없는 기존 백업은 기본값으로 복원된다', () async {
+      const legacyJson = '''
+{
+  "version": 1,
+  "appName": "my_little_budget",
+  "exportedAt": "2026-05-01T00:00:00Z",
+  "data": {
+    "accounts": [
+      {"id":1,"name":"현금","kind":"cash","initialBalance":0,"color":"#000000",
+       "excludeFromTotal":false,"isInvestment":false,"sortOrder":0,
+       "archivedAt":null,"createdAt":"2026-05-01 00:00:00"}
+    ],
+    "categories":[], "budgetGroups":[], "budgetGroupCategories":[],
+    "transactions":[], "investments":[], "tags":[], "transactionTags":[],
+    "monthlyIncome":[], "recurringTransactions":[]
+  }
+}
+''';
+
+      final r = parseBackup(legacyJson);
+
+      expect(r.isOk, true, reason: r.error);
+      final acc = r.backup!.accounts.single;
+      expect(acc.uuid, isNotEmpty);
+      expect(acc.updatedAt, '2026-05-01 00:00:00');
+      expect(acc.deletedAt, isNull);
+      expect(acc.syncStatus, syncStatusPending);
+
+      await db.backupDao.importBackup(r.backup!);
+      final row = await db.customSelect('''
+SELECT uuid, updated_at, deleted_at, sync_status
+FROM accounts
+WHERE id = 1
+''').getSingle();
+      expect(row.read<String>('uuid'), acc.uuid);
+      expect(row.read<String>('updated_at'), '2026-05-01 00:00:00');
+      expect(row.readNullable<String>('deleted_at'), isNull);
+      expect(row.read<String>('sync_status'), syncStatusPending);
     });
 
     test('잘못된 JSON / 버전 / appName 거부', () {
@@ -175,5 +237,30 @@ void main() {
       expect(await db.recurringDao.listRecurringTransactions(), isEmpty);
       expect(await db.tagsDao.getTags(), isEmpty);
     });
+  });
+
+  test('일정 필드가 없는 기존 메모 백업을 1회 알림으로 변환한다', () {
+    const legacyJson = '''
+{
+  "version": 1,
+  "appName": "my_little_budget",
+  "exportedAt": "2026-05-01T00:00:00Z",
+  "data": {
+    "accounts": [], "categories": [], "budgetGroups": [],
+    "budgetGroupCategories": [], "transactions": [], "investments": [],
+    "tags": [], "transactionTags": [], "monthlyIncome": [],
+    "recurringTransactions": [],
+    "notes": [
+      {"id":1,"title":"기존 알림","content":"","reminderAt":"2026-06-01T09:00:00Z",
+       "completed":0,"pinned":0,"createdAt":"2026-05-01 00:00:00",
+       "updatedAt":"2026-05-01 00:00:00"}
+    ]
+  }
+}
+''';
+    final result = parseBackup(legacyJson);
+    expect(result.isOk, isTrue, reason: result.error);
+    expect(result.backup!.notes.single.scheduleType, 'once');
+    expect(result.backup!.notes.single.notificationEnabled, isTrue);
   });
 }

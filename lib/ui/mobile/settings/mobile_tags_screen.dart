@@ -17,7 +17,7 @@ class MobileTagsScreen extends ConsumerWidget {
     final tags = ref.watch(settingsTagsProvider);
     return MobilePageScaffold(
       title: '태그 관리',
-      onAdd: () => _TagSheet.show(context),
+      onAdd: () => _showTagSheet(context),
       addTooltip: '태그 추가',
       children: [
         Align(
@@ -39,6 +39,19 @@ class MobileTagsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _showTagSheet(BuildContext context, {Tag? tag}) async {
+    final action = await _TagSheet.show(context, tag: tag);
+    if (!context.mounted || action == null) return;
+    final message = switch (action) {
+      _TagAction.created => '태그를 추가했습니다.',
+      _TagAction.updated => '태그를 수정했습니다.',
+      _TagAction.deleted => '태그를 삭제했습니다.',
+    };
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -64,7 +77,16 @@ class _TagCard extends ConsumerWidget {
           ),
           tooltip: tag.isPinned ? '고정 해제' : '태그 고정',
         ),
-        onTap: () => _TagSheet.show(context, tag: tag),
+        onTap: () async {
+          final action = await _TagSheet.show(context, tag: tag);
+          if (!context.mounted || action == null) return;
+          final message = action == _TagAction.deleted
+              ? '태그를 삭제했습니다.'
+              : '태그를 수정했습니다.';
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
+        },
       ),
     );
   }
@@ -75,8 +97,8 @@ class _TagSheet extends ConsumerStatefulWidget {
 
   final Tag? tag;
 
-  static Future<void> show(BuildContext context, {Tag? tag}) {
-    return showModalBottomSheet<void>(
+  static Future<_TagAction?> show(BuildContext context, {Tag? tag}) {
+    return showModalBottomSheet<_TagAction>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -91,6 +113,7 @@ class _TagSheet extends ConsumerStatefulWidget {
 class _TagSheetState extends ConsumerState<_TagSheet> {
   late final _name = TextEditingController(text: widget.tag?.name ?? '');
   bool _busy = false;
+  String? _error;
 
   bool get _isEdit => widget.tag != null;
 
@@ -103,7 +126,7 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
   Future<void> _save() async {
     final result = validateTag(name: _name.text);
     if (result.isFail) {
-      _showSnack('태그 이름을 입력해주세요.');
+      setState(() => _error = '태그 이름을 입력해주세요.');
       return;
     }
     setState(() => _busy = true);
@@ -118,8 +141,15 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
       }
       if (!mounted) return;
       refreshTags(ref);
-      Navigator.pop(context);
-      _showSnack(_isEdit ? '태그를 수정했습니다.' : '태그를 추가했습니다.');
+      Navigator.pop(context, _isEdit ? _TagAction.updated : _TagAction.created);
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error.toString().contains('UNIQUE')
+              ? '이미 사용 중인 태그 이름입니다.'
+              : '태그를 저장하지 못했습니다.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -131,14 +161,7 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
     await ref.read(tagsDaoProvider).deleteTag(tag.id);
     if (!mounted) return;
     refreshTags(ref);
-    Navigator.pop(context);
-    _showSnack('태그를 삭제했습니다.');
-  }
-
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    Navigator.pop(context, _TagAction.deleted);
   }
 
   @override
@@ -162,10 +185,11 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
           TextField(
             controller: _name,
             enabled: !_busy,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: '이름',
               prefixText: '#',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              errorText: _error,
             ),
           ),
           const SizedBox(height: 16),
@@ -197,6 +221,8 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
     );
   }
 }
+
+enum _TagAction { created, updated, deleted }
 
 Color _parseColor(String hex) {
   final value = int.tryParse(hex.replaceFirst('#', ''), radix: 16);

@@ -6,6 +6,7 @@ import 'daos/backup_dao.dart';
 import 'daos/budget_dao.dart';
 import 'daos/categories_dao.dart';
 import 'daos/investments_dao.dart';
+import 'daos/notes_dao.dart';
 import 'daos/recurring_dao.dart';
 import 'daos/tags_dao.dart';
 import 'daos/transactions_dao.dart';
@@ -48,6 +49,10 @@ final budgetDaoProvider = Provider<BudgetDao>(
 
 final backupDaoProvider = Provider<BackupDao>(
   (ref) => ref.watch(appDatabaseProvider).backupDao,
+);
+
+final notesDaoProvider = Provider<NotesDao>(
+  (ref) => ref.watch(appDatabaseProvider).notesDao,
 );
 
 /// 앱 시작 시 당월 말까지 반복거래를 한 번 backfill 한다.

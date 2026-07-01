@@ -8,6 +8,8 @@ import '../tables/budget_groups.dart';
 import '../tables/categories.dart';
 import '../tables/investments.dart';
 import '../tables/monthly_income.dart';
+import '../tables/note_checklist_items.dart';
+import '../tables/notes.dart';
 import '../tables/recurring_transactions.dart';
 import '../tables/tags.dart';
 import '../tables/transactions.dart';
@@ -27,6 +29,8 @@ part 'backup_dao.g.dart';
     RecurringTransactions,
     Tags,
     TransactionTags,
+    Notes,
+    NoteChecklistItems,
   ],
 )
 class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
@@ -45,6 +49,8 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
       transactionTags: await select(transactionTags).get(),
       monthlyIncome: await select(monthlyIncome).get(),
       recurringTransactions: await select(recurringTransactions).get(),
+      notes: await select(notes).get(),
+      noteChecklistItems: await select(noteChecklistItems).get(),
     );
   }
 
@@ -78,6 +84,10 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
         if (b.tags.isNotEmpty) batch.insertAll(tags, b.tags);
         if (b.transactionTags.isNotEmpty) {
           batch.insertAll(transactionTags, b.transactionTags);
+        }
+        if (b.notes.isNotEmpty) batch.insertAll(notes, b.notes);
+        if (b.noteChecklistItems.isNotEmpty) {
+          batch.insertAll(noteChecklistItems, b.noteChecklistItems);
         }
       });
     });
@@ -149,6 +159,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
   }
 
   Future<void> _deleteUserData() async {
+    await delete(noteChecklistItems).go();
     await delete(transactionTags).go();
     await delete(budgetGroupCategories).go();
     await delete(investments).go();
@@ -157,5 +168,6 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
     await delete(budgetGroups).go();
     await delete(tags).go();
     await delete(monthlyIncome).go();
+    await delete(notes).go();
   }
 }

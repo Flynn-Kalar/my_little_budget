@@ -212,7 +212,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _amountCtrl,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.text,
                 decoration: const InputDecoration(
                   labelText: '금액',
                   isDense: true,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
 import '../../../core/money.dart';
@@ -20,6 +21,14 @@ class MobileStatsScreen extends ConsumerWidget {
 
     return MobilePage(
       title: '통계',
+      actions: [
+        FilledButton.tonalIcon(
+          key: const ValueKey('mobile-stats-yearly-button'),
+          onPressed: () => context.go('/stats/yearly'),
+          icon: const Icon(Icons.calendar_view_month_outlined, size: 18),
+          label: const Text('연간'),
+        ),
+      ],
       children: [
         MobileMonthNav(
           month: month,

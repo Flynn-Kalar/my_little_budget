@@ -12,17 +12,31 @@ import '../../../features/investments/quantity_precision.dart';
 import '../../../features/investments/validation.dart';
 import 'providers.dart';
 
-class InvestmentsScreen extends ConsumerWidget {
+class InvestmentsScreen extends ConsumerStatefulWidget {
   const InvestmentsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InvestmentsScreen> createState() => _InvestmentsScreenState();
+}
+
+class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> {
+  bool _yearly = false;
+  int _year = DateTime.now().year;
+
+  @override
+  Widget build(BuildContext context) {
     final month = ref.watch(investmentMonthProvider);
     final account = ref.watch(investmentAccountProvider);
-    final summary = ref.watch(investmentMonthlySummaryProvider);
+    final summary = _yearly
+        ? ref.watch(investmentYearlySummaryProvider(_year))
+        : ref.watch(investmentMonthlySummaryProvider);
     final holdings = ref.watch(currentHoldingsProvider);
-    final rows = ref.watch(investmentRowsProvider);
-    final realizedPnl = ref.watch(realizedPnlProvider);
+    final rows = _yearly
+        ? ref.watch(investmentYearlyRowsProvider(_year))
+        : ref.watch(investmentRowsProvider);
+    final realizedPnl = _yearly
+        ? ref.watch(investmentYearlyRealizedPnlProvider(_year))
+        : ref.watch(realizedPnlProvider);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 1100),
@@ -40,7 +54,18 @@ class InvestmentsScreen extends ConsumerWidget {
               runSpacing: 8,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                _InvestmentMonthNav(month: month),
+                _InvestmentPeriodNav(
+                  yearly: _yearly,
+                  month: month,
+                  year: _year,
+                  onModeChanged: (yearly) => setState(() {
+                    _yearly = yearly;
+                    if (yearly) _year = parseMonthKey(month).year;
+                  }),
+                  onMonthChanged: (value) =>
+                      ref.read(investmentMonthProvider.notifier).state = value,
+                  onYearChanged: (value) => setState(() => _year = value),
+                ),
                 const _AddInvestmentButton(),
               ],
             ),
@@ -75,6 +100,7 @@ class InvestmentsScreen extends ConsumerWidget {
               data: (value) => _InvestmentRowsCard(
                 rows: value,
                 filterActive: ref.watch(investmentFilterProvider).isActive,
+                yearly: _yearly,
               ),
               loading: () => const _InvestmentCard(
                 child: LinearProgressIndicator(minHeight: 3),
@@ -83,7 +109,7 @@ class InvestmentsScreen extends ConsumerWidget {
             ),
             SizedBox(height: 16),
             realizedPnl.when(
-              data: (value) => _RealizedPnlCard(rows: value),
+              data: (value) => _RealizedPnlCard(rows: value, yearly: _yearly),
               loading: () => const _InvestmentCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
@@ -254,20 +280,33 @@ class _InvestmentFilterBarState extends ConsumerState<_InvestmentFilterBar> {
   }
 }
 
-class _InvestmentMonthNav extends ConsumerWidget {
-  const _InvestmentMonthNav({required this.month});
+class _InvestmentPeriodNav extends StatelessWidget {
+  const _InvestmentPeriodNav({
+    required this.yearly,
+    required this.month,
+    required this.year,
+    required this.onModeChanged,
+    required this.onMonthChanged,
+    required this.onYearChanged,
+  });
 
+  final bool yearly;
   final String month;
+  final int year;
+  final ValueChanged<bool> onModeChanged;
+  final ValueChanged<String> onMonthChanged;
+  final ValueChanged<int> onYearChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final d = parseMonthKey(month);
 
     void shift(int delta) {
-      ref.read(investmentMonthProvider.notifier).state = shiftMonth(
-        month,
-        delta,
-      );
+      if (yearly) {
+        onYearChanged(year + delta);
+      } else {
+        onMonthChanged(shiftMonth(month, delta));
+      }
     }
 
     return Row(
@@ -276,20 +315,34 @@ class _InvestmentMonthNav extends ConsumerWidget {
         IconButton(
           onPressed: () => shift(-1),
           icon: Icon(Icons.chevron_left),
-          tooltip: '이전 달',
+          tooltip: yearly ? '이전 연도' : '이전 달',
         ),
         OutlinedButton.icon(
           onPressed: () {
-            ref.read(investmentMonthProvider.notifier).state =
-                currentMonthKey();
+            if (yearly) {
+              onYearChanged(DateTime.now().year);
+            } else {
+              onMonthChanged(currentMonthKey());
+            }
           },
           icon: Icon(Icons.calendar_month, size: 18),
-          label: Text('${d.year}년 ${d.month}월'),
+          label: Text(yearly ? '$year년' : '${d.year}년 ${d.month}월'),
         ),
         IconButton(
           onPressed: () => shift(1),
           icon: Icon(Icons.chevron_right),
-          tooltip: '다음 달',
+          tooltip: yearly ? '다음 연도' : '다음 달',
+        ),
+        SizedBox(width: 8),
+        SegmentedButton<bool>(
+          key: const ValueKey('investment-period-mode'),
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: false, label: Text('월')),
+            ButtonSegment(value: true, label: Text('연')),
+          ],
+          selected: {yearly},
+          onSelectionChanged: (values) => onModeChanged(values.first),
         ),
       ],
     );
@@ -688,11 +741,7 @@ class _HoldingInlineActions extends StatelessWidget {
                   ];
                   if (narrow) {
                     return Column(
-                      children: [
-                        forms[0],
-                        SizedBox(height: 12),
-                        forms[1],
-                      ],
+                      children: [forms[0], SizedBox(height: 12), forms[1]],
                     );
                   }
                   return Row(
@@ -984,10 +1033,15 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
 }
 
 class _InvestmentRowsCard extends StatelessWidget {
-  const _InvestmentRowsCard({required this.rows, required this.filterActive});
+  const _InvestmentRowsCard({
+    required this.rows,
+    required this.filterActive,
+    required this.yearly,
+  });
 
   final List<Investment> rows;
   final bool filterActive;
+  final bool yearly;
 
   @override
   Widget build(BuildContext context) {
@@ -996,13 +1050,17 @@ class _InvestmentRowsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '월간 투자 거래',
+            yearly ? '연간 투자 거래' : '월간 투자 거래',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 12),
           if (rows.isEmpty)
             _EmptyState(
-              message: filterActive ? '필터 결과가 없습니다.' : '이번 달 투자 거래가 없습니다.',
+              message: filterActive
+                  ? '필터 결과가 없습니다.'
+                  : yearly
+                  ? '이번 연도 투자 거래가 없습니다.'
+                  : '이번 달 투자 거래가 없습니다.',
             )
           else
             Column(
@@ -1174,7 +1232,11 @@ class _SidePill extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(_sideIcon(side), size: 12, color: _sideColor(context, side)),
+                Icon(
+                  _sideIcon(side),
+                  size: 12,
+                  color: _sideColor(context, side),
+                ),
                 SizedBox(width: 4),
                 Text(
                   _sideLabel(side),
@@ -1194,9 +1256,10 @@ class _SidePill extends StatelessWidget {
 }
 
 class _RealizedPnlCard extends StatelessWidget {
-  const _RealizedPnlCard({required this.rows});
+  const _RealizedPnlCard({required this.rows, required this.yearly});
 
   final List<RealizedPnL> rows;
+  final bool yearly;
 
   @override
   Widget build(BuildContext context) {
@@ -1221,9 +1284,11 @@ class _RealizedPnlCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _InlineMetric(
-                  label: '월간 실현손익',
+                  label: yearly ? '연간 실현손익' : '월간 실현손익',
                   amount: totalPnl,
-                  color: totalPnl < 0 ? context.desktopExpense : context.desktopIncome,
+                  color: totalPnl < 0
+                      ? context.desktopExpense
+                      : context.desktopIncome,
                 ),
               ),
               SizedBox(width: 12),
@@ -1246,7 +1311,9 @@ class _RealizedPnlCard extends StatelessWidget {
           ),
           SizedBox(height: 12),
           if (rows.isEmpty)
-            const _EmptyState(message: '이번 달 실현손익 내역이 없습니다.')
+            _EmptyState(
+              message: yearly ? '이번 연도 실현손익 내역이 없습니다.' : '이번 달 실현손익 내역이 없습니다.',
+            )
           else
             Column(
               children: [
@@ -1333,7 +1400,9 @@ class _RealizedPnlRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final side = row.kind == RealizedKind.sell ? 'sell' : 'dividend';
-    final pnlColor = row.pnl < 0 ? context.desktopExpense : context.desktopIncome;
+    final pnlColor = row.pnl < 0
+        ? context.desktopExpense
+        : context.desktopIncome;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),

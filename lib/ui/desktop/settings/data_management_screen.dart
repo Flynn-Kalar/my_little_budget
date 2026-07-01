@@ -11,6 +11,8 @@ import '../../../data/backup.dart';
 import '../../../data/providers.dart';
 import '../../../data/supabase_backup_service.dart';
 import '../../../data/supabase_backup_settings.dart';
+import '../../../data/supabase_table_sync_service.dart';
+import '../../shared/notes_providers.dart';
 import '../accounts/providers.dart' as accounts_providers;
 import '../budget/providers.dart' as budget_providers;
 import '../investments/providers.dart' as investments_providers;
@@ -134,6 +136,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 
       await ref.read(backupDaoProvider).importBackup(parsed.backup!);
       _invalidateAfterImport(ref);
+      await rebuildNoteNotifications(ref);
       if (!mounted) return;
       _showSnack('백업 데이터를 복원했습니다.');
     } catch (e) {
@@ -153,6 +156,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     try {
       await ref.read(backupDaoProvider).resetAllData();
       _invalidateAfterImport(ref);
+      await rebuildNoteNotifications(ref);
       if (!mounted) return;
       _showSnack('데이터를 초기화했습니다.');
     } catch (e) {
@@ -208,6 +212,28 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       if (!mounted) return;
       _showSnack(result.isOk ? 'Supabase Storage 연결을 확인했습니다.' : result.error!);
       if (result.isOk) await _refreshSupabaseRemoteStatus();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _testSupabaseTables() async {
+    final draft = _supabaseDraft();
+    final error = validateSupabaseProjectSettings(draft);
+    if (error != null) {
+      _showSnack(error);
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      final result = await ref
+          .read(supabaseTableSyncServiceProvider)
+          .testConnection(draft);
+      if (!mounted) return;
+      _showSnack(
+        result.isOk ? 'Supabase DB 엔티티 테이블 8개를 확인했습니다.' : result.error!,
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -291,6 +317,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 
       await ref.read(backupDaoProvider).importBackup(parsed.backup!);
       _invalidateAfterImport(ref);
+      await rebuildNoteNotifications(ref);
       await ref.read(supabaseBackupSettingsProvider.notifier).markRestoreNow();
       if (!mounted) return;
       await _refreshSupabaseRemoteStatus();
@@ -346,6 +373,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               busy: _busy,
               onSave: _saveSupabaseSettings,
               onTest: _testSupabaseSettings,
+              onTestTables: _testSupabaseTables,
               onClear: _clearSupabaseSettings,
               onUpload: _uploadSupabaseBackup,
               onRestore: _restoreSupabaseBackup,
@@ -407,6 +435,7 @@ class _SupabaseSettingsCard extends StatelessWidget {
     required this.busy,
     required this.onSave,
     required this.onTest,
+    required this.onTestTables,
     required this.onClear,
     required this.onUpload,
     required this.onRestore,
@@ -424,6 +453,7 @@ class _SupabaseSettingsCard extends StatelessWidget {
   final bool busy;
   final VoidCallback onSave;
   final VoidCallback onTest;
+  final VoidCallback onTestTables;
   final VoidCallback onClear;
   final VoidCallback onUpload;
   final VoidCallback onRestore;
@@ -530,6 +560,12 @@ class _SupabaseSettingsCard extends StatelessWidget {
                   onPressed: busy ? null : onTest,
                   icon: const Icon(Icons.check_circle_outline),
                   label: const Text('연결 테스트'),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey('settings-supabase-table-test-button'),
+                  onPressed: busy ? null : onTestTables,
+                  icon: const Icon(Icons.storage_outlined),
+                  label: const Text('DB 테이블 테스트'),
                 ),
                 OutlinedButton.icon(
                   key: const ValueKey('settings-supabase-refresh-button'),
@@ -788,6 +824,8 @@ class _WarningCard extends StatelessWidget {
 }
 
 void _invalidateAfterImport(WidgetRef ref) {
+  ref.invalidate(notesProvider);
+  ref.invalidate(pendingReminderCountProvider);
   ref.invalidate(accounts_providers.accountBalancesProvider);
   ref.invalidate(accounts_providers.archivedAccountsProvider);
 

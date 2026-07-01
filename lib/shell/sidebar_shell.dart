@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_theme.dart';
-import '../ui/desktop/shell/badges_providers.dart';
+import '../ui/shared/notes_providers.dart';
 
 class _NavItem {
   const _NavItem({required this.path, required this.label, required this.icon});
@@ -18,7 +18,6 @@ const _topItems = <_NavItem>[
     label: '내역',
     icon: Icons.receipt_long_outlined,
   ),
-  _NavItem(path: '/budget', label: '예산', icon: Icons.savings_outlined),
   _NavItem(path: '/stats', label: '통계', icon: Icons.bar_chart_outlined),
   _NavItem(
     path: '/accounts',
@@ -26,6 +25,7 @@ const _topItems = <_NavItem>[
     icon: Icons.account_balance_wallet_outlined,
   ),
   _NavItem(path: '/investments', label: '투자', icon: Icons.trending_up),
+  _NavItem(path: '/notes', label: '메모', icon: Icons.note_alt_outlined),
 ];
 
 const _bottomItems = <_NavItem>[
@@ -39,13 +39,17 @@ class SidebarShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).matchedLocation;
-    final overBudget = ref.watch(overBudgetCountProvider).asData?.value ?? 0;
+    final pendingReminders =
+        ref.watch(pendingReminderCountProvider).asData?.value ?? 0;
     final sidebarBg = context.desktopSidebarBackground;
     final border = context.desktopBorder;
     final background = context.desktopBackground;
     final muted = context.desktopMuted;
 
-    int badgeFor(String path) => path == '/budget' ? overBudget : 0;
+    int badgeFor(String path) => switch (path) {
+      '/notes' => pendingReminders,
+      _ => 0,
+    };
 
     return Scaffold(
       body: Row(

@@ -149,6 +149,17 @@ final supabaseBackupSettingsProvider =
     );
 
 String? validateSupabaseBackupSettings(SupabaseBackupSettings settings) {
+  final projectError = validateSupabaseProjectSettings(settings);
+  if (projectError != null) return projectError;
+
+  final normalized = settings.normalized();
+  if (normalized.bucket.isEmpty) {
+    return 'Storage bucket 이름을 입력해주세요.';
+  }
+  return null;
+}
+
+String? validateSupabaseProjectSettings(SupabaseBackupSettings settings) {
   final normalized = settings.normalized();
   final uri = Uri.tryParse(normalized.url);
   if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
@@ -162,9 +173,6 @@ String? validateSupabaseBackupSettings(SupabaseBackupSettings settings) {
   }
   if (normalized.anonKey.toLowerCase().contains('service_role')) {
     return 'service_role key는 앱에 저장하지 마세요. anon/publishable key만 입력하세요.';
-  }
-  if (normalized.bucket.isEmpty) {
-    return 'Storage bucket 이름을 입력해주세요.';
   }
   return null;
 }

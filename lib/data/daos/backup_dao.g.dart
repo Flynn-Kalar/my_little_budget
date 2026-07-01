@@ -16,6 +16,9 @@ mixin _$BackupDaoMixin on DatabaseAccessor<AppDatabase> {
       attachedDatabase.recurringTransactions;
   $TagsTable get tags => attachedDatabase.tags;
   $TransactionTagsTable get transactionTags => attachedDatabase.transactionTags;
+  $NotesTable get notes => attachedDatabase.notes;
+  $NoteChecklistItemsTable get noteChecklistItems =>
+      attachedDatabase.noteChecklistItems;
   BackupDaoManager get managers => BackupDaoManager(this);
 }
 
@@ -50,5 +53,12 @@ class BackupDaoManager {
       $$TransactionTagsTableTableManager(
         _db.attachedDatabase,
         _db.transactionTags,
+      );
+  $$NotesTableTableManager get notes =>
+      $$NotesTableTableManager(_db.attachedDatabase, _db.notes);
+  $$NoteChecklistItemsTableTableManager get noteChecklistItems =>
+      $$NoteChecklistItemsTableTableManager(
+        _db.attachedDatabase,
+        _db.noteChecklistItems,
       );
 }

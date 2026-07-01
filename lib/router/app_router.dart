@@ -7,6 +7,7 @@ import '../features/settings/settings_page.dart';
 import '../features/stats/stats_page.dart';
 import '../ui/desktop/accounts/account_detail_screen.dart';
 import '../ui/desktop/accounts/accounts_screen.dart';
+import '../ui/desktop/notes/notes_screen.dart';
 import '../ui/desktop/settings/categories_screen.dart';
 import '../ui/desktop/settings/data_management_screen.dart';
 import '../ui/desktop/settings/recurring_screen.dart';
@@ -18,6 +19,7 @@ import '../ui/mobile/accounts/mobile_accounts_screen.dart';
 import '../ui/mobile/accounts/mobile_account_detail_screen.dart';
 import '../ui/mobile/budget/mobile_budget_screen.dart';
 import '../ui/mobile/investments/mobile_investments_screen.dart';
+import '../ui/mobile/notes/mobile_notes_screen.dart';
 import '../ui/mobile/responsive_page.dart';
 import '../ui/mobile/settings/mobile_categories_screen.dart';
 import '../ui/mobile/settings/mobile_settings_screen.dart';
@@ -92,6 +94,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               desktop: InvestmentsPage(),
               mobile: MobileInvestmentsScreen(),
             ),
+          ),
+          GoRoute(
+            path: '/notes',
+            builder: (context, state) {
+              final openNoteId = int.tryParse(
+                state.uri.queryParameters['open'] ?? '',
+              );
+              final openRequest =
+                  state.uri.queryParameters['tap'] ??
+                  state.uri.queryParameters['open'];
+              return ResponsivePage(
+                desktop: NotesScreen(
+                  openNoteId: openNoteId,
+                  openRequest: openRequest,
+                ),
+                mobile: MobileNotesScreen(
+                  openNoteId: openNoteId,
+                  openRequest: openRequest,
+                ),
+              );
+            },
           ),
           GoRoute(
             path: '/settings',
