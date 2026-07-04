@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/date.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
 import '../providers.dart';
@@ -97,7 +98,11 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
   }
 
   void _focusFirstField() {
-    _focus(_dateFocus);
+    _focus(_amountFocus);
+  }
+
+  void _focusAfterAmount() {
+    _focus(_type == 'transfer' ? _fromAccountFocus : _accountFocus);
   }
 
   void _focusAfterDate() {
@@ -105,8 +110,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
   }
 
   void _focusAfterTime() {
-    if (!_syncDateAndTime()) return;
-    _focus(_type == 'transfer' ? _fromAccountFocus : _accountFocus);
+    if (_syncDateAndTime()) _focus(_memoFocus);
   }
 
   void _focusAfterAccount() {
@@ -118,7 +122,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
   }
 
   void _focusAfterTag() {
-    _focus(_amountFocus);
+    _focus(_dateFocus);
   }
 
   void _focusAfterFromAccount() {
@@ -126,11 +130,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
   }
 
   void _focusAfterToAccount() {
-    _focus(_amountFocus);
-  }
-
-  void _focusAfterAmount() {
-    _focus(_memoFocus);
+    _focus(_dateFocus);
   }
 
   Future<void> _pickDate() async {
@@ -276,8 +276,12 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
             draft: result.value!,
             tagNames: _type == 'transfer' ? const [] : _tags,
           );
+      final warning = await ref
+          .read(transactionsDaoProvider)
+          .cardLimitWarningFor(result.value!);
       refreshTransactions(ref);
       if (!mounted) return true;
+      _showCardLimitWarning(context, warning);
       setState(() {
         _amountCtrl.clear();
         _memoCtrl.clear();
@@ -308,6 +312,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
         .toList();
 
     return Container(
+      key: const ValueKey('desktop-transactions-inline-entry'),
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -317,239 +322,240 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
       ),
       child: FocusTraversalGroup(
         policy: OrderedTraversalPolicy(),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            const minRowWidth = 1500.0;
-            final targetWidth = constraints.maxWidth < minRowWidth
-                ? minRowWidth
-                : constraints.maxWidth;
-            final row = SizedBox(
-              width: targetWidth,
-              child: Row(
-                children: [
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'income',
-                        label: Text('\uC218\uC785'),
-                      ),
-                      ButtonSegment(
-                        value: 'expense',
-                        label: Text('\uC9C0\uCD9C'),
-                      ),
-                      ButtonSegment(
-                        value: 'transfer',
-                        label: Text('\uC774\uCCB4'),
-                      ),
-                    ],
-                    selected: {_type},
-                    showSelectedIcon: false,
-                    onSelectionChanged: (s) => setState(() {
-                      _type = s.first;
-                      _categoryId = null;
-                      if (_type == 'transfer') _tags = [];
-                    }),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 3,
-                    child: FocusTraversalOrder(
-                      order: const NumericFocusOrder(1),
-                      child: TextField(
-                        controller: _dateCtrl,
-                        focusNode: _dateFocus,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          hintText: '\uB0A0\uC9DC',
-                          isDense: true,
-                          prefixIcon: const Icon(
-                            Icons.calendar_today,
-                            size: 16,
-                          ),
-                          suffixIcon: IconButton(
-                            tooltip: '\uB0A0\uC9DC \uC120\uD0DD',
-                            onPressed: _pickDate,
-                            icon: const Icon(Icons.expand_more, size: 18),
-                          ),
-                          border: const OutlineInputBorder(),
-                        ),
-                        onSubmitted: (_) => _focusAfterDate(),
-                      ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'income', label: Text('\uC218\uC785')),
+                    ButtonSegment(
+                      value: 'expense',
+                      label: Text('\uC9C0\uCD9C'),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 82,
-                    child: FocusTraversalOrder(
-                      order: const NumericFocusOrder(2),
-                      child: TextField(
-                        controller: _timeCtrl,
-                        focusNode: _timeFocus,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          hintText: '\uC2DC\uAC04',
-                          isDense: true,
-                          border: OutlineInputBorder(),
-                        ),
-                        onSubmitted: (_) => _focusAfterTime(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  if (_type == 'transfer') ...[
-                    Expanded(
-                      flex: 2,
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(3),
-                        child: AccountDropdown(
-                          hint: '\uCD9C\uAE08',
-                          accounts: accounts,
-                          value: _fromAccountId,
-                          width: null,
-                          focusNode: _fromAccountFocus,
-                          onChanged: (v) => setState(() => _fromAccountId = v),
-                          onSubmitted: (_) => _focusAfterFromAccount(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.arrow_forward,
-                      size: 16,
-                      color: context.desktopMuted,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(4),
-                        child: AccountDropdown(
-                          hint: '\uC785\uAE08',
-                          accounts: accounts,
-                          value: _toAccountId,
-                          width: null,
-                          focusNode: _toAccountFocus,
-                          onChanged: (v) => setState(() => _toAccountId = v),
-                          onSubmitted: (_) => _focusAfterToAccount(),
-                        ),
-                      ),
-                    ),
-                  ] else ...[
-                    Expanded(
-                      flex: 2,
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(3),
-                        child: AccountDropdown(
-                          hint: '\uC790\uC0B0',
-                          accounts: accounts,
-                          value: _accountId,
-                          width: null,
-                          focusNode: _accountFocus,
-                          onChanged: (v) => setState(() => _accountId = v),
-                          onSubmitted: (_) => _focusAfterAccount(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(4),
-                        child: CategoryDropdown(
-                          categories: visibleCats,
-                          value: _categoryId,
-                          width: null,
-                          focusNode: _categoryFocus,
-                          onChanged: (v) => setState(() => _categoryId = v),
-                          onSubmitted: (_) => _focusAfterCategory(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(5),
-                        child: TagAutocompleteField(
-                          value: _tags,
-                          suggestions: tagSuggestions,
-                          width: null,
-                          focusNode: _tagFocus,
-                          onChanged: (v) => setState(() => _tags = v),
-                          onSubmitted: (result) {
-                            if (result == TagSubmitResult.empty) {
-                              _focusAfterTag();
-                            }
-                          },
-                        ),
-                      ),
+                    ButtonSegment(
+                      value: 'transfer',
+                      label: Text('\uC774\uCCB4'),
                     ),
                   ],
-                  const SizedBox(width: 10),
+                  selected: {_type},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) => setState(() {
+                    _type = s.first;
+                    _categoryId = null;
+                    if (_type == 'transfer') _tags = [];
+                  }),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: FocusTraversalOrder(
+                    order: const NumericFocusOrder(1),
+                    child: TextField(
+                      key: const ValueKey('desktop-transactions-inline-amount'),
+                      controller: _amountCtrl,
+                      focusNode: _amountFocus,
+                      keyboardType: TextInputType.text,
+                      textAlign: TextAlign.right,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        hintText: '₩ 금액',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _focusAfterAmount(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_type == 'transfer') ...[
                   Expanded(
                     flex: 2,
                     child: FocusTraversalOrder(
-                      order: NumericFocusOrder(_type == 'transfer' ? 5 : 6),
-                      child: TextField(
-                        controller: _amountCtrl,
-                        focusNode: _amountFocus,
-                        keyboardType: TextInputType.text,
-                        textAlign: TextAlign.right,
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          hintText: '\uAE08\uC561',
-                          isDense: true,
-                          border: OutlineInputBorder(),
-                        ),
-                        onSubmitted: (_) => _focusAfterAmount(),
+                      order: const NumericFocusOrder(2),
+                      child: AccountDropdown(
+                        hint: '\uCD9C\uAE08',
+                        accounts: accounts,
+                        value: _fromAccountId,
+                        width: null,
+                        focusNode: _fromAccountFocus,
+                        onChanged: (v) => setState(() => _fromAccountId = v),
+                        onSubmitted: (_) => _focusAfterFromAccount(),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.arrow_forward,
+                    size: 16,
+                    color: context.desktopMuted,
+                  ),
+                  const SizedBox(width: 6),
                   Expanded(
-                    flex: 3,
+                    flex: 2,
                     child: FocusTraversalOrder(
-                      order: NumericFocusOrder(_type == 'transfer' ? 6 : 7),
-                      child: MemoAutocompleteField(
-                        controller: _memoCtrl,
-                        suggestions: memoSuggestions,
-                        focusNode: _memoFocus,
-                        onSubmitted: (committedSuggestion) {
-                          if (!committedSuggestion) _save();
+                      order: const NumericFocusOrder(3),
+                      child: AccountDropdown(
+                        hint: '\uC785\uAE08',
+                        accounts: accounts,
+                        value: _toAccountId,
+                        width: null,
+                        focusNode: _toAccountFocus,
+                        onChanged: (v) => setState(() => _toAccountId = v),
+                        onSubmitted: (_) => _focusAfterToAccount(),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Expanded(
+                    flex: 2,
+                    child: FocusTraversalOrder(
+                      order: const NumericFocusOrder(2),
+                      child: AccountDropdown(
+                        hint: '\uC790\uC0B0',
+                        accounts: accounts,
+                        value: _accountId,
+                        width: null,
+                        focusNode: _accountFocus,
+                        onChanged: (v) => setState(() => _accountId = v),
+                        onSubmitted: (_) => _focusAfterAccount(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: FocusTraversalOrder(
+                      order: const NumericFocusOrder(3),
+                      child: CategoryDropdown(
+                        categories: visibleCats,
+                        value: _categoryId,
+                        width: null,
+                        focusNode: _categoryFocus,
+                        onChanged: (v) => setState(() => _categoryId = v),
+                        onSubmitted: (_) => _focusAfterCategory(),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 74,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(74, 40),
+                      padding: EdgeInsets.zero,
+                    ),
+                    onPressed: _saving ? null : _save,
+                    child: _saving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('\uCD94\uAC00', softWrap: false),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(
+                  width: 150,
+                  child: FocusTraversalOrder(
+                    order: NumericFocusOrder(_type == 'transfer' ? 4 : 5),
+                    child: TextField(
+                      key: const ValueKey('desktop-transactions-inline-date'),
+                      controller: _dateCtrl,
+                      focusNode: _dateFocus,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        hintText: '\uB0A0\uC9DC',
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.calendar_today, size: 16),
+                        suffixIcon: IconButton(
+                          tooltip: '\uB0A0\uC9DC \uC120\uD0DD',
+                          onPressed: _pickDate,
+                          icon: const Icon(Icons.expand_more, size: 18),
+                        ),
+                        border: const OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _focusAfterDate(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 74,
+                  child: FocusTraversalOrder(
+                    order: NumericFocusOrder(_type == 'transfer' ? 5 : 6),
+                    child: TextField(
+                      key: const ValueKey('desktop-transactions-inline-time'),
+                      controller: _timeCtrl,
+                      focusNode: _timeFocus,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        hintText: '\uC2DC\uAC04',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _focusAfterTime(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_type != 'transfer') ...[
+                  Expanded(
+                    child: FocusTraversalOrder(
+                      order: const NumericFocusOrder(4),
+                      child: TagAutocompleteField(
+                        value: _tags,
+                        suggestions: tagSuggestions,
+                        width: null,
+                        focusNode: _tagFocus,
+                        onChanged: (v) => setState(() => _tags = v),
+                        onSubmitted: (result) {
+                          if (result == TagSubmitResult.empty) {
+                            _focusAfterTag();
+                          }
                         },
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 96,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(96, 40),
-                        padding: EdgeInsets.zero,
-                      ),
-                      onPressed: _saving ? null : _save,
-                      child: _saving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('\uCD94\uAC00', softWrap: false),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: FocusTraversalOrder(
+                    order: NumericFocusOrder(_type == 'transfer' ? 6 : 7),
+                    child: MemoAutocompleteField(
+                      controller: _memoCtrl,
+                      suggestions: memoSuggestions,
+                      focusNode: _memoFocus,
+                      onSubmitted: (committedSuggestion) {
+                        if (!committedSuggestion) _save();
+                      },
                     ),
                   ),
-                ],
-              ),
-            );
-
-            if (constraints.maxWidth >= minRowWidth) return row;
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: row,
-            );
-          },
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+void _showCardLimitWarning(BuildContext context, CardLimitWarning? warning) {
+  if (warning == null) return;
+  final message = warning.exceeded
+      ? '${warning.accountName} 한도를 ${formatKRW(-warning.remaining)} 초과했습니다.'
+      : '${warning.accountName} 한도까지 ${formatKRW(warning.remaining)} 남았습니다.';
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Theme.of(context).colorScheme.error,
+    ),
+  );
 }

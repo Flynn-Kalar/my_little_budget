@@ -259,7 +259,7 @@ void main() {
     ).go('/transactions');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('필터').first);
+    await tester.tap(find.text('검색·필터').first);
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('transactions-search-field')),

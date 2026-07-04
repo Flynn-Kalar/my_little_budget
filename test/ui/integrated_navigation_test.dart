@@ -26,7 +26,7 @@ void main() {
 
     const budgetButton = ValueKey('desktop-transactions-budget-button');
     expect(find.byKey(budgetButton), findsOneWidget);
-    expect(find.text('예산'), findsOneWidget);
+    expect(find.text('예산 보기'), findsOneWidget);
 
     await tester.tap(find.byKey(budgetButton));
     await tester.pumpAndSettle();

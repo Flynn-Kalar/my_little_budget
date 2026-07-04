@@ -16,7 +16,8 @@ class SummaryBar extends ConsumerWidget {
     final net = income - expense;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      key: const ValueKey('desktop-transactions-summary-bar'),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: context.desktopSurface,
         border: Border.all(color: context.desktopBorder),
@@ -35,7 +36,7 @@ class SummaryBar extends ConsumerWidget {
             label: '순수입',
             value: net,
             color: net > 0
-                ? context.desktopIncome
+                ? context.desktopAccent
                 : net < 0
                 ? context.desktopExpense
                 : Theme.of(context).colorScheme.onSurface,
@@ -69,7 +70,7 @@ class _Cell extends StatelessWidget {
             label,
             style: TextStyle(fontSize: 12, color: context.desktopMuted),
           ),
-          SizedBox(height: 4),
+          SizedBox(height: 3),
           Text(
             '$prefix${formatKRW(value)}',
             style: TextStyle(

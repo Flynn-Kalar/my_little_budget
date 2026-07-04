@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -145,6 +146,10 @@ void main() {
 
     expect(find.text('최근 12개월 추세'), findsOneWidget);
     expect(find.text(formatKRW(2139650)), findsWidgets);
+    final chart = tester.widget<LineChart>(find.byType(LineChart));
+    final tooltip = chart.data.lineTouchData.touchTooltipData;
+    expect(tooltip.fitInsideHorizontally, isTrue);
+    expect(tooltip.fitInsideVertically, isTrue);
     expect(tester.takeException(), isNull);
   });
 

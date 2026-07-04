@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/date.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
@@ -9,11 +10,15 @@ import '../providers.dart';
 import 'transaction_edit_dialog.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+const _listMaxWidth = 1040.0;
+const _secondaryColumnWidth = 150.0;
+const _amountColumnWidth = 118.0;
+const _menuColumnWidth = 40.0;
 
 String _dateHeader(String dateKey) {
   final parts = dateKey.split('-');
   final dt = DateTime.parse('${dateKey}T00:00:00');
-  return '${parts[1]}.${parts[2]} (${_weekdays[dt.weekday % 7]})';
+  return '${parts[1]}.${parts[2]} ${_weekdays[dt.weekday % 7]}요일';
 }
 
 class TransactionList extends ConsumerWidget {
@@ -30,8 +35,35 @@ class TransactionList extends ConsumerWidget {
       error: (e, _) => Center(child: Text('불러오기 오류: $e')),
       data: (rows) => SingleChildScrollView(
         key: const ValueKey('desktop-transactions-list-scroll'),
-        child: _TransactionListBody(rows: rows, filter: filter, type: type),
+        child: _ConstrainedTransactionList(
+          child: _TransactionListBody(rows: rows, filter: filter, type: type),
+        ),
       ),
+    );
+  }
+}
+
+class _ConstrainedTransactionList extends StatelessWidget {
+  const _ConstrainedTransactionList({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth < _listMaxWidth
+            ? constraints.maxWidth
+            : _listMaxWidth;
+        return Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            key: const ValueKey('desktop-transactions-list-width'),
+            width: width,
+            child: child,
+          ),
+        );
+      },
     );
   }
 }
@@ -68,6 +100,41 @@ class _TransactionListBody extends StatelessWidget {
       );
     }
 
+    final today = currentDateKey();
+    final futureRows = rows.where((row) => row.occurredOn.compareTo(today) > 0);
+    final completedRows = rows.where(
+      (row) => row.occurredOn.compareTo(today) <= 0,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (futureRows.isNotEmpty)
+          _Section(title: '예정 거래', rows: futureRows.toList(), planned: true),
+        if (futureRows.isNotEmpty && completedRows.isNotEmpty)
+          const SizedBox(height: 10),
+        if (completedRows.isNotEmpty)
+          _Section(title: '완료 거래', rows: completedRows.toList())
+        else if (futureRows.isEmpty)
+          const SizedBox.shrink(),
+      ],
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({
+    required this.title,
+    required this.rows,
+    this.planned = false,
+  });
+
+  final String title;
+  final List<TransactionRow> rows;
+  final bool planned;
+
+  @override
+  Widget build(BuildContext context) {
     final groups = <String, List<TransactionRow>>{};
     final totals = <String, _DailyTotals>{};
     for (final r in rows) {
@@ -80,36 +147,103 @@ class _TransactionListBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _SectionHeader(title: title, count: rows.length, planned: planned),
         for (final entry in groups.entries) ...[
           _DateHeader(
             date: entry.key,
             totals: totals[entry.key] ?? const _DailyTotals(),
+            planned: planned,
           ),
-          for (final row in entry.value) _Row(row: row),
+          for (final row in entry.value) _Row(row: row, planned: planned),
         ],
       ],
     );
   }
 }
 
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.count,
+    required this.planned,
+  });
+
+  final String title;
+  final int count;
+  final bool planned;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            planned ? Icons.schedule_outlined : Icons.check_circle_outline,
+            size: 16,
+            color: planned ? context.desktopWarning : context.desktopMuted,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$title $count건',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: planned ? context.desktopWarning : context.desktopMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DailyTotals {
-  const _DailyTotals({this.income = 0, this.expense = 0});
+  const _DailyTotals({
+    this.income = 0,
+    this.expense = 0,
+    this.transferAmount = 0,
+    this.transferCount = 0,
+  });
 
   final int income;
   final int expense;
+  final int transferAmount;
+  final int transferCount;
 
   _DailyTotals add(TransactionRow row) => switch (row.type) {
-    'income' => _DailyTotals(income: income + row.amount, expense: expense),
-    'expense' => _DailyTotals(income: income, expense: expense + row.amount),
+    'income' => _DailyTotals(
+      income: income + row.amount,
+      expense: expense,
+      transferAmount: transferAmount,
+      transferCount: transferCount,
+    ),
+    'expense' => _DailyTotals(
+      income: income,
+      expense: expense + row.amount,
+      transferAmount: transferAmount,
+      transferCount: transferCount,
+    ),
+    'transfer' => _DailyTotals(
+      income: income,
+      expense: expense,
+      transferAmount: transferAmount + row.amount,
+      transferCount: transferCount + 1,
+    ),
     _ => this,
   };
 }
 
 class _DateHeader extends StatelessWidget {
-  const _DateHeader({required this.date, required this.totals});
+  const _DateHeader({
+    required this.date,
+    required this.totals,
+    required this.planned,
+  });
 
   final String date;
   final _DailyTotals totals;
+  final bool planned;
 
   @override
   Widget build(BuildContext context) {
@@ -119,13 +253,21 @@ class _DateHeader extends StatelessWidget {
         key: ValueKey('desktop-transactions-date-header-$date'),
         children: [
           Expanded(
-            child: Text(
-              _dateHeader(date),
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: context.desktopMuted,
-              ),
+            child: Row(
+              children: [
+                Text(
+                  _dateHeader(date),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                if (planned) ...[
+                  const SizedBox(width: 6),
+                  _PlannedBadge(compact: true),
+                ],
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -134,18 +276,26 @@ class _DateHeader extends StatelessWidget {
             spacing: 12,
             runSpacing: 4,
             children: [
-              _DailyTotalText(
-                key: ValueKey('desktop-transactions-date-income-$date'),
-                label: '수입',
-                value: totals.income,
-                color: context.desktopIncome,
-              ),
-              _DailyTotalText(
-                key: ValueKey('desktop-transactions-date-expense-$date'),
-                label: '지출',
-                value: totals.expense,
-                color: context.desktopExpense,
-              ),
+              if (totals.income > 0)
+                _DailyTotalText(
+                  key: ValueKey('desktop-transactions-date-income-$date'),
+                  label: '수입',
+                  value: totals.income,
+                  color: context.desktopIncome,
+                ),
+              if (totals.expense > 0)
+                _DailyTotalText(
+                  key: ValueKey('desktop-transactions-date-expense-$date'),
+                  label: '지출',
+                  value: totals.expense,
+                  color: context.desktopExpense,
+                ),
+              if (totals.transferCount > 0)
+                _TransferTotalText(
+                  key: ValueKey('desktop-transactions-date-transfer-$date'),
+                  count: totals.transferCount,
+                  value: totals.transferAmount,
+                ),
             ],
           ),
         ],
@@ -176,9 +326,34 @@ class _DailyTotalText extends StatelessWidget {
   }
 }
 
+class _TransferTotalText extends StatelessWidget {
+  const _TransferTotalText({
+    super.key,
+    required this.count,
+    required this.value,
+  });
+
+  final int count;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '이체 $count건 · ${formatKRW(value)}',
+      textAlign: TextAlign.end,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: context.desktopMuted,
+      ),
+    );
+  }
+}
+
 class _Row extends StatelessWidget {
-  const _Row({required this.row});
+  const _Row({required this.row, required this.planned});
   final TransactionRow row;
+  final bool planned;
 
   @override
   Widget build(BuildContext context) {
@@ -189,6 +364,7 @@ class _Row extends StatelessWidget {
     final Widget leading;
     final String title;
     final List<String> metaParts;
+    final String secondary;
 
     if (isTransfer) {
       leading = CircleAvatar(
@@ -196,12 +372,9 @@ class _Row extends StatelessWidget {
         backgroundColor: context.desktopSelectedSurface,
         child: Icon(Icons.swap_horiz, size: 16, color: context.desktopMuted),
       );
-      title = '이체';
-      metaParts = [
-        if (showTime) row.occurredTime,
-        '${row.fromAccountName ?? '?'} → ${row.toAccountName ?? '?'}',
-        if (row.memo != null) row.memo!,
-      ];
+      title = '${row.fromAccountName ?? '?'} → ${row.toAccountName ?? '?'}';
+      metaParts = [if (showTime) row.occurredTime];
+      secondary = '이체';
     } else {
       leading = Container(
         width: 10,
@@ -212,11 +385,8 @@ class _Row extends StatelessWidget {
         ),
       );
       title = row.categoryName ?? '(카테고리 없음)';
-      metaParts = [
-        if (showTime) row.occurredTime,
-        row.accountName ?? '(자산 없음)',
-        if (row.memo != null) row.memo!,
-      ];
+      metaParts = [if (showTime) row.occurredTime];
+      secondary = row.accountName ?? '(자산 없음)';
     }
 
     final amountColor = isTransfer
@@ -226,8 +396,12 @@ class _Row extends StatelessWidget {
         : context.desktopExpense;
     final sign = isTransfer ? '' : (isIncome ? '+' : '-');
 
+    final visibleTags = row.tags.take(2).toList();
+    final hiddenTagCount = row.tags.length - visibleTags.length;
+    final memo = row.memo?.trim();
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.only(bottom: 3),
       child: Material(
         color: context.desktopSurface,
         borderRadius: BorderRadius.circular(6),
@@ -235,21 +409,27 @@ class _Row extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           onTap: () => TransactionEditDialog.show(context, row),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: context.desktopBorder),
+              border: Border.all(
+                color: context.desktopBorder.withValues(alpha: 0.72),
+              ),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
                 SizedBox(width: 28, child: Center(child: leading)),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
+                          if (planned) ...[
+                            const _PlannedBadge(),
+                            const SizedBox(width: 6),
+                          ],
                           Flexible(
                             child: Text(
                               title,
@@ -260,15 +440,6 @@ class _Row extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (row.tags.isNotEmpty) ...[
-                            SizedBox(width: 8),
-                            ...row.tags.map(
-                              (t) => Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: _TagChip(name: t.name, color: t.color),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                       if (metaParts.isNotEmpty)
@@ -284,34 +455,116 @@ class _Row extends StatelessWidget {
                             ).colorScheme.onSurface.withValues(alpha: 0.82),
                           ),
                         ),
+                      if (memo != null && memo.isNotEmpty)
+                        Text(
+                          memo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: context.desktopMuted,
+                          ),
+                        ),
                     ],
                   ),
                 ),
-                SizedBox(width: 8),
-                Text(
-                  '$sign${formatKRW(row.amount)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: amountColor,
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: _secondaryColumnWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        secondary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.76),
+                        ),
+                      ),
+                      if (visibleTags.isNotEmpty)
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 2,
+                          children: [
+                            ...visibleTags.map(
+                              (t) => _TagChip(name: t.name, color: t.color),
+                            ),
+                            if (hiddenTagCount > 0)
+                              _MoreTagChip(count: hiddenTagCount),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
-                PopupMenuButton<String>(
-                  tooltip: '거래 메뉴',
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      TransactionEditDialog.show(context, row);
-                    } else if (value == 'copy') {
-                      TransactionEditDialog.showDuplicate(context, row);
-                    }
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('수정')),
-                    PopupMenuItem(value: 'copy', child: Text('복사')),
-                  ],
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: _amountColumnWidth,
+                  child: Text(
+                    '$sign${formatKRW(row.amount)}',
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: amountColor,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: _menuColumnWidth,
+                  child: PopupMenuButton<String>(
+                    tooltip: '거래 메뉴',
+                    padding: EdgeInsets.zero,
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        TransactionEditDialog.show(context, row);
+                      } else if (value == 'copy') {
+                        TransactionEditDialog.showDuplicate(context, row);
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'edit', child: Text('수정')),
+                      PopupMenuItem(value: 'copy', child: Text('복사')),
+                    ],
+                  ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlannedBadge extends StatelessWidget {
+  const _PlannedBadge({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.desktopWarning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 6 : 7,
+          vertical: compact ? 1 : 2,
+        ),
+        child: Text(
+          '예정',
+          style: TextStyle(
+            fontSize: compact ? 10 : 11,
+            fontWeight: FontWeight.w800,
+            color: context.desktopWarning,
           ),
         ),
       ),
@@ -334,6 +587,27 @@ class _TagChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text('#$name', style: TextStyle(fontSize: 10, color: c)),
+    );
+  }
+}
+
+class _MoreTagChip extends StatelessWidget {
+  const _MoreTagChip({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: context.desktopSelectedSurface,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '+$count',
+        style: TextStyle(fontSize: 10, color: context.desktopMuted),
+      ),
     );
   }
 }

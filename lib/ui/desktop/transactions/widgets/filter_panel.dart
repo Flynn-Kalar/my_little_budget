@@ -154,7 +154,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
           OutlinedButton.icon(
             onPressed: () => _setExpanded(true),
             icon: const Icon(Icons.filter_list, size: 18),
-            label: Text(activeCount > 0 ? '필터 $activeCount' : '필터'),
+            label: Text(activeCount > 0 ? '검색·필터 $activeCount' : '검색·필터'),
           ),
           if (hasFilter)
             ActionChip(

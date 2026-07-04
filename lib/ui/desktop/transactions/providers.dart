@@ -68,6 +68,28 @@ final monthlySummaryProvider = FutureProvider.autoDispose<MonthlySummary>((
   return dao.monthlySummary(month);
 });
 
+final transactionsMonthRowsProvider =
+    FutureProvider.autoDispose<List<TransactionRow>>((ref) async {
+      await ref.watch(recurringBackfillProvider.future);
+      final month = ref.watch(selectedMonthProvider);
+      final dao = ref.watch(transactionsDaoProvider);
+      return dao.listTransactionsByMonth(month);
+    });
+
+final transactionsCategoryBreakdownProvider =
+    FutureProvider.autoDispose<List<CategoryBreakdownRow>>((ref) {
+      final month = ref.watch(selectedMonthProvider);
+      final dao = ref.watch(transactionsDaoProvider);
+      return dao.expenseByCategory(month);
+    });
+
+final transactionsMonthlyTrendProvider =
+    FutureProvider.autoDispose<List<MonthlyTrendRow>>((ref) {
+      final month = ref.watch(selectedMonthProvider);
+      final dao = ref.watch(transactionsDaoProvider);
+      return dao.monthlyTrend(6, month);
+    });
+
 final activeAccountsProvider = FutureProvider<List<Account>>(
   (ref) => ref.watch(accountsDaoProvider).getActiveAccounts(),
 );
@@ -88,7 +110,10 @@ final recentMemosProvider = FutureProvider<List<String>>(
 /// 거래 변경 후 목록·요약 갱신.
 void refreshTransactions(WidgetRef ref) {
   ref.invalidate(transactionsListProvider);
+  ref.invalidate(transactionsMonthRowsProvider);
   ref.invalidate(monthlySummaryProvider);
+  ref.invalidate(transactionsCategoryBreakdownProvider);
+  ref.invalidate(transactionsMonthlyTrendProvider);
   ref.invalidate(allTagsProvider);
   ref.invalidate(recentMemosProvider);
   ref.invalidate(accounts_providers.accountBalancesProvider);

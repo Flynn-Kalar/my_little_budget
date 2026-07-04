@@ -93,8 +93,13 @@ class _State extends ConsumerState<TransactionEditDialog> {
             draft: result.value!,
             tagNames: _tags,
           );
+      final warning = await ref
+          .read(transactionsDaoProvider)
+          .cardLimitWarningFor(result.value!);
       refreshTransactions(ref);
-      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      _showCardLimitWarning(context, warning);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -264,4 +269,17 @@ class _State extends ConsumerState<TransactionEditDialog> {
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
     );
   }
+}
+
+void _showCardLimitWarning(BuildContext context, CardLimitWarning? warning) {
+  if (warning == null) return;
+  final message = warning.exceeded
+      ? '${warning.accountName} 한도를 ${formatKRW(-warning.remaining)} 초과했습니다.'
+      : '${warning.accountName} 한도까지 ${formatKRW(warning.remaining)} 남았습니다.';
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Theme.of(context).colorScheme.error,
+    ),
+  );
 }

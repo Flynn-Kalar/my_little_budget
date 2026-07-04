@@ -69,6 +69,17 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _cardLimitMeta = const VerificationMeta(
+    'cardLimit',
+  );
+  @override
+  late final GeneratedColumn<int> cardLimit = GeneratedColumn<int>(
+    'card_limit',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _colorMeta = const VerificationMeta('color');
   @override
   late final GeneratedColumn<String> color = GeneratedColumn<String>(
@@ -186,6 +197,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     name,
     kind,
     initialBalance,
+    cardLimit,
     color,
     excludeFromTotal,
     isInvestment,
@@ -240,6 +252,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           data['initial_balance']!,
           _initialBalanceMeta,
         ),
+      );
+    }
+    if (data.containsKey('card_limit')) {
+      context.handle(
+        _cardLimitMeta,
+        cardLimit.isAcceptableOrUnknown(data['card_limit']!, _cardLimitMeta),
       );
     }
     if (data.containsKey('color')) {
@@ -331,6 +349,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}initial_balance'],
       )!,
+      cardLimit: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}card_limit'],
+      ),
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}color'],
@@ -382,6 +404,7 @@ class Account extends DataClass implements Insertable<Account> {
   final String name;
   final String kind;
   final int initialBalance;
+  final int? cardLimit;
   final String color;
   final bool excludeFromTotal;
   final bool isInvestment;
@@ -397,6 +420,7 @@ class Account extends DataClass implements Insertable<Account> {
     required this.name,
     required this.kind,
     required this.initialBalance,
+    this.cardLimit,
     required this.color,
     required this.excludeFromTotal,
     required this.isInvestment,
@@ -415,6 +439,9 @@ class Account extends DataClass implements Insertable<Account> {
     map['name'] = Variable<String>(name);
     map['kind'] = Variable<String>(kind);
     map['initial_balance'] = Variable<int>(initialBalance);
+    if (!nullToAbsent || cardLimit != null) {
+      map['card_limit'] = Variable<int>(cardLimit);
+    }
     map['color'] = Variable<String>(color);
     map['exclude_from_total'] = Variable<bool>(excludeFromTotal);
     map['is_investment'] = Variable<bool>(isInvestment);
@@ -438,6 +465,9 @@ class Account extends DataClass implements Insertable<Account> {
       name: Value(name),
       kind: Value(kind),
       initialBalance: Value(initialBalance),
+      cardLimit: cardLimit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cardLimit),
       color: Value(color),
       excludeFromTotal: Value(excludeFromTotal),
       isInvestment: Value(isInvestment),
@@ -465,6 +495,7 @@ class Account extends DataClass implements Insertable<Account> {
       name: serializer.fromJson<String>(json['name']),
       kind: serializer.fromJson<String>(json['kind']),
       initialBalance: serializer.fromJson<int>(json['initialBalance']),
+      cardLimit: serializer.fromJson<int?>(json['cardLimit']),
       color: serializer.fromJson<String>(json['color']),
       excludeFromTotal: serializer.fromJson<bool>(json['excludeFromTotal']),
       isInvestment: serializer.fromJson<bool>(json['isInvestment']),
@@ -485,6 +516,7 @@ class Account extends DataClass implements Insertable<Account> {
       'name': serializer.toJson<String>(name),
       'kind': serializer.toJson<String>(kind),
       'initialBalance': serializer.toJson<int>(initialBalance),
+      'cardLimit': serializer.toJson<int?>(cardLimit),
       'color': serializer.toJson<String>(color),
       'excludeFromTotal': serializer.toJson<bool>(excludeFromTotal),
       'isInvestment': serializer.toJson<bool>(isInvestment),
@@ -503,6 +535,7 @@ class Account extends DataClass implements Insertable<Account> {
     String? name,
     String? kind,
     int? initialBalance,
+    Value<int?> cardLimit = const Value.absent(),
     String? color,
     bool? excludeFromTotal,
     bool? isInvestment,
@@ -518,6 +551,7 @@ class Account extends DataClass implements Insertable<Account> {
     name: name ?? this.name,
     kind: kind ?? this.kind,
     initialBalance: initialBalance ?? this.initialBalance,
+    cardLimit: cardLimit.present ? cardLimit.value : this.cardLimit,
     color: color ?? this.color,
     excludeFromTotal: excludeFromTotal ?? this.excludeFromTotal,
     isInvestment: isInvestment ?? this.isInvestment,
@@ -537,6 +571,7 @@ class Account extends DataClass implements Insertable<Account> {
       initialBalance: data.initialBalance.present
           ? data.initialBalance.value
           : this.initialBalance,
+      cardLimit: data.cardLimit.present ? data.cardLimit.value : this.cardLimit,
       color: data.color.present ? data.color.value : this.color,
       excludeFromTotal: data.excludeFromTotal.present
           ? data.excludeFromTotal.value
@@ -565,6 +600,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('name: $name, ')
           ..write('kind: $kind, ')
           ..write('initialBalance: $initialBalance, ')
+          ..write('cardLimit: $cardLimit, ')
           ..write('color: $color, ')
           ..write('excludeFromTotal: $excludeFromTotal, ')
           ..write('isInvestment: $isInvestment, ')
@@ -585,6 +621,7 @@ class Account extends DataClass implements Insertable<Account> {
     name,
     kind,
     initialBalance,
+    cardLimit,
     color,
     excludeFromTotal,
     isInvestment,
@@ -604,6 +641,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.name == this.name &&
           other.kind == this.kind &&
           other.initialBalance == this.initialBalance &&
+          other.cardLimit == this.cardLimit &&
           other.color == this.color &&
           other.excludeFromTotal == this.excludeFromTotal &&
           other.isInvestment == this.isInvestment &&
@@ -621,6 +659,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> name;
   final Value<String> kind;
   final Value<int> initialBalance;
+  final Value<int?> cardLimit;
   final Value<String> color;
   final Value<bool> excludeFromTotal;
   final Value<bool> isInvestment;
@@ -636,6 +675,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.name = const Value.absent(),
     this.kind = const Value.absent(),
     this.initialBalance = const Value.absent(),
+    this.cardLimit = const Value.absent(),
     this.color = const Value.absent(),
     this.excludeFromTotal = const Value.absent(),
     this.isInvestment = const Value.absent(),
@@ -652,6 +692,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required String name,
     required String kind,
     this.initialBalance = const Value.absent(),
+    this.cardLimit = const Value.absent(),
     this.color = const Value.absent(),
     this.excludeFromTotal = const Value.absent(),
     this.isInvestment = const Value.absent(),
@@ -669,6 +710,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? name,
     Expression<String>? kind,
     Expression<int>? initialBalance,
+    Expression<int>? cardLimit,
     Expression<String>? color,
     Expression<bool>? excludeFromTotal,
     Expression<bool>? isInvestment,
@@ -685,6 +727,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (name != null) 'name': name,
       if (kind != null) 'kind': kind,
       if (initialBalance != null) 'initial_balance': initialBalance,
+      if (cardLimit != null) 'card_limit': cardLimit,
       if (color != null) 'color': color,
       if (excludeFromTotal != null) 'exclude_from_total': excludeFromTotal,
       if (isInvestment != null) 'is_investment': isInvestment,
@@ -703,6 +746,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String>? name,
     Value<String>? kind,
     Value<int>? initialBalance,
+    Value<int?>? cardLimit,
     Value<String>? color,
     Value<bool>? excludeFromTotal,
     Value<bool>? isInvestment,
@@ -719,6 +763,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       name: name ?? this.name,
       kind: kind ?? this.kind,
       initialBalance: initialBalance ?? this.initialBalance,
+      cardLimit: cardLimit ?? this.cardLimit,
       color: color ?? this.color,
       excludeFromTotal: excludeFromTotal ?? this.excludeFromTotal,
       isInvestment: isInvestment ?? this.isInvestment,
@@ -748,6 +793,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     }
     if (initialBalance.present) {
       map['initial_balance'] = Variable<int>(initialBalance.value);
+    }
+    if (cardLimit.present) {
+      map['card_limit'] = Variable<int>(cardLimit.value);
     }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
@@ -787,6 +835,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('name: $name, ')
           ..write('kind: $kind, ')
           ..write('initialBalance: $initialBalance, ')
+          ..write('cardLimit: $cardLimit, ')
           ..write('color: $color, ')
           ..write('excludeFromTotal: $excludeFromTotal, ')
           ..write('isInvestment: $isInvestment, ')
@@ -9894,6 +9943,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required String name,
       required String kind,
       Value<int> initialBalance,
+      Value<int?> cardLimit,
       Value<String> color,
       Value<bool> excludeFromTotal,
       Value<bool> isInvestment,
@@ -9911,6 +9961,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> kind,
       Value<int> initialBalance,
+      Value<int?> cardLimit,
       Value<String> color,
       Value<bool> excludeFromTotal,
       Value<bool> isInvestment,
@@ -10126,6 +10177,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<int> get initialBalance => $composableBuilder(
     column: $table.initialBalance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cardLimit => $composableBuilder(
+    column: $table.cardLimit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10412,6 +10468,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get cardLimit => $composableBuilder(
+    column: $table.cardLimit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get color => $composableBuilder(
     column: $table.color,
     builder: (column) => ColumnOrderings(column),
@@ -10483,6 +10544,9 @@ class $$AccountsTableAnnotationComposer
     column: $table.initialBalance,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get cardLimit =>
+      $composableBuilder(column: $table.cardLimit, builder: (column) => column);
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
@@ -10765,6 +10829,7 @@ class $$AccountsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> kind = const Value.absent(),
                 Value<int> initialBalance = const Value.absent(),
+                Value<int?> cardLimit = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<bool> excludeFromTotal = const Value.absent(),
                 Value<bool> isInvestment = const Value.absent(),
@@ -10780,6 +10845,7 @@ class $$AccountsTableTableManager
                 name: name,
                 kind: kind,
                 initialBalance: initialBalance,
+                cardLimit: cardLimit,
                 color: color,
                 excludeFromTotal: excludeFromTotal,
                 isInvestment: isInvestment,
@@ -10797,6 +10863,7 @@ class $$AccountsTableTableManager
                 required String name,
                 required String kind,
                 Value<int> initialBalance = const Value.absent(),
+                Value<int?> cardLimit = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<bool> excludeFromTotal = const Value.absent(),
                 Value<bool> isInvestment = const Value.absent(),
@@ -10812,6 +10879,7 @@ class $$AccountsTableTableManager
                 name: name,
                 kind: kind,
                 initialBalance: initialBalance,
+                cardLimit: cardLimit,
                 color: color,
                 excludeFromTotal: excludeFromTotal,
                 isInvestment: isInvestment,

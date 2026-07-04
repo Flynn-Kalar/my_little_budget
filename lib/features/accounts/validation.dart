@@ -54,13 +54,15 @@ ValidationResult<AccountDraft> validateAccount({
 
   if (errors.isNotEmpty) return ValidationResult.fail(errors);
 
-  return ValidationResult.ok(AccountDraft(
-    name: cleanedName,
-    kind: kind,
-    initialBalance: initialBalance,
-    cardLimit: cardLimit,
-    color: color,
-    excludeFromTotal: excludeFromTotal,
-    isInvestment: isInvestment,
-  ));
+  return ValidationResult.ok(
+    AccountDraft(
+      name: cleanedName,
+      kind: kind,
+      initialBalance: initialBalance,
+      cardLimit: cardLimit,
+      color: color,
+      excludeFromTotal: excludeFromTotal,
+      isInvestment: isInvestment,
+    ),
+  );
 }

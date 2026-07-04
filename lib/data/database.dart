@@ -125,7 +125,7 @@ WHERE reminder_at IS NOT NULL
       if (from < 12) {
         await m.createTable(calendarEvents);
       }
-      if (from < 13) {
+      if (from < 13 && await _tableExists('accounts')) {
         await m.addColumn(accounts, accounts.cardLimit);
       }
     },

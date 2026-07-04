@@ -569,10 +569,14 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
             draft: result.value!,
             tagNames: _tagNames.toList(),
           );
+      final warning = await ref
+          .read(transactionsDaoProvider)
+          .cardLimitWarningFor(result.value!);
       if (!mounted) return;
       refreshTransactions(ref);
       ref.invalidate(_quickInputTagsProvider);
       Navigator.pop(context);
+      _showCardLimitWarning(context, warning);
       _showSnack(_isEdit ? '거래를 수정했습니다.' : '거래를 추가했습니다.');
     } catch (e) {
       if (mounted) _showSnack('거래 저장에 실패했습니다: $e');
@@ -775,6 +779,19 @@ class _TransactionSheetState extends ConsumerState<_TransactionSheet> {
       ),
     );
   }
+}
+
+void _showCardLimitWarning(BuildContext context, CardLimitWarning? warning) {
+  if (warning == null) return;
+  final message = warning.exceeded
+      ? '${warning.accountName} 한도를 ${formatKRW(-warning.remaining)} 초과했습니다.'
+      : '${warning.accountName} 한도까지 ${formatKRW(warning.remaining)} 남았습니다.';
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Theme.of(context).colorScheme.error,
+    ),
+  );
 }
 
 class _AdvancedFilterSheet extends ConsumerStatefulWidget {

@@ -1115,6 +1115,8 @@ class _TrendChart extends StatelessWidget {
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
+            fitInsideHorizontally: true,
+            fitInsideVertically: true,
             getTooltipItems: (spots) {
               return [
                 for (final spot in spots)

@@ -191,6 +191,13 @@ WHERE id = 1
     expect(row.read<String>('updated_at'), '2026-06-01 00:00:00');
     expect(row.readNullable<String>('deleted_at'), isNull);
     expect(row.read<String>('sync_status'), syncStatusPending);
+    final accountColumns = await db
+        .customSelect('PRAGMA table_info(accounts)')
+        .get();
+    expect(
+      accountColumns.map((row) => row.read<String>('name')),
+      contains('card_limit'),
+    );
 
     final notesTable = await db
         .customSelect(
