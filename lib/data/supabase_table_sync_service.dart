@@ -12,6 +12,7 @@ const supabaseSyncTableNames = <String>[
   'mlb_investments',
   'mlb_recurring_transactions',
   'mlb_tags',
+  'mlb_calendar_events',
 ];
 
 final supabaseTableSyncServiceProvider = Provider<SupabaseTableSyncService>((

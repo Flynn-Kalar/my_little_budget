@@ -12,7 +12,9 @@ import '../providers.dart';
 import 'form_fields.dart';
 
 class FilterPanel extends ConsumerStatefulWidget {
-  const FilterPanel({super.key});
+  const FilterPanel({super.key, this.onExpandedChanged});
+
+  final ValueChanged<bool>? onExpandedChanged;
 
   @override
   ConsumerState<FilterPanel> createState() => _FilterPanelState();
@@ -30,6 +32,11 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
   DateTime? _toDate;
   Timer? _searchDebounce;
   bool _expanded = false;
+
+  void _setExpanded(bool expanded) {
+    setState(() => _expanded = expanded);
+    widget.onExpandedChanged?.call(expanded);
+  }
 
   @override
   void initState() {
@@ -145,7 +152,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           OutlinedButton.icon(
-            onPressed: () => setState(() => _expanded = true),
+            onPressed: () => _setExpanded(true),
             icon: const Icon(Icons.filter_list, size: 18),
             label: Text(activeCount > 0 ? '필터 $activeCount' : '필터'),
           ),
@@ -198,7 +205,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
                 const Spacer(),
                 IconButton(
                   tooltip: '필터 접기',
-                  onPressed: () => setState(() => _expanded = false),
+                  onPressed: () => _setExpanded(false),
                   icon: const Icon(Icons.keyboard_arrow_up, size: 20),
                 ),
               ],
@@ -303,6 +310,7 @@ class _FilterControls extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
+          key: const ValueKey('desktop-transactions-filter-controls-row'),
           spacing: 12,
           runSpacing: 12,
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -331,6 +339,7 @@ class _FilterControls extends StatelessWidget {
             SizedBox(
               width: 110,
               child: TextField(
+                key: const ValueKey('transactions-min-amount-field'),
                 controller: minCtrl,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
@@ -343,6 +352,7 @@ class _FilterControls extends StatelessWidget {
             SizedBox(
               width: 110,
               child: TextField(
+                key: const ValueKey('transactions-max-amount-field'),
                 controller: maxCtrl,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
@@ -353,17 +363,14 @@ class _FilterControls extends StatelessWidget {
               ),
             ),
             AccountDropdown(
+              key: const ValueKey('transactions-account-filter-field'),
               hint: '자산 전체',
               accounts: accounts,
               value: accountId,
               onChanged: onAccountChanged,
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
             OutlinedButton.icon(
+              key: const ValueKey('transactions-from-date-filter-button'),
               onPressed: onPickFromDate,
               icon: const Icon(Icons.calendar_today, size: 14),
               label: Text(fromDate == null ? '시작일' : toDateKey(fromDate!)),
@@ -373,6 +380,7 @@ class _FilterControls extends StatelessWidget {
               child: Text('~'),
             ),
             OutlinedButton.icon(
+              key: const ValueKey('transactions-to-date-filter-button'),
               onPressed: onPickToDate,
               icon: const Icon(Icons.calendar_today, size: 14),
               label: Text(toDate == null ? '종료일' : toDateKey(toDate!)),

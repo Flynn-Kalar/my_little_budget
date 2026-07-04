@@ -208,9 +208,11 @@ class _DisplayRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+          padding: const EdgeInsets.fromLTRB(14, 9, 6, 9),
           decoration: BoxDecoration(
-            border: Border.all(color: context.desktopBorder),
+            border: Border.all(
+              color: context.desktopBorder.withValues(alpha: 0.55),
+            ),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -222,9 +224,9 @@ class _DisplayRow extends StatelessWidget {
               ),
               _Meta(account: account),
               SizedBox(width: 8),
-              _BalanceText(account: account),
+              SizedBox(width: 150, child: _BalanceText(account: account)),
               SizedBox(
-                width: 32,
+                width: 30,
                 child: showEditIcon
                     ? IconButton(
                         key: ValueKey('account-edit-${account.accountId}'),
@@ -232,6 +234,7 @@ class _DisplayRow extends StatelessWidget {
                         color: context.desktopMuted,
                         tooltip: '편집',
                         onPressed: onEdit,
+                        visualDensity: VisualDensity.compact,
                       )
                     : null,
               ),
@@ -339,6 +342,13 @@ class _Meta extends StatelessWidget {
               '투자',
               style: TextStyle(fontSize: 10, color: context.desktopTransfer),
             ),
+          ),
+        ],
+        if (account.kind == 'card' && account.cardLimit != null) ...[
+          SizedBox(width: 8),
+          Text(
+            '한도 ${formatKRW(account.cardLimit!)}',
+            style: TextStyle(fontSize: 11, color: context.desktopMuted),
           ),
         ],
         if (account.excludeFromTotal) ...[

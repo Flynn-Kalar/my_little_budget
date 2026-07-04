@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
@@ -69,6 +73,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 ],
               ),
             ),
+            FilledButton.tonalIcon(
+              key: const ValueKey('desktop-notes-calendar-button'),
+              onPressed: () => context.go('/notes/calendar'),
+              icon: const Icon(Icons.calendar_month_outlined, size: 18),
+              label: const Text('캘린더'),
+            ),
+            const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: () => _NoteDialog.show(context),
               icon: const Icon(Icons.add),
@@ -137,10 +148,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               if (filtered.isEmpty) return const _EmptyNotes();
               return GridView.builder(
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 390,
-                  mainAxisExtent: 245,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  maxCrossAxisExtent: 330,
+                  mainAxisExtent: 212,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
                 ),
                 itemCount: filtered.length,
                 itemBuilder: (context, index) =>
@@ -186,12 +197,32 @@ class _NoteCard extends ConsumerWidget {
     );
     final nextReset = noteNextResetDate(note);
     final colors = Theme.of(context).colorScheme;
+    final scheduleLines = [
+      if (note.scheduleType != 'none')
+        (
+          icon: overdue ? Icons.notification_important : Icons.restart_alt,
+          text: noteScheduleSummary(note),
+          color: overdue ? colors.error : colors.primary,
+        ),
+      if (note.scheduleType != 'none' && nextReset != null)
+        (
+          icon: Icons.update,
+          text: '다음 리셋 ${formatNoteReminder(nextReset)}',
+          color: colors.onSurfaceVariant,
+        ),
+      if (note.scheduleType != 'none' && note.notificationEnabled)
+        (
+          icon: Icons.notifications_active_outlined,
+          text: noteNotificationSummary(note),
+          color: colors.onSurfaceVariant,
+        ),
+    ];
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _NoteDialog.show(context, entry: entry),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -246,27 +277,12 @@ class _NoteCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-              if (note.scheduleType != 'none') ...[
+              for (final line in scheduleLines.take(2))
                 _ScheduleLine(
-                  icon: overdue
-                      ? Icons.notification_important
-                      : Icons.restart_alt,
-                  text: noteScheduleSummary(note),
-                  color: overdue ? colors.error : colors.primary,
+                  icon: line.icon,
+                  text: line.text,
+                  color: line.color,
                 ),
-                if (nextReset != null)
-                  _ScheduleLine(
-                    icon: Icons.update,
-                    text: '다음 리셋 ${formatNoteReminder(nextReset)}',
-                    color: colors.onSurfaceVariant,
-                  ),
-                if (note.notificationEnabled)
-                  _ScheduleLine(
-                    icon: Icons.notifications_active_outlined,
-                    text: noteNotificationSummary(note),
-                    color: colors.onSurfaceVariant,
-                  ),
-              ],
               Align(
                 alignment: Alignment.centerRight,
                 child: IconButton(
@@ -402,12 +418,27 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
   late DateTime _anchorDate =
       parseNoteDate(_note?.anchorDate) ?? DateTime.now();
   late bool _pinned = _note?.pinned ?? false;
-  late final NoteAlarmSettings _alarmSettings = _note == null
+  late NoteAlarmSettings _alarmSettings = _note == null
       ? const NoteAlarmSettings()
       : noteAlarmSettingsFromNote(_note!);
+  int? _audioDurationMs;
   bool _busy = false;
   late bool _editing = _entry == null;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final uri = _alarmSettings.soundUri;
+    if (uri != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final duration = await ref
+            .read(noteNotificationServiceProvider)
+            .audioDuration(uri);
+        if (mounted) setState(() => _audioDurationMs = duration);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -481,6 +512,58 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     if (selected != null) setState(() => _anchorDate = selected);
   }
 
+  Future<void> _pickSystemSound() async {
+    final picked = await ref
+        .read(noteNotificationServiceProvider)
+        .pickSystemAlarmSound();
+    if (picked == null || !mounted) return;
+    setState(() {
+      _alarmSettings = NoteAlarmSettings(
+        soundKind: NoteAlarmSoundKind.system,
+        soundUri: picked.uri,
+        soundName: picked.name,
+        vibrationEnabled: _alarmSettings.vibrationEnabled,
+        snoozeMinutes: _alarmSettings.snoozeMinutes,
+      );
+      _audioDurationMs = picked.durationMs;
+    });
+  }
+
+  Future<void> _pickCustomSound() async {
+    final picked = await FilePicker.pickFiles(type: FileType.audio);
+    final sourcePath = picked?.files.single.path;
+    if (sourcePath == null) return;
+    final root = await getApplicationDocumentsDirectory();
+    final directory = Directory(
+      '${root.path}${Platform.pathSeparator}note_alarm_audio',
+    );
+    await directory.create(recursive: true);
+    final originalName = picked!.files.single.name;
+    final extension = originalName.contains('.')
+        ? '.${originalName.split('.').last}'
+        : '';
+    final target = File(
+      '${directory.path}${Platform.pathSeparator}${DateTime.now().microsecondsSinceEpoch}$extension',
+    );
+    await File(sourcePath).copy(target.path);
+    final uri = target.uri.toString();
+    final duration = await ref
+        .read(noteNotificationServiceProvider)
+        .audioDuration(uri);
+    if (!mounted) return;
+    setState(() {
+      _audioDurationMs = duration;
+      _alarmSettings = NoteAlarmSettings(
+        soundKind: NoteAlarmSoundKind.custom,
+        soundUri: uri,
+        soundName: originalName,
+        clipEndMs: duration,
+        vibrationEnabled: _alarmSettings.vibrationEnabled,
+        snoozeMinutes: _alarmSettings.snoozeMinutes,
+      );
+    });
+  }
+
   void _restoreDraftAndEdit() {
     final entry = _entry;
     if (entry == null) return;
@@ -507,6 +590,8 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
       _weekdays = parseNoteIntList(note.resetWeekdays).toSet();
       _anchorDate = parseNoteDate(note.anchorDate) ?? DateTime.now();
       _pinned = note.pinned;
+      _alarmSettings = noteAlarmSettingsFromNote(note);
+      _audioDurationMs = null;
       _error = null;
       _editing = true;
     });
@@ -545,6 +630,10 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     final scheduleError = validateNoteSchedule(schedule);
     if (scheduleError != null) {
       setState(() => _error = scheduleError);
+      return;
+    }
+    if (!_alarmSettings.hasValidClip) {
+      setState(() => _error = '알림 음원 구간은 1초 이상이어야 합니다.');
       return;
     }
 
@@ -624,11 +713,120 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     if (updated != null && mounted) setState(() => _entry = updated);
   }
 
+  Widget _alarmSoundControls(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 28),
+        Text('알림 소리', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        SegmentedButton<NoteAlarmSoundKind>(
+          segments: const [
+            ButtonSegment(
+              value: NoteAlarmSoundKind.system,
+              label: Text('시스템 음원'),
+            ),
+            ButtonSegment(
+              value: NoteAlarmSoundKind.custom,
+              label: Text('내 파일'),
+            ),
+          ],
+          selected: {_alarmSettings.soundKind},
+          onSelectionChanged: (value) => setState(() {
+            _alarmSettings = _alarmSettings.copyWith(soundKind: value.first);
+          }),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.music_note),
+          title: Text(
+            _alarmSettings.soundName ??
+                (_alarmSettings.soundKind == NoteAlarmSoundKind.system
+                    ? '기본 알림음'
+                    : '음원 파일을 선택하세요'),
+          ),
+          trailing: TextButton(
+            onPressed: _alarmSettings.soundKind == NoteAlarmSoundKind.system
+                ? _pickSystemSound
+                : _pickCustomSound,
+            child: const Text('선택'),
+          ),
+        ),
+        if (_alarmSettings.soundKind == NoteAlarmSoundKind.custom &&
+            _audioDurationMs != null &&
+            _audioDurationMs! >= 1000) ...[
+          Text(
+            '재생 구간 ${_formatDuration(_alarmSettings.clipStartMs)} - '
+            '${_formatDuration(_alarmSettings.clipEndMs ?? _audioDurationMs!)}',
+          ),
+          RangeSlider(
+            min: 0,
+            max: _audioDurationMs!.toDouble(),
+            divisions: (_audioDurationMs! ~/ 500).clamp(2, 1000),
+            values: RangeValues(
+              _alarmSettings.clipStartMs.toDouble().clamp(
+                0.0,
+                (_audioDurationMs! - 1000).toDouble(),
+              ),
+              (_alarmSettings.clipEndMs ?? _audioDurationMs!).toDouble().clamp(
+                1000.0,
+                _audioDurationMs!.toDouble(),
+              ),
+            ),
+            onChanged: (values) => setState(() {
+              final start = values.start.round();
+              final end = values.end.round();
+              if (end - start >= 1000) {
+                _alarmSettings = _alarmSettings.copyWith(
+                  clipStartMs: start,
+                  clipEndMs: end,
+                );
+              }
+            }),
+          ),
+        ],
+        Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed:
+                  _alarmSettings.soundKind == NoteAlarmSoundKind.system ||
+                      _alarmSettings.soundUri != null
+                  ? () => ref
+                        .read(noteNotificationServiceProvider)
+                        .preview(_alarmSettings)
+                  : null,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('미리듣기'),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () =>
+                  ref.read(noteNotificationServiceProvider).stopPreview(),
+              child: const Text('정지'),
+            ),
+          ],
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _alarmSettings.vibrationEnabled,
+          onChanged: (value) => setState(() {
+            _alarmSettings = _alarmSettings.copyWith(vibrationEnabled: value);
+          }),
+          title: const Text('진동'),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final notificationSupported = ref
         .watch(noteNotificationServiceProvider)
         .isSupported;
+    final showAlarmControls =
+        notificationSupported &&
+        _notificationEnabled &&
+        (_scheduleType == NoteScheduleType.once || _scheduleType.isRepeating);
     if (!_editing && _entry != null) return _buildViewer(context, _entry!);
     return AlertDialog(
       title: Text(_note == null ? '새 메모' : '메모 수정'),
@@ -854,6 +1052,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
                     ),
                   ),
               ],
+              if (showAlarmControls) _alarmSoundControls(context),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -950,6 +1149,13 @@ Widget _force24HourTimePicker(BuildContext context, Widget? child) {
     data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
     child: child ?? const SizedBox.shrink(),
   );
+}
+
+String _formatDuration(int milliseconds) {
+  final duration = Duration(milliseconds: milliseconds);
+  final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+  return '$minutes:$seconds';
 }
 
 class _TimeTile extends StatelessWidget {

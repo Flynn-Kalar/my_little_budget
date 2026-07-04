@@ -17,9 +17,10 @@ class TotalAssetsCard extends ConsumerWidget {
     final balances =
         ref.watch(accountBalancesProvider).asData?.value ?? const [];
     final included = balances.where((a) => !a.excludeFromTotal).toList();
-    final total = included.fold<int>(0, (s, a) => s + a.balance);
+    final excluded = balances.where((a) => a.excludeFromTotal).toList();
+    final netTotal = included.fold<int>(0, (s, a) => s + a.balance);
+    final excludedTotal = excluded.fold<int>(0, (s, a) => s + a.balance);
 
-    // 4그룹 분류
     final byGroup = <AccountGroup, List<AccountBalance>>{};
     for (final a in included) {
       final g = classifyAccount(
@@ -34,6 +35,12 @@ class TotalAssetsCard extends ConsumerWidget {
         if (byGroup.containsKey(g))
           (group: g, sum: byGroup[g]!.fold<int>(0, (s, a) => s + a.balance)),
     ];
+    final assetTotal = groupRows
+        .where((g) => g.group != AccountGroup.debt && g.sum > 0)
+        .fold<int>(0, (s, g) => s + g.sum);
+    final debtTotal = groupRows
+        .where((g) => g.group == AccountGroup.debt)
+        .fold<int>(0, (s, g) => s + g.sum.abs());
     final positiveTotal = groupRows
         .where((g) => g.group != AccountGroup.debt && g.sum > 0)
         .fold<int>(0, (s, g) => s + g.sum);
@@ -48,18 +55,36 @@ class TotalAssetsCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '총 순자산',
-            style: TextStyle(fontSize: 12, color: context.desktopMuted),
-          ),
-          SizedBox(height: 6),
-          Text(
-            formatKRW(total),
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-              color: total < 0 ? context.desktopExpense : null,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _AssetMetric(
+                  label: '총자산',
+                  amount: assetTotal,
+                  color: context.desktopIncome,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _AssetMetric(
+                  label: '총부채',
+                  amount: debtTotal,
+                  color: context.desktopExpense,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _AssetMetric(
+                  label: '총 순자산',
+                  amount: netTotal,
+                  color: netTotal < 0
+                      ? context.desktopExpense
+                      : context.desktopAccent,
+                  emphasized: true,
+                ),
+              ),
+            ],
           ),
           if (groupRows.isNotEmpty) ...[
             SizedBox(height: 16),
@@ -74,7 +99,88 @@ class TotalAssetsCard extends ConsumerWidget {
               ],
             ),
           ],
+          if (excluded.isNotEmpty) ...[
+            SizedBox(height: 12),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.desktopSelectedSurface,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: context.desktopMuted,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '총액에서 제외한 계좌 ${excluded.length}개 · ${formatKRW(excludedTotal)}',
+                        style: TextStyle(
+                          color: context.desktopMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _AssetMetric extends StatelessWidget {
+  const _AssetMetric({
+    required this.label,
+    required this.amount,
+    required this.color,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final int amount;
+  final Color color;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.desktopSelectedSurface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, color: context.desktopMuted),
+            ),
+            SizedBox(height: 5),
+            Text(
+              formatKRW(amount),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: emphasized ? 20 : 17,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -810,12 +810,12 @@ class _HoldingInlineForm extends ConsumerStatefulWidget {
 class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
   final _date = TextEditingController(text: currentDateKey());
   final _quantity = TextEditingController();
+  final _unitPrice = TextEditingController();
   final _totalAmount = TextEditingController();
-  final _fee = TextEditingController(text: '0');
   final _memo = TextEditingController();
   final _quantityFocus = FocusNode();
+  final _unitPriceFocus = FocusNode();
   final _totalAmountFocus = FocusNode();
-  final _feeFocus = FocusNode();
   final _memoFocus = FocusNode();
   bool _busy = false;
 
@@ -825,12 +825,12 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
   void dispose() {
     _date.dispose();
     _quantity.dispose();
+    _unitPrice.dispose();
     _totalAmount.dispose();
-    _fee.dispose();
     _memo.dispose();
     _quantityFocus.dispose();
+    _unitPriceFocus.dispose();
     _totalAmountFocus.dispose();
-    _feeFocus.dispose();
     _memoFocus.dispose();
     super.dispose();
   }
@@ -853,9 +853,9 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
       final quantity = _isSell && rawQuantity != null
           ? normalizeQuantity(rawQuantity)
           : (_isSell ? null : 0.0);
-      final fee = _isSell ? parseKRW(_fee.text) : 0;
-      final totalAmount = _isSell
-          ? parseKRW(_totalAmount.text) - fee
+      final unitPrice = parseKRW(_unitPrice.text);
+      final totalAmount = _isSell && quantity != null
+          ? (quantity * unitPrice).round()
           : parseKRW(_totalAmount.text);
 
       final result = validateInvestment(
@@ -957,31 +957,18 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
                 label: '매도 수량',
                 enabled: !_busy,
                 textInputAction: TextInputAction.next,
-                onSubmitted: (_) => _totalAmountFocus.requestFocus(),
+                onSubmitted: (_) => _unitPriceFocus.requestFocus(),
               ),
               SizedBox(height: 10),
               TextField(
-                controller: _totalAmount,
-                focusNode: _totalAmountFocus,
-                enabled: !_busy,
-                keyboardType: TextInputType.number,
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => _feeFocus.requestFocus(),
-                decoration: const InputDecoration(
-                  labelText: '총 매도금액',
-                  suffixText: '원',
-                ),
-              ),
-              SizedBox(height: 10),
-              TextField(
-                controller: _fee,
-                focusNode: _feeFocus,
+                controller: _unitPrice,
+                focusNode: _unitPriceFocus,
                 enabled: !_busy,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
                 onSubmitted: (_) => _memoFocus.requestFocus(),
                 decoration: const InputDecoration(
-                  labelText: '수수료',
+                  labelText: '단가',
                   suffixText: '원',
                 ),
               ),
@@ -1380,7 +1367,7 @@ class _RealizedPnlHeader extends StatelessWidget {
         children: [
           Expanded(flex: 2, child: Text('거래일')),
           Expanded(flex: 2, child: Text('종류')),
-          Expanded(flex: 2, child: Text('ticker')),
+          Expanded(flex: 2, child: Text('종목명')),
           Expanded(flex: 2, child: Text('수량', textAlign: TextAlign.right)),
           Expanded(flex: 3, child: Text('매도/배당', textAlign: TextAlign.right)),
           Expanded(flex: 3, child: Text('원가', textAlign: TextAlign.right)),
@@ -1498,18 +1485,14 @@ class _InvestmentCreateDialogState
   String _side = 'buy';
   final _date = TextEditingController(text: currentDateKey());
   final _ticker = TextEditingController();
-  final _name = TextEditingController();
   final _quantity = TextEditingController();
   final _unitPrice = TextEditingController();
   final _totalAmount = TextEditingController();
-  final _fee = TextEditingController(text: '0');
   final _memo = TextEditingController();
   final _tickerFocus = FocusNode();
-  final _nameFocus = FocusNode();
   final _quantityFocus = FocusNode();
   final _unitPriceFocus = FocusNode();
   final _totalAmountFocus = FocusNode();
-  final _feeFocus = FocusNode();
   final _memoFocus = FocusNode();
   bool _busy = false;
 
@@ -1536,7 +1519,10 @@ class _InvestmentCreateDialogState
           : (row.totalAmount / row.quantity).round();
       _unitPrice.text = unitPrice.toString();
     } else {
-      _totalAmount.text = row.totalAmount.toString();
+      final unitPrice = row.quantity == 0
+          ? row.totalAmount
+          : (row.totalAmount / row.quantity).round();
+      _unitPrice.text = unitPrice.toString();
     }
   }
 
@@ -1544,18 +1530,14 @@ class _InvestmentCreateDialogState
   void dispose() {
     _date.dispose();
     _ticker.dispose();
-    _name.dispose();
     _quantity.dispose();
     _unitPrice.dispose();
     _totalAmount.dispose();
-    _fee.dispose();
     _memo.dispose();
     _tickerFocus.dispose();
-    _nameFocus.dispose();
     _quantityFocus.dispose();
     _unitPriceFocus.dispose();
     _totalAmountFocus.dispose();
-    _feeFocus.dispose();
     _memoFocus.dispose();
     super.dispose();
   }
@@ -1579,10 +1561,9 @@ class _InvestmentCreateDialogState
           ? null
           : normalizeQuantity(rawQuantity);
       final unitPrice = parseKRW(_unitPrice.text);
-      final fee = parseKRW(_fee.text);
       final totalAmount = switch (_side) {
-        'buy' => quantity == null ? null : (quantity * unitPrice).round() + fee,
-        'sell' => parseKRW(_totalAmount.text) - fee,
+        'buy' ||
+        'sell' => quantity == null ? null : (quantity * unitPrice).round(),
         'dividend' => parseKRW(_totalAmount.text),
         _ => null,
       };
@@ -1593,7 +1574,7 @@ class _InvestmentCreateDialogState
         ticker: _ticker.text,
         quantity: _side == 'dividend' ? 0 : quantity,
         totalAmount: totalAmount,
-        memo: _mergedMemo(),
+        memo: _memo.text,
       );
 
       if (result.isFail) {
@@ -1647,16 +1628,6 @@ class _InvestmentCreateDialogState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  String? _mergedMemo() {
-    final memo = _memo.text.trim();
-    if (_side != 'buy') return memo.isEmpty ? null : memo;
-    final name = _name.text.trim();
-    if (name.isEmpty && memo.isEmpty) return null;
-    if (name.isEmpty) return memo;
-    if (memo.isEmpty) return '종목명: $name';
-    return '종목명: $name\n$memo';
   }
 
   void _showSnack(String message) {
@@ -1715,66 +1686,42 @@ class _InvestmentCreateDialogState
               ),
               SizedBox(height: 12),
               TextField(
-                key: const ValueKey('investment-ticker-field'),
+                key: const ValueKey('investment-name-field'),
                 controller: _ticker,
                 focusNode: _tickerFocus,
                 enabled: !_busy,
-                textCapitalization: TextCapitalization.characters,
                 textInputAction: TextInputAction.next,
                 onSubmitted: (_) {
-                  if (_side == 'buy') {
-                    _nameFocus.requestFocus();
-                  } else if (_side == 'sell') {
+                  if (_side == 'buy' || _side == 'sell') {
                     _quantityFocus.requestFocus();
                   } else {
                     _totalAmountFocus.requestFocus();
                   }
                 },
-                decoration: const InputDecoration(labelText: 'ticker'),
+                decoration: const InputDecoration(labelText: '종목명'),
               ),
               SizedBox(height: 12),
               if (_side == 'buy') ...[
-                TextField(
-                  key: const ValueKey('investment-name-field'),
-                  controller: _name,
-                  focusNode: _nameFocus,
+                _QuantityField(
+                  controller: _quantity,
+                  focusNode: _quantityFocus,
                   enabled: !_busy,
                   textInputAction: TextInputAction.next,
-                  onSubmitted: (_) => _quantityFocus.requestFocus(),
-                  decoration: const InputDecoration(
-                    labelText: '종목명 / name',
-                    helperText: '현재 DB에는 별도 종목명 컬럼이 없어 메모에 함께 저장됩니다.',
-                  ),
+                  onSubmitted: (_) => _unitPriceFocus.requestFocus(),
                 ),
                 SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _QuantityField(
-                        controller: _quantity,
-                        focusNode: _quantityFocus,
-                        enabled: !_busy,
-                        textInputAction: TextInputAction.next,
-                        onSubmitted: (_) => _unitPriceFocus.requestFocus(),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        key: const ValueKey('investment-unit-price-field'),
-                        controller: _unitPrice,
-                        focusNode: _unitPriceFocus,
-                        enabled: !_busy,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.next,
-                        onSubmitted: (_) => _feeFocus.requestFocus(),
-                        decoration: const InputDecoration(
-                          labelText: '단가',
-                          suffixText: '원',
-                        ),
-                      ),
-                    ),
-                  ],
+                TextField(
+                  key: const ValueKey('investment-unit-price-field'),
+                  controller: _unitPrice,
+                  focusNode: _unitPriceFocus,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => _memoFocus.requestFocus(),
+                  decoration: const InputDecoration(
+                    labelText: '단가',
+                    suffixText: '원',
+                  ),
                 ),
                 SizedBox(height: 12),
               ] else if (_side == 'sell') ...[
@@ -1784,19 +1731,19 @@ class _InvestmentCreateDialogState
                   label: '매도 수량',
                   enabled: !_busy,
                   textInputAction: TextInputAction.next,
-                  onSubmitted: (_) => _totalAmountFocus.requestFocus(),
+                  onSubmitted: (_) => _unitPriceFocus.requestFocus(),
                 ),
                 SizedBox(height: 12),
                 TextField(
-                  key: const ValueKey('investment-total-amount-field'),
-                  controller: _totalAmount,
-                  focusNode: _totalAmountFocus,
+                  key: const ValueKey('investment-unit-price-field'),
+                  controller: _unitPrice,
+                  focusNode: _unitPriceFocus,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
-                  onSubmitted: (_) => _feeFocus.requestFocus(),
+                  onSubmitted: (_) => _memoFocus.requestFocus(),
                   decoration: const InputDecoration(
-                    labelText: '총 매도금액',
+                    labelText: '단가',
                     suffixText: '원',
                   ),
                 ),
@@ -1812,22 +1759,6 @@ class _InvestmentCreateDialogState
                   onSubmitted: (_) => _memoFocus.requestFocus(),
                   decoration: const InputDecoration(
                     labelText: '배당금 총액',
-                    suffixText: '원',
-                  ),
-                ),
-                SizedBox(height: 12),
-              ],
-              if (_side != 'dividend') ...[
-                TextField(
-                  key: const ValueKey('investment-fee-field'),
-                  controller: _fee,
-                  focusNode: _feeFocus,
-                  enabled: !_busy,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  onSubmitted: (_) => _memoFocus.requestFocus(),
-                  decoration: const InputDecoration(
-                    labelText: '수수료',
                     suffixText: '원',
                   ),
                 ),

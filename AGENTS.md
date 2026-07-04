@@ -26,3 +26,17 @@ width < 900
 ✅ shell.dart 에서 플랫폼 분기
 ✅ mobile 폴더 신규 생성
 ✅ feature 단위 UI 분리
+
+## Agent skills
+
+### Issue tracker
+
+이슈와 PRD는 이 저장소의 `.scratch/<feature-slug>/` 아래 로컬 마크다운 파일로 관리한다. 외부 PR은 트리아지 대상으로 보지 않는다. 자세한 내용은 `docs/agents/issue-tracker.md`를 참고한다.
+
+### Triage labels
+
+기본 트리아지 용어를 사용한다: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. 자세한 내용은 `docs/agents/triage-labels.md`를 참고한다.
+
+### Domain docs
+
+이 저장소는 single-context 도메인 문서 구조를 사용한다: 루트 `CONTEXT.md`와 `docs/adr/`. 자세한 내용은 `docs/agents/domain.md`를 참고한다.

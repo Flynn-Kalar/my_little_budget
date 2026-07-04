@@ -9,6 +9,7 @@ class AccountDraft {
     required this.name,
     required this.kind,
     required this.initialBalance,
+    this.cardLimit,
     required this.color,
     required this.excludeFromTotal,
     required this.isInvestment,
@@ -17,6 +18,7 @@ class AccountDraft {
   final String name;
   final String kind;
   final int initialBalance;
+  final int? cardLimit;
   final String color;
   final bool excludeFromTotal;
   final bool isInvestment;
@@ -26,6 +28,7 @@ ValidationResult<AccountDraft> validateAccount({
   required String name,
   required String kind,
   int initialBalance = 0,
+  int? cardLimit,
   String color = '#94a3b8',
   bool excludeFromTotal = false,
   bool isInvestment = false,
@@ -42,6 +45,12 @@ ValidationResult<AccountDraft> validateAccount({
   if (!isHexColor(color)) {
     errors['color'] = '색상은 #RRGGBB 형식이어야 합니다';
   }
+  if (cardLimit != null && cardLimit < 1) {
+    errors['cardLimit'] = '카드 한도는 1원 이상이어야 합니다';
+  }
+  if (kind != 'card' && cardLimit != null) {
+    errors['cardLimit'] = '카드 한도는 카드 자산에만 설정할 수 있습니다';
+  }
 
   if (errors.isNotEmpty) return ValidationResult.fail(errors);
 
@@ -49,6 +58,7 @@ ValidationResult<AccountDraft> validateAccount({
     name: cleanedName,
     kind: kind,
     initialBalance: initialBalance,
+    cardLimit: cardLimit,
     color: color,
     excludeFromTotal: excludeFromTotal,
     isInvestment: isInvestment,

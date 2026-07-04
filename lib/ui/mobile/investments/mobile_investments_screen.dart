@@ -1030,7 +1030,7 @@ class _InvestmentSheetState extends ConsumerState<_InvestmentSheet> {
   }
 
   Future<void> _save() async {
-    final ticker = _ticker.text.trim().toUpperCase();
+    final ticker = _ticker.text.trim();
     final holdings =
         ref.read(currentHoldingsProvider).asData?.value ?? const [];
     final heldQuantities = {
@@ -1139,9 +1139,8 @@ class _InvestmentSheetState extends ConsumerState<_InvestmentSheet> {
             TextField(
               controller: _ticker,
               enabled: !_busy && !_tickerLocked,
-              textCapitalization: TextCapitalization.characters,
               decoration: const InputDecoration(
-                labelText: '종목 코드',
+                labelText: '종목명',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -1214,7 +1213,7 @@ String _realizedKindLabel(RealizedKind kind) => switch (kind) {
 };
 
 String _investmentErrorMessage(String field) => switch (field) {
-  'ticker' => '종목 코드를 입력해주세요.',
+  'ticker' => '종목명을 입력해주세요.',
   'quantity' => '수량은 0보다 커야 합니다.',
   'totalAmount' => '금액은 1원 이상이어야 합니다.',
   'occurredOn' => '날짜 형식이 올바르지 않습니다.',

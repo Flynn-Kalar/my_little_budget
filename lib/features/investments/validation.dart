@@ -40,7 +40,7 @@ ValidationResult<InvestmentDraft> validateInvestment({
 
   final cleanedTicker = ticker.trim();
   if (cleanedTicker.isEmpty || cleanedTicker.length > 40) {
-    errors['ticker'] = '종목코드는 1~40자여야 합니다.';
+    errors['ticker'] = '종목명은 1~40자여야 합니다.';
   }
 
   final isDividend = side == 'dividend';

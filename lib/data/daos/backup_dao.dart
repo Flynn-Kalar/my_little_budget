@@ -5,6 +5,7 @@ import '../database.dart';
 import '../defaults.dart';
 import '../tables/accounts.dart';
 import '../tables/budget_groups.dart';
+import '../tables/calendar_events.dart';
 import '../tables/categories.dart';
 import '../tables/investments.dart';
 import '../tables/monthly_income.dart';
@@ -31,6 +32,7 @@ part 'backup_dao.g.dart';
     TransactionTags,
     Notes,
     NoteChecklistItems,
+    CalendarEvents,
   ],
 )
 class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
@@ -51,6 +53,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
       recurringTransactions: await select(recurringTransactions).get(),
       notes: await select(notes).get(),
       noteChecklistItems: await select(noteChecklistItems).get(),
+      calendarEvents: await select(calendarEvents).get(),
     );
   }
 
@@ -88,6 +91,9 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
         if (b.notes.isNotEmpty) batch.insertAll(notes, b.notes);
         if (b.noteChecklistItems.isNotEmpty) {
           batch.insertAll(noteChecklistItems, b.noteChecklistItems);
+        }
+        if (b.calendarEvents.isNotEmpty) {
+          batch.insertAll(calendarEvents, b.calendarEvents);
         }
       });
     });
@@ -169,5 +175,6 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
     await delete(tags).go();
     await delete(monthlyIncome).go();
     await delete(notes).go();
+    await delete(calendarEvents).go();
   }
 }

@@ -177,6 +177,26 @@ class MonthlySummary {
   int get net => income - expense;
 }
 
+class CardLimitWarning {
+  const CardLimitWarning({
+    required this.accountId,
+    required this.accountName,
+    required this.limit,
+    required this.used,
+    required this.remaining,
+    required this.thresholdPercent,
+  });
+
+  final int accountId;
+  final String accountName;
+  final int limit;
+  final int used;
+  final int remaining;
+  final int thresholdPercent;
+
+  bool get exceeded => remaining < 0;
+}
+
 @DriftAccessor(
   tables: [
     Transactions,
@@ -748,6 +768,54 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       await _setTagsByName(txId, tagNames);
       return txId;
     });
+  }
+
+  Future<CardLimitWarning?> cardLimitWarningFor(
+    TransactionDraft draft, {
+    int thresholdPercent = 80,
+  }) async {
+    final accountId = draft.accountId;
+    if (draft.type != 'expense' || accountId == null) return null;
+    if (thresholdPercent < 1 || thresholdPercent > 100) return null;
+
+    final account = await (select(
+      accounts,
+    )..where((a) => a.id.equals(accountId))).getSingleOrNull();
+    final limit = account?.cardLimit;
+    if (account == null ||
+        account.kind != 'card' ||
+        limit == null ||
+        limit < 1) {
+      return null;
+    }
+
+    final range = monthRange(draft.occurredOn.substring(0, 7));
+    final row = await customSelect(
+      '''
+      SELECT COALESCE(SUM(amount), 0) AS used
+      FROM transactions
+      WHERE type = 'expense'
+        AND account_id = ?
+        AND occurred_on BETWEEN ? AND ?
+      ''',
+      variables: [
+        Variable<int>(accountId),
+        Variable<String>(range.start),
+        Variable<String>(range.end),
+      ],
+      readsFrom: {transactions},
+    ).getSingle();
+    final used = row.read<int>('used');
+    if (used * 100 < limit * thresholdPercent) return null;
+
+    return CardLimitWarning(
+      accountId: accountId,
+      accountName: account.name,
+      limit: limit,
+      used: used,
+      remaining: limit - used,
+      thresholdPercent: thresholdPercent,
+    );
   }
 
   Future<void> deleteTransaction(int id) async {

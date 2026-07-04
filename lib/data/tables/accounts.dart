@@ -14,6 +14,7 @@ class Accounts extends Table {
     "NOT NULL CHECK (kind IN ('cash','bank','card','other'))",
   )();
   IntColumn get initialBalance => integer().withDefault(const Constant(0))();
+  IntColumn get cardLimit => integer().nullable()();
   TextColumn get color => text().withDefault(const Constant('#94a3b8'))();
   BoolColumn get excludeFromTotal =>
       boolean().withDefault(const Constant(false))();

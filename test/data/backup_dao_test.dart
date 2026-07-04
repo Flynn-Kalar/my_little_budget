@@ -53,6 +53,14 @@ void main() {
           ChecklistItemDraft(text: '백업 항목', isChecked: true),
         ],
       );
+      await db.calendarEventsDao.saveEvent(
+        title: '백업할 일정',
+        description: '캘린더 백업 확인',
+        startAt: DateTime(2026, 6, 22, 10),
+        endAt: DateTime(2026, 6, 22, 11),
+        allDay: false,
+        color: '#2563eb',
+      );
 
       final original = await db.backupDao.exportBackup();
       expect(original.transactions.length, 2);
@@ -60,10 +68,12 @@ void main() {
       expect(original.categories.length, 14);
       expect(original.notes.length, 1);
       expect(original.noteChecklistItems.length, 1);
+      expect(original.calendarEvents.length, 1);
 
       final json = original.toJsonString();
       final parsed = parseBackup(json);
       expect(parsed.isOk, true, reason: parsed.error);
+      expect(parsed.backup!.calendarEvents.single.title, '백업할 일정');
 
       final db2 = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db2.close);
@@ -82,6 +92,13 @@ void main() {
       );
       expect(restoredEntry!.items.single.itemText, '백업 항목');
       expect(restoredEntry.items.single.isChecked, isTrue);
+      final restoredEvents = await db2.calendarEventsDao.listEvents();
+      expect(restoredEvents.single.title, '백업할 일정');
+      expect(restoredEvents.single.description, '캘린더 백업 확인');
+      expect(
+        restoredEvents.single.startAt,
+        DateTime(2026, 6, 22, 10).toUtc().toIso8601String(),
+      );
     });
 
     test('bool 필드 0/1 호환 (구 Tauri export 호환)', () {
@@ -107,6 +124,7 @@ void main() {
       final acc = r.backup!.accounts.single;
       expect(acc.excludeFromTotal, false);
       expect(acc.isInvestment, true);
+      expect(r.backup!.calendarEvents, isEmpty);
     });
 
     test('sync metadata 없는 기존 백업은 기본값으로 복원된다', () async {
@@ -204,6 +222,10 @@ WHERE id = 1
           tagNames: const ['고정'],
         ),
       );
+      await db.calendarEventsDao.saveEvent(
+        title: '초기화할 일정',
+        startAt: DateTime(2026, 5, 12, 9),
+      );
       await db.accountsDao.saveAccount(
         draft: const AccountDraft(
           name: '사용자추가자산',
@@ -236,6 +258,7 @@ WHERE id = 1
       expect(await db.budgetDao.listBudgetGroups('2026-05'), isEmpty);
       expect(await db.recurringDao.listRecurringTransactions(), isEmpty);
       expect(await db.tagsDao.getTags(), isEmpty);
+      expect(await db.calendarEventsDao.listEvents(), isEmpty);
     });
   });
 

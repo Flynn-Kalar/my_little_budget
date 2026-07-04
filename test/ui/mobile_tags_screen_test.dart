@@ -38,4 +38,29 @@ void main() {
     expect(find.text('이미 사용 중인 태그 이름입니다.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('모바일 태그 화면에서 PC와 동일하게 순서를 변경한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await db.tagsDao.createTag('A', '#111111');
+    await db.tagsDao.createTag('B', '#222222');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MaterialApp(home: MobileTagsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(PopupMenuButton<String>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('위로 이동'));
+    await tester.pumpAndSettle();
+
+    final tags = await db.tagsDao.getTags();
+    expect(tags.map((tag) => tag.name), ['B', 'A']);
+  });
 }

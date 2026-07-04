@@ -35,6 +35,9 @@ class _State extends ConsumerState<AccountFormDialog> {
   late final _balanceCtrl = TextEditingController(
     text: (widget.account?.balance ?? 0).toString(),
   );
+  late final _cardLimitCtrl = TextEditingController(
+    text: widget.account?.cardLimit?.toString() ?? '',
+  );
   late String _kind = widget.account?.kind ?? 'bank';
   late String _color =
       widget.account?.color ?? randomColor(); // 신규는 마운트 시 1회 랜덤
@@ -48,13 +51,18 @@ class _State extends ConsumerState<AccountFormDialog> {
   void dispose() {
     _nameCtrl.dispose();
     _balanceCtrl.dispose();
+    _cardLimitCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
+    final cardLimit = _kind == 'card' && _cardLimitCtrl.text.trim().isNotEmpty
+        ? parseKRW(_cardLimitCtrl.text)
+        : null;
     final result = validateAccount(
       name: _nameCtrl.text,
       kind: _kind,
+      cardLimit: cardLimit,
       color: _color,
       excludeFromTotal: _excludeFromTotal,
       isInvestment: _isInvestment,
@@ -153,6 +161,20 @@ class _State extends ConsumerState<AccountFormDialog> {
                     .toList(),
                 onChanged: (v) => setState(() => _kind = v ?? 'bank'),
               ),
+              if (_kind == 'card') ...[
+                SizedBox(height: 12),
+                TextField(
+                  controller: _cardLimitCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '카드 한도',
+                    suffixText: '원',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    helperText: '월 지출 합계가 한도의 80% 이상이면 경고합니다.',
+                  ),
+                ),
+              ],
               SizedBox(height: 12),
               TextField(
                 controller: _balanceCtrl,

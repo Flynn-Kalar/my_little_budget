@@ -32,31 +32,205 @@ class MobileCategoriesScreen extends ConsumerWidget {
           value: categories,
           builder: (items) {
             if (items.isEmpty) return const EmptyMobileCard('카테고리가 없습니다.');
+            final expense = _active(items, 'expense');
+            final income = _active(items, 'income');
+            final archived = items.where((c) => c.archivedAt != null).toList();
             return Column(
-              children: [for (final item in items) _CategoryCard(item: item)],
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _CategorySection(title: '지출 카테고리', items: expense),
+                _CategorySection(title: '수입 카테고리', items: income),
+                if (archived.isNotEmpty)
+                  _CategorySection(
+                    title: '보관된 카테고리',
+                    items: archived,
+                    archived: true,
+                  ),
+              ],
             );
           },
         ),
       ],
     );
   }
+
+  List<Category> _active(List<Category> all, String type) {
+    return all.where((c) => c.type == type && c.archivedAt == null).toList();
+  }
 }
 
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({required this.item});
+class _CategorySection extends StatelessWidget {
+  const _CategorySection({
+    required this.title,
+    required this.items,
+    this.archived = false,
+  });
 
-  final Category item;
+  final String title;
+  final List<Category> items;
+  final bool archived;
 
   @override
   Widget build(BuildContext context) {
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+          child: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        for (var i = 0; i < items.length; i++)
+          _CategoryCard(
+            item: items[i],
+            sectionItems: items,
+            index: i,
+            archived: archived,
+          ),
+      ],
+    );
+  }
+}
+
+class _CategoryCard extends ConsumerWidget {
+  const _CategoryCard({
+    required this.item,
+    required this.sectionItems,
+    required this.index,
+    required this.archived,
+  });
+
+  final Category item;
+  final List<Category> sectionItems;
+  final int index;
+  final bool archived;
+
+  Future<void> _move(WidgetRef ref, int direction) async {
+    final target = index + direction;
+    if (target < 0 || target >= sectionItems.length) return;
+    final ordered = [...sectionItems];
+    final moving = ordered.removeAt(index);
+    ordered.insert(target, moving);
+    await ref
+        .read(categoriesDaoProvider)
+        .updateCategoryOrder(item.type, ordered.map((c) => c.id).toList());
+    refreshCategories(ref);
+  }
+
+  Future<void> _restore(BuildContext context, WidgetRef ref) async {
+    await ref.read(categoriesDaoProvider).restoreCategory(item.id);
+    if (!context.mounted) return;
+    refreshCategories(ref);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('카테고리를 복원했습니다.')));
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('영구 삭제'),
+        content: Text('${item.name} 카테고리를 완전히 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final error = await ref.read(categoriesDaoProvider).deleteCategory(item.id);
+    if (!context.mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    refreshCategories(ref);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('카테고리를 삭제했습니다.')));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return MobileCard(
       child: ListTile(
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(backgroundColor: _parseColor(item.color)),
         title: Text(item.name),
         subtitle: Text(item.type == 'income' ? '수입' : '지출'),
-        trailing: item.archivedAt == null ? null : const Text('보관됨'),
-        onTap: () => _CategorySheet.show(context, item: item),
+        trailing: PopupMenuButton<String>(
+          tooltip: '카테고리 메뉴',
+          onSelected: (value) {
+            if (value == 'edit') {
+              _CategorySheet.show(context, item: item);
+            } else if (value == 'up') {
+              _move(ref, -1);
+            } else if (value == 'down') {
+              _move(ref, 1);
+            } else if (value == 'restore') {
+              _restore(context, ref);
+            } else if (value == 'delete') {
+              _delete(context, ref);
+            }
+          },
+          itemBuilder: (context) => [
+            if (!archived)
+              const PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('수정'),
+                ),
+              ),
+            if (!archived)
+              PopupMenuItem(
+                value: 'up',
+                enabled: index > 0,
+                child: const ListTile(
+                  leading: Icon(Icons.arrow_upward),
+                  title: Text('위로 이동'),
+                ),
+              ),
+            if (!archived)
+              PopupMenuItem(
+                value: 'down',
+                enabled: index < sectionItems.length - 1,
+                child: const ListTile(
+                  leading: Icon(Icons.arrow_downward),
+                  title: Text('아래로 이동'),
+                ),
+              ),
+            if (archived)
+              const PopupMenuItem(
+                value: 'restore',
+                child: ListTile(
+                  leading: Icon(Icons.unarchive_outlined),
+                  title: Text('복원'),
+                ),
+              ),
+            if (archived)
+              const PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  leading: Icon(Icons.delete_outline),
+                  title: Text('삭제'),
+                ),
+              ),
+          ],
+        ),
+        onTap: archived ? null : () => _CategorySheet.show(context, item: item),
       ),
     );
   }
@@ -113,18 +287,14 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
     }
   }
 
-  Future<void> _delete() async {
+  Future<void> _archive() async {
     final item = widget.item;
     if (item == null) return;
-    final error = await ref.read(categoriesDaoProvider).deleteCategory(item.id);
+    await ref.read(categoriesDaoProvider).archiveCategory(item.id);
     if (!mounted) return;
-    if (error != null) {
-      _showSnack(error);
-      return;
-    }
     refreshCategories(ref);
     Navigator.pop(context);
-    _showSnack('카테고리를 삭제했습니다.');
+    _showSnack('카테고리를 보관했습니다.');
   }
 
   void _showSnack(String message) {
@@ -176,11 +346,11 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
             children: [
               if (_isEdit)
                 TextButton.icon(
-                  onPressed: _busy ? null : _delete,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('삭제'),
+                  onPressed: _busy ? null : _archive,
+                  icon: const Icon(Icons.archive_outlined),
+                  label: const Text('보관'),
                   style: TextButton.styleFrom(
-                    foregroundColor: context.appExpense,
+                    foregroundColor: context.appAccent,
                   ),
                 ),
               const Spacer(),

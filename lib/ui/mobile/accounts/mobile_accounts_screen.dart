@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/accounts_dao.dart';
+import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/accounts/validation.dart';
 import '../../shared/accounts_providers.dart';
@@ -16,6 +17,7 @@ class MobileAccountsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accounts = ref.watch(accountBalancesProvider);
+    final archived = ref.watch(archivedAccountsProvider);
 
     return MobilePageScaffold(
       title: '자산',
@@ -42,7 +44,28 @@ class MobileAccountsScreen extends ConsumerWidget {
                     valueColor: total < 0 ? expense : income,
                   ),
                 ),
-                for (final row in value) _AccountCard(account: row),
+                for (var i = 0; i < value.length; i++)
+                  _AccountCard(account: value[i], allAccounts: value, index: i),
+              ],
+            );
+          },
+        ),
+        MobileAsync(
+          value: archived,
+          builder: (value) {
+            if (value.isEmpty) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(4, 12, 4, 4),
+                  child: Text(
+                    '보관된 자산',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                for (final account in value)
+                  _ArchivedAccountCard(account: account),
               ],
             );
           },
@@ -53,16 +76,22 @@ class MobileAccountsScreen extends ConsumerWidget {
 }
 
 class _AccountCard extends ConsumerWidget {
-  const _AccountCard({required this.account});
+  const _AccountCard({
+    required this.account,
+    required this.allAccounts,
+    required this.index,
+  });
 
   final AccountBalance account;
+  final List<AccountBalance> allAccounts;
+  final int index;
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+  Future<void> _archive(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('자산 삭제'),
-        content: Text('${account.name} 자산을 삭제할까요?'),
+        title: const Text('자산 보관'),
+        content: Text('${account.name} 자산을 보관할까요?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -70,27 +99,31 @@ class _AccountCard extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('삭제'),
+            child: const Text('보관'),
           ),
         ],
       ),
     );
     if (confirmed != true) return;
 
-    final error = await ref
-        .read(accountsDaoProvider)
-        .deleteAccount(account.accountId);
+    await ref.read(accountsDaoProvider).archiveAccount(account.accountId);
     if (!context.mounted) return;
-    if (error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error)));
-      return;
-    }
     refreshAccountsList(ref);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('자산을 삭제했습니다.')));
+    ).showSnackBar(const SnackBar(content: Text('자산을 보관했습니다.')));
+  }
+
+  Future<void> _move(WidgetRef ref, int direction) async {
+    final target = index + direction;
+    if (target < 0 || target >= allAccounts.length) return;
+    final ordered = [...allAccounts];
+    final moving = ordered.removeAt(index);
+    ordered.insert(target, moving);
+    await ref
+        .read(accountsDaoProvider)
+        .updateAccountOrder(ordered.map((row) => row.accountId).toList());
+    refreshAccountsList(ref);
   }
 
   @override
@@ -127,23 +160,25 @@ class _AccountCard extends ConsumerWidget {
                   onSelected: (value) {
                     if (value == 'detail') {
                       context.go('/accounts/${account.accountId}');
-                    }
-                    if (value == 'edit') {
+                    } else if (value == 'edit') {
                       _AccountSheet.show(context, account: account);
-                    }
-                    if (value == 'delete') {
-                      _delete(context, ref);
+                    } else if (value == 'up') {
+                      _move(ref, -1);
+                    } else if (value == 'down') {
+                      _move(ref, 1);
+                    } else if (value == 'archive') {
+                      _archive(context, ref);
                     }
                   },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
                       value: 'detail',
                       child: ListTile(
                         leading: Icon(Icons.receipt_long_outlined),
                         title: Text('거래내역 보기'),
                       ),
                     ),
-                    PopupMenuItem(
+                    const PopupMenuItem(
                       value: 'edit',
                       child: ListTile(
                         leading: Icon(Icons.edit_outlined),
@@ -151,10 +186,26 @@ class _AccountCard extends ConsumerWidget {
                       ),
                     ),
                     PopupMenuItem(
-                      value: 'delete',
+                      value: 'up',
+                      enabled: index > 0,
+                      child: const ListTile(
+                        leading: Icon(Icons.arrow_upward),
+                        title: Text('위로 이동'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'down',
+                      enabled: index < allAccounts.length - 1,
+                      child: const ListTile(
+                        leading: Icon(Icons.arrow_downward),
+                        title: Text('아래로 이동'),
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'archive',
                       child: ListTile(
-                        leading: Icon(Icons.delete_outline),
-                        title: Text('삭제'),
+                        leading: Icon(Icons.archive_outlined),
+                        title: Text('보관'),
                       ),
                     ),
                   ],
@@ -169,6 +220,89 @@ class _AccountCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ArchivedAccountCard extends ConsumerWidget {
+  const _ArchivedAccountCard({required this.account});
+
+  final Account account;
+
+  Future<void> _restore(BuildContext context, WidgetRef ref) async {
+    await ref.read(accountsDaoProvider).restoreAccount(account.id);
+    if (!context.mounted) return;
+    refreshAccountsList(ref);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('자산을 복원했습니다.')));
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('영구 삭제'),
+        content: Text('${account.name} 자산을 완전히 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final error = await ref.read(accountsDaoProvider).deleteAccount(account.id);
+    if (!context.mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    refreshAccountsList(ref);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('자산을 삭제했습니다.')));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MobileCard(
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  account.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(_kindLabel(account.kind)),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _restore(context, ref),
+            icon: const Icon(Icons.unarchive_outlined),
+            label: const Text('복원'),
+          ),
+          IconButton(
+            onPressed: () => _delete(context, ref),
+            icon: const Icon(Icons.delete_outline),
+            tooltip: '삭제',
+          ),
+        ],
       ),
     );
   }
@@ -197,6 +331,9 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
   late final _balance = TextEditingController(
     text: (widget.account?.balance ?? 0).toString(),
   );
+  late final _cardLimit = TextEditingController(
+    text: widget.account?.cardLimit?.toString() ?? '',
+  );
   late String _kind = widget.account?.kind ?? 'bank';
   late bool _exclude = widget.account?.excludeFromTotal ?? false;
   late bool _investment = widget.account?.isInvestment ?? false;
@@ -208,14 +345,19 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
   void dispose() {
     _name.dispose();
     _balance.dispose();
+    _cardLimit.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
+    final cardLimit = _kind == 'card' && _cardLimit.text.trim().isNotEmpty
+        ? parseKRW(_cardLimit.text)
+        : null;
     final result = validateAccount(
       name: _name.text,
       kind: _kind,
       initialBalance: parseKRW(_balance.text),
+      cardLimit: cardLimit,
       excludeFromTotal: _exclude,
       isInvestment: _investment,
     );
@@ -244,14 +386,14 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
     }
   }
 
-  Future<void> _delete() async {
+  Future<void> _archive() async {
     final account = widget.account;
     if (account == null) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('자산 삭제'),
-        content: Text('${account.name} 자산을 삭제할까요?'),
+        title: const Text('자산 보관'),
+        content: Text('${account.name} 자산을 보관할까요?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -259,7 +401,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('삭제'),
+            child: const Text('보관'),
           ),
         ],
       ),
@@ -268,17 +410,11 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
 
     setState(() => _busy = true);
     try {
-      final error = await ref
-          .read(accountsDaoProvider)
-          .deleteAccount(account.accountId);
+      await ref.read(accountsDaoProvider).archiveAccount(account.accountId);
       if (!mounted) return;
-      if (error != null) {
-        _showSnack(error);
-        return;
-      }
       refreshAccountsList(ref);
       Navigator.pop(context);
-      _showSnack('자산을 삭제했습니다.');
+      _showSnack('자산을 보관했습니다.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -335,12 +471,26 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            if (_kind == 'card') ...[
+              TextField(
+                controller: _cardLimit,
+                enabled: !_busy,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: '카드 한도',
+                  suffixText: '원',
+                  helperText: '월 지출 합계가 한도의 80% 이상이면 경고합니다.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextField(
               controller: _balance,
               enabled: !_busy,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
-                labelText: '현재 잔액',
+                labelText: '현재 금액',
                 suffixText: '원',
                 border: OutlineInputBorder(),
               ),
@@ -366,11 +516,11 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
               children: [
                 if (_isEdit)
                   TextButton.icon(
-                    onPressed: _busy ? null : _delete,
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('삭제'),
+                    onPressed: _busy ? null : _archive,
+                    icon: const Icon(Icons.archive_outlined),
+                    label: const Text('보관'),
                     style: TextButton.styleFrom(
-                      foregroundColor: context.appExpense,
+                      foregroundColor: context.appAccent,
                     ),
                   ),
                 const Spacer(),

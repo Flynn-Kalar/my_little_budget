@@ -108,7 +108,7 @@ extension AppThemeColors on BuildContext {
   Color get desktopMuted {
     final theme = Theme.of(this);
     return theme.colorScheme.onSurface.withValues(
-      alpha: theme.brightness == Brightness.dark ? 0.80 : 0.74,
+      alpha: theme.brightness == Brightness.dark ? 0.86 : 0.76,
     );
   }
 
@@ -141,7 +141,9 @@ ThemeData buildAppTheme({
   final disabledText = isDark
       ? Colors.white.withValues(alpha: 0.45)
       : AppTokens.disabledText;
-  final divider = isDark ? const Color(0xFF50536A) : AppTokens.sidebarBorder;
+  final divider = isDark
+      ? const Color(0xFF56596F).withValues(alpha: 0.72)
+      : AppTokens.sidebarBorder.withValues(alpha: 0.86);
   final activeSurface = isDark
       ? effectiveColors.surface.withValues(alpha: 0.82)
       : AppTokens.sidebarActive;
@@ -165,6 +167,7 @@ ThemeData buildAppTheme({
   ).textTheme.apply(bodyColor: primaryText, displayColor: primaryText);
 
   final inputBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(6),
     borderSide: BorderSide(color: divider),
   );
 
@@ -247,6 +250,7 @@ ThemeData buildAppTheme({
       suffixIconColor: secondaryText,
       enabledBorder: inputBorder,
       focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
         borderSide: BorderSide(color: effectiveColors.income, width: 1.5),
       ),
       disabledBorder: inputBorder,

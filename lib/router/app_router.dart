@@ -7,6 +7,8 @@ import '../features/settings/settings_page.dart';
 import '../features/stats/stats_page.dart';
 import '../ui/desktop/accounts/account_detail_screen.dart';
 import '../ui/desktop/accounts/accounts_screen.dart';
+import '../ui/desktop/calendar/calendar_screen.dart';
+import '../ui/desktop/notes/notes_calendar_screen.dart';
 import '../ui/desktop/notes/notes_screen.dart';
 import '../ui/desktop/settings/categories_screen.dart';
 import '../ui/desktop/settings/data_management_screen.dart';
@@ -18,7 +20,9 @@ import '../ui/desktop/transactions/transactions_screen.dart';
 import '../ui/mobile/accounts/mobile_accounts_screen.dart';
 import '../ui/mobile/accounts/mobile_account_detail_screen.dart';
 import '../ui/mobile/budget/mobile_budget_screen.dart';
+import '../ui/mobile/calendar/mobile_calendar_screen.dart';
 import '../ui/mobile/investments/mobile_investments_screen.dart';
+import '../ui/mobile/notes/mobile_notes_calendar_screen.dart';
 import '../ui/mobile/notes/mobile_notes_screen.dart';
 import '../ui/mobile/responsive_page.dart';
 import '../ui/mobile/settings/mobile_categories_screen.dart';
@@ -96,6 +100,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/calendar',
+            builder: (context, state) => const ResponsivePage(
+              desktop: CalendarScreen(),
+              mobile: MobileCalendarScreen(),
+            ),
+          ),
+          GoRoute(
             path: '/notes',
             builder: (context, state) {
               final openNoteId = int.tryParse(
@@ -115,6 +126,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 ),
               );
             },
+            routes: [
+              GoRoute(
+                path: 'calendar',
+                builder: (context, state) => const ResponsivePage(
+                  desktop: NotesCalendarScreen(),
+                  mobile: MobileNotesCalendarScreen(),
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: '/settings',

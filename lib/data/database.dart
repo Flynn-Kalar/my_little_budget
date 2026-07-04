@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'daos/accounts_dao.dart';
 import 'daos/backup_dao.dart';
 import 'daos/budget_dao.dart';
+import 'daos/calendar_events_dao.dart';
 import 'daos/categories_dao.dart';
 import 'daos/investments_dao.dart';
 import 'daos/notes_dao.dart';
@@ -14,6 +15,7 @@ import 'seed.dart';
 import 'sync_metadata.dart';
 import 'tables/accounts.dart';
 import 'tables/budget_groups.dart';
+import 'tables/calendar_events.dart';
 import 'tables/categories.dart';
 import 'tables/investments.dart';
 import 'tables/monthly_income.dart';
@@ -39,6 +41,7 @@ part 'database.g.dart';
     TransactionTags,
     Notes,
     NoteChecklistItems,
+    CalendarEvents,
   ],
   daos: [
     AccountsDao,
@@ -50,6 +53,7 @@ part 'database.g.dart';
     BudgetDao,
     BackupDao,
     NotesDao,
+    CalendarEventsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -57,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -117,6 +121,12 @@ WHERE reminder_at IS NOT NULL
       if (from < 11 && await _tableExists('tags')) {
         await m.addColumn(tags, tags.sortOrder);
         await _initializeTagSortOrder();
+      }
+      if (from < 12) {
+        await m.createTable(calendarEvents);
+      }
+      if (from < 13) {
+        await m.addColumn(accounts, accounts.cardLimit);
       }
     },
     beforeOpen: (details) async {

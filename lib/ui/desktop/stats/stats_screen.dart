@@ -382,7 +382,7 @@ class _CategoryBreakdownPane extends ConsumerWidget {
             netAmount: netAmount,
           ),
         ),
-        SizedBox(height: 12),
+        SizedBox(height: 10),
         for (final row in rows)
           _BreakdownRow(
             row: row,
@@ -432,7 +432,7 @@ class _TagBreakdownPane extends ConsumerWidget {
             height: 220,
             child: _TagDonutChart(rows: rows, total: total),
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 10),
           for (final row in rows)
             _TagBreakdownRow(
               row: row,
@@ -623,7 +623,7 @@ class _BreakdownRow extends StatelessWidget {
     final percent = total == 0 ? 0 : (row.total * 100 / total).round();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
         color: selected ? context.desktopSelectedSurface : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
@@ -631,53 +631,34 @@ class _BreakdownRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    _ColorDot(
-                      color: _parseColor(
-                        row.categoryColor,
-                        context.desktopMuted,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        row.categoryName,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      '$percent%',
-                      style: TextStyle(color: context.desktopMuted),
-                    ),
-                    SizedBox(width: 16),
-                    SizedBox(
-                      width: 120,
-                      child: Text(
-                        formatKRW(row.total),
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
+                _ColorDot(
+                  color: _parseColor(row.categoryColor, context.desktopMuted),
                 ),
-                SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: maxTotal == 0 ? 0 : row.total / maxTotal,
-                    minHeight: 6,
-                    backgroundColor: context.desktopBorder,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _parseColor(row.categoryColor, context.desktopMuted),
-                    ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    row.categoryName,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                SizedBox(width: 10),
+                _PercentPill(
+                  percent: percent,
+                  weight: maxTotal == 0 ? 0 : row.total / maxTotal,
+                  color: _parseColor(row.categoryColor, context.desktopMuted),
+                ),
+                SizedBox(width: 12),
+                SizedBox(
+                  width: 112,
+                  child: Text(
+                    formatKRW(row.total),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -709,7 +690,7 @@ class _TagBreakdownRow extends StatelessWidget {
     final percent = total == 0 ? 0 : (row.total * 100 / total).round();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
         color: selected ? context.desktopSelectedSurface : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
@@ -717,56 +698,88 @@ class _TagBreakdownRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    _ColorDot(
-                      color: _parseColor(row.tagColor, context.desktopMuted),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        row.isUntagged ? row.tagName : '#${row.tagName}',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      '$percent%',
-                      style: TextStyle(color: context.desktopMuted),
-                    ),
-                    SizedBox(width: 16),
-                    SizedBox(
-                      width: 120,
-                      child: Text(
-                        formatKRW(row.total),
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
+                _ColorDot(
+                  color: _parseColor(row.tagColor, context.desktopMuted),
                 ),
-                SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: maxTotal == 0 ? 0 : row.total / maxTotal,
-                    minHeight: 6,
-                    backgroundColor: context.desktopBorder,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _parseColor(row.tagColor, context.desktopMuted),
-                    ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    row.isUntagged ? row.tagName : '#${row.tagName}',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                SizedBox(width: 10),
+                _PercentPill(
+                  percent: percent,
+                  weight: maxTotal == 0 ? 0 : row.total / maxTotal,
+                  color: _parseColor(row.tagColor, context.desktopMuted),
+                ),
+                SizedBox(width: 12),
+                SizedBox(
+                  width: 112,
+                  child: Text(
+                    formatKRW(row.total),
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PercentPill extends StatelessWidget {
+  const _PercentPill({
+    required this.percent,
+    required this.weight,
+    required this.color,
+  });
+
+  final int percent;
+  final double weight;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final clamped = weight.clamp(0.0, 1.0);
+    return SizedBox(
+      width: 64,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          Container(
+            height: 22,
+            decoration: BoxDecoration(
+              color: context.desktopSelectedSurface,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          FractionallySizedBox(
+            widthFactor: clamped,
+            child: Container(
+              height: 22,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          Center(
+            child: Text(
+              '$percent%',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1013,7 +1026,7 @@ class _TrendCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '(만원 단위)',
+                '축: 만원',
                 style: TextStyle(color: context.desktopMuted, fontSize: 12),
               ),
             ],
@@ -1052,8 +1065,8 @@ class _TrendCard extends StatelessWidget {
           if (rows.isEmpty)
             const _EmptyState(message: '최근 12개월 거래 내역이 없습니다.')
           else ...[
-            SizedBox(height: 220, child: _TrendChart(rows: rows)),
-            SizedBox(height: 16),
+            SizedBox(height: 210, child: _TrendChart(rows: rows)),
+            SizedBox(height: 12),
             _TrendTable(rows: rows),
           ],
         ],
@@ -1099,7 +1112,17 @@ class _TrendChart extends StatelessWidget {
       LineChartData(
         minY: minY.toDouble(),
         maxY: maxY.toDouble(),
-        lineTouchData: const LineTouchData(enabled: true),
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (spots) {
+              return [
+                for (final spot in spots)
+                  _trendTooltipItem(context, rows, spot),
+              ];
+            },
+          ),
+        ),
         gridData: FlGridData(
           drawVerticalLine: false,
           horizontalInterval: _axisStep.toDouble(),
@@ -1143,7 +1166,7 @@ class _TrendChart extends StatelessWidget {
                 return SideTitleWidget(
                   meta: meta,
                   child: Text(
-                    '',
+                    '${parseMonthKey(rows[index].month).month}',
                     style: TextStyle(color: context.desktopMuted, fontSize: 11),
                   ),
                 );
@@ -1196,6 +1219,35 @@ class _TrendChart extends StatelessWidget {
   }
 }
 
+LineTooltipItem _trendTooltipItem(
+  BuildContext context,
+  List<MonthlyTrendRow> rows,
+  LineBarSpot spot,
+) {
+  final index = spot.x.toInt();
+  final safeIndex = index.clamp(0, rows.length - 1);
+  final row = rows[safeIndex];
+  final label = switch (spot.barIndex) {
+    0 => '수입',
+    1 => '지출',
+    _ => '순액',
+  };
+  final amount = switch (spot.barIndex) {
+    0 => row.income,
+    1 => row.expense,
+    _ => row.net,
+  };
+  final color = switch (spot.barIndex) {
+    0 => context.desktopIncome,
+    1 => context.desktopExpense,
+    _ => context.desktopAccent,
+  };
+  return LineTooltipItem(
+    '$label ${formatKRW(amount)}',
+    TextStyle(color: color, fontWeight: FontWeight.w800),
+  );
+}
+
 class _TrendSummaryTile extends StatelessWidget {
   const _TrendSummaryTile({
     required this.label,
@@ -1245,37 +1297,16 @@ class _TrendTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const _TrendHeader(),
-        const Divider(height: 1),
-        for (final row in rows) _TrendTableRow(row: row),
-      ],
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [for (final row in rows) _TrendMonthChip(row: row)],
     );
   }
 }
 
-class _TrendHeader extends StatelessWidget {
-  const _TrendHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(flex: 2, child: Text('월')),
-          Expanded(flex: 3, child: Text('수입', textAlign: TextAlign.right)),
-          Expanded(flex: 3, child: Text('지출', textAlign: TextAlign.right)),
-          Expanded(flex: 3, child: Text('순액', textAlign: TextAlign.right)),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrendTableRow extends StatelessWidget {
-  const _TrendTableRow({required this.row});
+class _TrendMonthChip extends StatelessWidget {
+  const _TrendMonthChip({required this.row});
 
   final MonthlyTrendRow row;
 
@@ -1286,29 +1317,81 @@ class _TrendTableRow extends StatelessWidget {
         ? context.desktopExpense
         : Theme.of(context).colorScheme.onSurface;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(
-        children: [
-          Expanded(flex: 2, child: Text('${d.year}.${d.month}')),
-          Expanded(
-            flex: 3,
-            child: Text(formatKRW(row.income), textAlign: TextAlign.right),
+    return SizedBox(
+      width: 164,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: context.desktopSelectedSurface,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${d.year}.${d.month}',
+                style: TextStyle(
+                  color: context.desktopMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 4),
+              _MiniAmount(
+                label: '수입',
+                amount: row.income,
+                color: context.desktopIncome,
+              ),
+              _MiniAmount(
+                label: '지출',
+                amount: row.expense,
+                color: context.desktopExpense,
+              ),
+              _MiniAmount(label: '순액', amount: row.net, color: netColor),
+            ],
           ),
-          Expanded(
-            flex: 3,
-            child: Text(formatKRW(row.expense), textAlign: TextAlign.right),
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniAmount extends StatelessWidget {
+  const _MiniAmount({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+
+  final String label;
+  final int amount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 32,
+          child: Text(
+            label,
+            style: TextStyle(color: context.desktopMuted, fontSize: 11),
           ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              formatKRW(row.net),
-              textAlign: TextAlign.right,
-              style: TextStyle(color: netColor, fontWeight: FontWeight.w600),
+        ),
+        Expanded(
+          child: Text(
+            formatKRW(amount),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

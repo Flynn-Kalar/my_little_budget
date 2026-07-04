@@ -24,6 +24,7 @@ class AccountBalance {
     required this.kind,
     required this.color,
     required this.initialBalance,
+    required this.cardLimit,
     required this.excludeFromTotal,
     required this.isInvestment,
     required this.balance,
@@ -34,6 +35,7 @@ class AccountBalance {
   final String kind;
   final String color;
   final int initialBalance;
+  final int? cardLimit;
   final bool excludeFromTotal;
   final bool isInvestment;
   final int balance;
@@ -88,6 +90,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
       SELECT
         a.id AS id, a.name AS name, a.kind AS kind, a.color AS color,
         a.initial_balance AS initial_balance,
+        a.card_limit AS card_limit,
         a.exclude_from_total AS exclude_from_total,
         a.is_investment AS is_investment,
         a.initial_balance
@@ -114,6 +117,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
         kind: r.read<String>('kind'),
         color: r.read<String>('color'),
         initialBalance: r.read<int>('initial_balance'),
+        cardLimit: r.readNullable<int>('card_limit'),
         excludeFromTotal: r.read<int>('exclude_from_total') != 0,
         isInvestment: r.read<int>('is_investment') != 0,
         balance: r.read<int>('balance') + (impact[id] ?? 0),
@@ -194,6 +198,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
           AccountsCompanion(
             name: Value(draft.name),
             kind: Value(draft.kind),
+            cardLimit: Value(draft.cardLimit),
             color: Value(draft.color),
             excludeFromTotal: Value(draft.excludeFromTotal),
             isInvestment: Value(draft.isInvestment),
@@ -221,6 +226,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
             name: draft.name,
             kind: draft.kind,
             initialBalance: Value(currentBalance),
+            cardLimit: Value(draft.cardLimit),
             color: Value(draft.color),
             excludeFromTotal: Value(draft.excludeFromTotal),
             isInvestment: Value(draft.isInvestment),

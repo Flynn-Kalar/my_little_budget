@@ -8837,6 +8837,818 @@ class NoteChecklistItemsCompanion extends UpdateCompanion<NoteChecklistItem> {
   }
 }
 
+class $CalendarEventsTable extends CalendarEvents
+    with TableInfo<$CalendarEventsTable, CalendarEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CalendarEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 120,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _startAtMeta = const VerificationMeta(
+    'startAt',
+  );
+  @override
+  late final GeneratedColumn<String> startAt = GeneratedColumn<String>(
+    'start_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endAtMeta = const VerificationMeta('endAt');
+  @override
+  late final GeneratedColumn<String> endAt = GeneratedColumn<String>(
+    'end_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _allDayMeta = const VerificationMeta('allDay');
+  @override
+  late final GeneratedColumn<bool> allDay = GeneratedColumn<bool>(
+    'all_day',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("all_day" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('#2563eb'),
+  );
+  static const VerificationMeta _locationMeta = const VerificationMeta(
+    'location',
+  );
+  @override
+  late final GeneratedColumn<String> location = GeneratedColumn<String>(
+    'location',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _linkUrlMeta = const VerificationMeta(
+    'linkUrl',
+  );
+  @override
+  late final GeneratedColumn<String> linkUrl = GeneratedColumn<String>(
+    'link_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _scheduleTypeMeta = const VerificationMeta(
+    'scheduleType',
+  );
+  @override
+  late final GeneratedColumn<String> scheduleType = GeneratedColumn<String>(
+    'schedule_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('none'),
+  );
+  static const VerificationMeta _notificationLeadMinutesMeta =
+      const VerificationMeta('notificationLeadMinutes');
+  @override
+  late final GeneratedColumn<String> notificationLeadMinutes =
+      GeneratedColumn<String>(
+        'notification_lead_minutes',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
+  static const VerificationMeta _notificationEnabledMeta =
+      const VerificationMeta('notificationEnabled');
+  @override
+  late final GeneratedColumn<bool> notificationEnabled = GeneratedColumn<bool>(
+    'notification_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("notification_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const CustomExpression("datetime('now')"),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const CustomExpression("datetime('now')"),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    description,
+    startAt,
+    endAt,
+    allDay,
+    color,
+    location,
+    linkUrl,
+    scheduleType,
+    notificationLeadMinutes,
+    notificationEnabled,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'calendar_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CalendarEvent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('start_at')) {
+      context.handle(
+        _startAtMeta,
+        startAt.isAcceptableOrUnknown(data['start_at']!, _startAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startAtMeta);
+    }
+    if (data.containsKey('end_at')) {
+      context.handle(
+        _endAtMeta,
+        endAt.isAcceptableOrUnknown(data['end_at']!, _endAtMeta),
+      );
+    }
+    if (data.containsKey('all_day')) {
+      context.handle(
+        _allDayMeta,
+        allDay.isAcceptableOrUnknown(data['all_day']!, _allDayMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('location')) {
+      context.handle(
+        _locationMeta,
+        location.isAcceptableOrUnknown(data['location']!, _locationMeta),
+      );
+    }
+    if (data.containsKey('link_url')) {
+      context.handle(
+        _linkUrlMeta,
+        linkUrl.isAcceptableOrUnknown(data['link_url']!, _linkUrlMeta),
+      );
+    }
+    if (data.containsKey('schedule_type')) {
+      context.handle(
+        _scheduleTypeMeta,
+        scheduleType.isAcceptableOrUnknown(
+          data['schedule_type']!,
+          _scheduleTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('notification_lead_minutes')) {
+      context.handle(
+        _notificationLeadMinutesMeta,
+        notificationLeadMinutes.isAcceptableOrUnknown(
+          data['notification_lead_minutes']!,
+          _notificationLeadMinutesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('notification_enabled')) {
+      context.handle(
+        _notificationEnabledMeta,
+        notificationEnabled.isAcceptableOrUnknown(
+          data['notification_enabled']!,
+          _notificationEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CalendarEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CalendarEvent(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      startAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}start_at'],
+      )!,
+      endAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}end_at'],
+      ),
+      allDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}all_day'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      )!,
+      location: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}location'],
+      ),
+      linkUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}link_url'],
+      ),
+      scheduleType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schedule_type'],
+      )!,
+      notificationLeadMinutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notification_lead_minutes'],
+      )!,
+      notificationEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}notification_enabled'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CalendarEventsTable createAlias(String alias) {
+    return $CalendarEventsTable(attachedDatabase, alias);
+  }
+}
+
+class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
+  final int id;
+  final String title;
+  final String description;
+  final String startAt;
+  final String? endAt;
+  final bool allDay;
+  final String color;
+  final String? location;
+  final String? linkUrl;
+  final String scheduleType;
+  final String notificationLeadMinutes;
+  final bool notificationEnabled;
+  final String createdAt;
+  final String updatedAt;
+  const CalendarEvent({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.startAt,
+    this.endAt,
+    required this.allDay,
+    required this.color,
+    this.location,
+    this.linkUrl,
+    required this.scheduleType,
+    required this.notificationLeadMinutes,
+    required this.notificationEnabled,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['title'] = Variable<String>(title);
+    map['description'] = Variable<String>(description);
+    map['start_at'] = Variable<String>(startAt);
+    if (!nullToAbsent || endAt != null) {
+      map['end_at'] = Variable<String>(endAt);
+    }
+    map['all_day'] = Variable<bool>(allDay);
+    map['color'] = Variable<String>(color);
+    if (!nullToAbsent || location != null) {
+      map['location'] = Variable<String>(location);
+    }
+    if (!nullToAbsent || linkUrl != null) {
+      map['link_url'] = Variable<String>(linkUrl);
+    }
+    map['schedule_type'] = Variable<String>(scheduleType);
+    map['notification_lead_minutes'] = Variable<String>(
+      notificationLeadMinutes,
+    );
+    map['notification_enabled'] = Variable<bool>(notificationEnabled);
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  CalendarEventsCompanion toCompanion(bool nullToAbsent) {
+    return CalendarEventsCompanion(
+      id: Value(id),
+      title: Value(title),
+      description: Value(description),
+      startAt: Value(startAt),
+      endAt: endAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endAt),
+      allDay: Value(allDay),
+      color: Value(color),
+      location: location == null && nullToAbsent
+          ? const Value.absent()
+          : Value(location),
+      linkUrl: linkUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkUrl),
+      scheduleType: Value(scheduleType),
+      notificationLeadMinutes: Value(notificationLeadMinutes),
+      notificationEnabled: Value(notificationEnabled),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory CalendarEvent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CalendarEvent(
+      id: serializer.fromJson<int>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      description: serializer.fromJson<String>(json['description']),
+      startAt: serializer.fromJson<String>(json['startAt']),
+      endAt: serializer.fromJson<String?>(json['endAt']),
+      allDay: serializer.fromJson<bool>(json['allDay']),
+      color: serializer.fromJson<String>(json['color']),
+      location: serializer.fromJson<String?>(json['location']),
+      linkUrl: serializer.fromJson<String?>(json['linkUrl']),
+      scheduleType: serializer.fromJson<String>(json['scheduleType']),
+      notificationLeadMinutes: serializer.fromJson<String>(
+        json['notificationLeadMinutes'],
+      ),
+      notificationEnabled: serializer.fromJson<bool>(
+        json['notificationEnabled'],
+      ),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'title': serializer.toJson<String>(title),
+      'description': serializer.toJson<String>(description),
+      'startAt': serializer.toJson<String>(startAt),
+      'endAt': serializer.toJson<String?>(endAt),
+      'allDay': serializer.toJson<bool>(allDay),
+      'color': serializer.toJson<String>(color),
+      'location': serializer.toJson<String?>(location),
+      'linkUrl': serializer.toJson<String?>(linkUrl),
+      'scheduleType': serializer.toJson<String>(scheduleType),
+      'notificationLeadMinutes': serializer.toJson<String>(
+        notificationLeadMinutes,
+      ),
+      'notificationEnabled': serializer.toJson<bool>(notificationEnabled),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  CalendarEvent copyWith({
+    int? id,
+    String? title,
+    String? description,
+    String? startAt,
+    Value<String?> endAt = const Value.absent(),
+    bool? allDay,
+    String? color,
+    Value<String?> location = const Value.absent(),
+    Value<String?> linkUrl = const Value.absent(),
+    String? scheduleType,
+    String? notificationLeadMinutes,
+    bool? notificationEnabled,
+    String? createdAt,
+    String? updatedAt,
+  }) => CalendarEvent(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    description: description ?? this.description,
+    startAt: startAt ?? this.startAt,
+    endAt: endAt.present ? endAt.value : this.endAt,
+    allDay: allDay ?? this.allDay,
+    color: color ?? this.color,
+    location: location.present ? location.value : this.location,
+    linkUrl: linkUrl.present ? linkUrl.value : this.linkUrl,
+    scheduleType: scheduleType ?? this.scheduleType,
+    notificationLeadMinutes:
+        notificationLeadMinutes ?? this.notificationLeadMinutes,
+    notificationEnabled: notificationEnabled ?? this.notificationEnabled,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  CalendarEvent copyWithCompanion(CalendarEventsCompanion data) {
+    return CalendarEvent(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      startAt: data.startAt.present ? data.startAt.value : this.startAt,
+      endAt: data.endAt.present ? data.endAt.value : this.endAt,
+      allDay: data.allDay.present ? data.allDay.value : this.allDay,
+      color: data.color.present ? data.color.value : this.color,
+      location: data.location.present ? data.location.value : this.location,
+      linkUrl: data.linkUrl.present ? data.linkUrl.value : this.linkUrl,
+      scheduleType: data.scheduleType.present
+          ? data.scheduleType.value
+          : this.scheduleType,
+      notificationLeadMinutes: data.notificationLeadMinutes.present
+          ? data.notificationLeadMinutes.value
+          : this.notificationLeadMinutes,
+      notificationEnabled: data.notificationEnabled.present
+          ? data.notificationEnabled.value
+          : this.notificationEnabled,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalendarEvent(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('startAt: $startAt, ')
+          ..write('endAt: $endAt, ')
+          ..write('allDay: $allDay, ')
+          ..write('color: $color, ')
+          ..write('location: $location, ')
+          ..write('linkUrl: $linkUrl, ')
+          ..write('scheduleType: $scheduleType, ')
+          ..write('notificationLeadMinutes: $notificationLeadMinutes, ')
+          ..write('notificationEnabled: $notificationEnabled, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    title,
+    description,
+    startAt,
+    endAt,
+    allDay,
+    color,
+    location,
+    linkUrl,
+    scheduleType,
+    notificationLeadMinutes,
+    notificationEnabled,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CalendarEvent &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.description == this.description &&
+          other.startAt == this.startAt &&
+          other.endAt == this.endAt &&
+          other.allDay == this.allDay &&
+          other.color == this.color &&
+          other.location == this.location &&
+          other.linkUrl == this.linkUrl &&
+          other.scheduleType == this.scheduleType &&
+          other.notificationLeadMinutes == this.notificationLeadMinutes &&
+          other.notificationEnabled == this.notificationEnabled &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
+  final Value<int> id;
+  final Value<String> title;
+  final Value<String> description;
+  final Value<String> startAt;
+  final Value<String?> endAt;
+  final Value<bool> allDay;
+  final Value<String> color;
+  final Value<String?> location;
+  final Value<String?> linkUrl;
+  final Value<String> scheduleType;
+  final Value<String> notificationLeadMinutes;
+  final Value<bool> notificationEnabled;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  const CalendarEventsCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.description = const Value.absent(),
+    this.startAt = const Value.absent(),
+    this.endAt = const Value.absent(),
+    this.allDay = const Value.absent(),
+    this.color = const Value.absent(),
+    this.location = const Value.absent(),
+    this.linkUrl = const Value.absent(),
+    this.scheduleType = const Value.absent(),
+    this.notificationLeadMinutes = const Value.absent(),
+    this.notificationEnabled = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  CalendarEventsCompanion.insert({
+    this.id = const Value.absent(),
+    required String title,
+    this.description = const Value.absent(),
+    required String startAt,
+    this.endAt = const Value.absent(),
+    this.allDay = const Value.absent(),
+    this.color = const Value.absent(),
+    this.location = const Value.absent(),
+    this.linkUrl = const Value.absent(),
+    this.scheduleType = const Value.absent(),
+    this.notificationLeadMinutes = const Value.absent(),
+    this.notificationEnabled = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : title = Value(title),
+       startAt = Value(startAt);
+  static Insertable<CalendarEvent> custom({
+    Expression<int>? id,
+    Expression<String>? title,
+    Expression<String>? description,
+    Expression<String>? startAt,
+    Expression<String>? endAt,
+    Expression<bool>? allDay,
+    Expression<String>? color,
+    Expression<String>? location,
+    Expression<String>? linkUrl,
+    Expression<String>? scheduleType,
+    Expression<String>? notificationLeadMinutes,
+    Expression<bool>? notificationEnabled,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (startAt != null) 'start_at': startAt,
+      if (endAt != null) 'end_at': endAt,
+      if (allDay != null) 'all_day': allDay,
+      if (color != null) 'color': color,
+      if (location != null) 'location': location,
+      if (linkUrl != null) 'link_url': linkUrl,
+      if (scheduleType != null) 'schedule_type': scheduleType,
+      if (notificationLeadMinutes != null)
+        'notification_lead_minutes': notificationLeadMinutes,
+      if (notificationEnabled != null)
+        'notification_enabled': notificationEnabled,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  CalendarEventsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? title,
+    Value<String>? description,
+    Value<String>? startAt,
+    Value<String?>? endAt,
+    Value<bool>? allDay,
+    Value<String>? color,
+    Value<String?>? location,
+    Value<String?>? linkUrl,
+    Value<String>? scheduleType,
+    Value<String>? notificationLeadMinutes,
+    Value<bool>? notificationEnabled,
+    Value<String>? createdAt,
+    Value<String>? updatedAt,
+  }) {
+    return CalendarEventsCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      startAt: startAt ?? this.startAt,
+      endAt: endAt ?? this.endAt,
+      allDay: allDay ?? this.allDay,
+      color: color ?? this.color,
+      location: location ?? this.location,
+      linkUrl: linkUrl ?? this.linkUrl,
+      scheduleType: scheduleType ?? this.scheduleType,
+      notificationLeadMinutes:
+          notificationLeadMinutes ?? this.notificationLeadMinutes,
+      notificationEnabled: notificationEnabled ?? this.notificationEnabled,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (startAt.present) {
+      map['start_at'] = Variable<String>(startAt.value);
+    }
+    if (endAt.present) {
+      map['end_at'] = Variable<String>(endAt.value);
+    }
+    if (allDay.present) {
+      map['all_day'] = Variable<bool>(allDay.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (location.present) {
+      map['location'] = Variable<String>(location.value);
+    }
+    if (linkUrl.present) {
+      map['link_url'] = Variable<String>(linkUrl.value);
+    }
+    if (scheduleType.present) {
+      map['schedule_type'] = Variable<String>(scheduleType.value);
+    }
+    if (notificationLeadMinutes.present) {
+      map['notification_lead_minutes'] = Variable<String>(
+        notificationLeadMinutes.value,
+      );
+    }
+    if (notificationEnabled.present) {
+      map['notification_enabled'] = Variable<bool>(notificationEnabled.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalendarEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('startAt: $startAt, ')
+          ..write('endAt: $endAt, ')
+          ..write('allDay: $allDay, ')
+          ..write('color: $color, ')
+          ..write('location: $location, ')
+          ..write('linkUrl: $linkUrl, ')
+          ..write('scheduleType: $scheduleType, ')
+          ..write('notificationLeadMinutes: $notificationLeadMinutes, ')
+          ..write('notificationEnabled: $notificationEnabled, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8857,6 +9669,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $NotesTable notes = $NotesTable(this);
   late final $NoteChecklistItemsTable noteChecklistItems =
       $NoteChecklistItemsTable(this);
+  late final $CalendarEventsTable calendarEvents = $CalendarEventsTable(this);
   late final Index uqCategoriesNameType = Index(
     'uq_categories_name_type',
     'CREATE UNIQUE INDEX uq_categories_name_type ON categories (name, type)',
@@ -8929,6 +9742,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_note_checklist_items_note',
     'CREATE INDEX idx_note_checklist_items_note ON note_checklist_items (note_id)',
   );
+  late final Index idxCalendarEventsStartAt = Index(
+    'idx_calendar_events_start_at',
+    'CREATE INDEX idx_calendar_events_start_at ON calendar_events (start_at)',
+  );
+  late final Index idxCalendarEventsScheduleType = Index(
+    'idx_calendar_events_schedule_type',
+    'CREATE INDEX idx_calendar_events_schedule_type ON calendar_events (schedule_type)',
+  );
   late final AccountsDao accountsDao = AccountsDao(this as AppDatabase);
   late final TransactionsDao transactionsDao = TransactionsDao(
     this as AppDatabase,
@@ -8942,6 +9763,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final BudgetDao budgetDao = BudgetDao(this as AppDatabase);
   late final BackupDao backupDao = BackupDao(this as AppDatabase);
   late final NotesDao notesDao = NotesDao(this as AppDatabase);
+  late final CalendarEventsDao calendarEventsDao = CalendarEventsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8959,6 +9783,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactionTags,
     notes,
     noteChecklistItems,
+    calendarEvents,
     uqCategoriesNameType,
     idxTxOccurredOn,
     idxTxType,
@@ -8977,6 +9802,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     idxNotesReminderAt,
     idxNotesPinned,
     idxNoteChecklistItemsNote,
+    idxCalendarEventsStartAt,
+    idxCalendarEventsScheduleType,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -16412,6 +17239,381 @@ typedef $$NoteChecklistItemsTableProcessedTableManager =
       NoteChecklistItem,
       PrefetchHooks Function({bool noteId})
     >;
+typedef $$CalendarEventsTableCreateCompanionBuilder =
+    CalendarEventsCompanion Function({
+      Value<int> id,
+      required String title,
+      Value<String> description,
+      required String startAt,
+      Value<String?> endAt,
+      Value<bool> allDay,
+      Value<String> color,
+      Value<String?> location,
+      Value<String?> linkUrl,
+      Value<String> scheduleType,
+      Value<String> notificationLeadMinutes,
+      Value<bool> notificationEnabled,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+    });
+typedef $$CalendarEventsTableUpdateCompanionBuilder =
+    CalendarEventsCompanion Function({
+      Value<int> id,
+      Value<String> title,
+      Value<String> description,
+      Value<String> startAt,
+      Value<String?> endAt,
+      Value<bool> allDay,
+      Value<String> color,
+      Value<String?> location,
+      Value<String?> linkUrl,
+      Value<String> scheduleType,
+      Value<String> notificationLeadMinutes,
+      Value<bool> notificationEnabled,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+    });
+
+class $$CalendarEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $CalendarEventsTable> {
+  $$CalendarEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get startAt => $composableBuilder(
+    column: $table.startAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get endAt => $composableBuilder(
+    column: $table.endAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get allDay => $composableBuilder(
+    column: $table.allDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkUrl => $composableBuilder(
+    column: $table.linkUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scheduleType => $composableBuilder(
+    column: $table.scheduleType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notificationLeadMinutes => $composableBuilder(
+    column: $table.notificationLeadMinutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get notificationEnabled => $composableBuilder(
+    column: $table.notificationEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CalendarEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CalendarEventsTable> {
+  $$CalendarEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get startAt => $composableBuilder(
+    column: $table.startAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get endAt => $composableBuilder(
+    column: $table.endAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get allDay => $composableBuilder(
+    column: $table.allDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get location => $composableBuilder(
+    column: $table.location,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkUrl => $composableBuilder(
+    column: $table.linkUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scheduleType => $composableBuilder(
+    column: $table.scheduleType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notificationLeadMinutes => $composableBuilder(
+    column: $table.notificationLeadMinutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get notificationEnabled => $composableBuilder(
+    column: $table.notificationEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CalendarEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CalendarEventsTable> {
+  $$CalendarEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get startAt =>
+      $composableBuilder(column: $table.startAt, builder: (column) => column);
+
+  GeneratedColumn<String> get endAt =>
+      $composableBuilder(column: $table.endAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get allDay =>
+      $composableBuilder(column: $table.allDay, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get location =>
+      $composableBuilder(column: $table.location, builder: (column) => column);
+
+  GeneratedColumn<String> get linkUrl =>
+      $composableBuilder(column: $table.linkUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get scheduleType => $composableBuilder(
+    column: $table.scheduleType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notificationLeadMinutes => $composableBuilder(
+    column: $table.notificationLeadMinutes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get notificationEnabled => $composableBuilder(
+    column: $table.notificationEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$CalendarEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CalendarEventsTable,
+          CalendarEvent,
+          $$CalendarEventsTableFilterComposer,
+          $$CalendarEventsTableOrderingComposer,
+          $$CalendarEventsTableAnnotationComposer,
+          $$CalendarEventsTableCreateCompanionBuilder,
+          $$CalendarEventsTableUpdateCompanionBuilder,
+          (
+            CalendarEvent,
+            BaseReferences<_$AppDatabase, $CalendarEventsTable, CalendarEvent>,
+          ),
+          CalendarEvent,
+          PrefetchHooks Function()
+        > {
+  $$CalendarEventsTableTableManager(
+    _$AppDatabase db,
+    $CalendarEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CalendarEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CalendarEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CalendarEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<String> startAt = const Value.absent(),
+                Value<String?> endAt = const Value.absent(),
+                Value<bool> allDay = const Value.absent(),
+                Value<String> color = const Value.absent(),
+                Value<String?> location = const Value.absent(),
+                Value<String?> linkUrl = const Value.absent(),
+                Value<String> scheduleType = const Value.absent(),
+                Value<String> notificationLeadMinutes = const Value.absent(),
+                Value<bool> notificationEnabled = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+              }) => CalendarEventsCompanion(
+                id: id,
+                title: title,
+                description: description,
+                startAt: startAt,
+                endAt: endAt,
+                allDay: allDay,
+                color: color,
+                location: location,
+                linkUrl: linkUrl,
+                scheduleType: scheduleType,
+                notificationLeadMinutes: notificationLeadMinutes,
+                notificationEnabled: notificationEnabled,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String title,
+                Value<String> description = const Value.absent(),
+                required String startAt,
+                Value<String?> endAt = const Value.absent(),
+                Value<bool> allDay = const Value.absent(),
+                Value<String> color = const Value.absent(),
+                Value<String?> location = const Value.absent(),
+                Value<String?> linkUrl = const Value.absent(),
+                Value<String> scheduleType = const Value.absent(),
+                Value<String> notificationLeadMinutes = const Value.absent(),
+                Value<bool> notificationEnabled = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+              }) => CalendarEventsCompanion.insert(
+                id: id,
+                title: title,
+                description: description,
+                startAt: startAt,
+                endAt: endAt,
+                allDay: allDay,
+                color: color,
+                location: location,
+                linkUrl: linkUrl,
+                scheduleType: scheduleType,
+                notificationLeadMinutes: notificationLeadMinutes,
+                notificationEnabled: notificationEnabled,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CalendarEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CalendarEventsTable,
+      CalendarEvent,
+      $$CalendarEventsTableFilterComposer,
+      $$CalendarEventsTableOrderingComposer,
+      $$CalendarEventsTableAnnotationComposer,
+      $$CalendarEventsTableCreateCompanionBuilder,
+      $$CalendarEventsTableUpdateCompanionBuilder,
+      (
+        CalendarEvent,
+        BaseReferences<_$AppDatabase, $CalendarEventsTable, CalendarEvent>,
+      ),
+      CalendarEvent,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -16439,4 +17641,6 @@ class $AppDatabaseManager {
       $$NotesTableTableManager(_db, _db.notes);
   $$NoteChecklistItemsTableTableManager get noteChecklistItems =>
       $$NoteChecklistItemsTableTableManager(_db, _db.noteChecklistItems);
+  $$CalendarEventsTableTableManager get calendarEvents =>
+      $$CalendarEventsTableTableManager(_db, _db.calendarEvents);
 }

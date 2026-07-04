@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/budget_dao.dart';
@@ -29,6 +30,7 @@ class MobileBudgetScreen extends ConsumerWidget {
           onChanged: (value) =>
               ref.read(budgetMonthProvider.notifier).state = value,
         ),
+        _CopyPreviousMonthAction(month: month),
         MobileAsync(
           value: income,
           builder: (value) => MobileCard(
@@ -65,6 +67,65 @@ class MobileBudgetScreen extends ConsumerWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _CopyPreviousMonthAction extends ConsumerStatefulWidget {
+  const _CopyPreviousMonthAction({required this.month});
+
+  final String month;
+
+  @override
+  ConsumerState<_CopyPreviousMonthAction> createState() =>
+      _CopyPreviousMonthActionState();
+}
+
+class _CopyPreviousMonthActionState
+    extends ConsumerState<_CopyPreviousMonthAction> {
+  bool _busy = false;
+
+  Future<void> _copy() async {
+    setState(() => _busy = true);
+    try {
+      final sourceMonth = shiftMonth(widget.month, -1);
+      final copied = await ref
+          .read(budgetDaoProvider)
+          .copyBudgetGroupsWithCarryforward(sourceMonth, widget.month);
+      if (!mounted) return;
+      refreshBudget(ref);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$sourceMonth 예산에서 $copied개 그룹을 복사했습니다.')),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('예산 복사에 실패했습니다: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MobileCard(
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          key: const ValueKey('mobile-budget-copy-previous-button'),
+          onPressed: _busy ? null : _copy,
+          icon: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.copy_all_outlined),
+          label: const Text('이전 달에서 복사'),
+        ),
+      ),
     );
   }
 }
@@ -531,10 +592,8 @@ class _CategorySelector extends StatelessWidget {
         ],
       ),
       loading: () => const LinearProgressIndicator(minHeight: 3),
-      error: (error, _) => Text(
-        error.toString(),
-        style: TextStyle(color: context.appExpense),
-      ),
+      error: (error, _) =>
+          Text(error.toString(), style: TextStyle(color: context.appExpense)),
     );
   }
 }
@@ -570,10 +629,8 @@ class _AccountSelector extends StatelessWidget {
         ),
       ),
       loading: () => const LinearProgressIndicator(minHeight: 3),
-      error: (error, _) => Text(
-        error.toString(),
-        style: TextStyle(color: context.appExpense),
-      ),
+      error: (error, _) =>
+          Text(error.toString(), style: TextStyle(color: context.appExpense)),
     );
   }
 }

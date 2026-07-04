@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../data/database.dart';
@@ -57,6 +58,14 @@ class _MobileNotesScreenState extends ConsumerState<MobileNotesScreen> {
     final notes = ref.watch(notesProvider);
     return MobilePageScaffold(
       title: '메모장',
+      actions: [
+        FilledButton.tonalIcon(
+          key: const ValueKey('mobile-notes-calendar-button'),
+          onPressed: () => context.go('/notes/calendar'),
+          icon: const Icon(Icons.calendar_month_outlined, size: 18),
+          label: const Text('캘린더'),
+        ),
+      ],
       onAdd: () => _MobileNoteSheet.show(context),
       addTooltip: '새 메모',
       children: [

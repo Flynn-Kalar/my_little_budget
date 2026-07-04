@@ -341,7 +341,7 @@ void main() {
     await _openInvestmentEdit(tester, seeded.sellId);
     expect(find.text('SELL'), findsWidgets);
     expect(find.widgetWithText(TextField, '0.1111'), findsOneWidget);
-    expect(find.widgetWithText(TextField, '15000'), findsOneWidget);
+    expect(find.widgetWithText(TextField, '135014'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('investment-cancel-button')));
     await tester.pumpAndSettle();
 

@@ -159,13 +159,25 @@ class _BudgetReadOnlyContent extends StatelessWidget {
         if (rows.isEmpty)
           const _EmptyBudgetGroups()
         else
-          Column(
-            children: [
-              for (final row in rows) ...[
-                _BudgetGroupCard(row: row),
-                SizedBox(height: 10),
-              ],
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final twoColumns = constraints.maxWidth >= 820;
+              final cardWidth = twoColumns
+                  ? (constraints.maxWidth - 12) / 2
+                  : constraints.maxWidth;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  for (final row in rows)
+                    SizedBox(
+                      key: ValueKey('desktop-budget-group-${row.groupId}'),
+                      width: cardWidth,
+                      child: _BudgetGroupCard(row: row),
+                    ),
+                ],
+              );
+            },
           ),
       ],
     );
@@ -288,7 +300,9 @@ class _BudgetSummary extends StatelessWidget {
             label: '남은 금액',
             amount: remaining,
             icon: Icons.savings_outlined,
-            color: remaining < 0 ? context.desktopExpense : context.desktopAccent,
+            color: remaining < 0
+                ? context.desktopExpense
+                : context.desktopAccent,
           ),
         ),
       ],
@@ -348,31 +362,55 @@ class _BudgetGroupCard extends ConsumerWidget {
         ? null
         : (row.spentAmount / row.budgetAmount).clamp(0.0, 1.0);
 
+    final remaining = row.budgetAmount - row.spentAmount;
+    final overAmount = row.spentAmount - row.budgetAmount;
+
     return _BudgetCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  row.groupName,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      row.groupName,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _ModeChip(row: row),
+                        if (row.adjustment != 0)
+                          _InfoChip(label: '조정 ${formatKRW(row.adjustment)}'),
+                        if (row.carryForward) const _InfoChip(label: '이월'),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              _ModeChip(row: row),
-              SizedBox(width: 4),
+              SizedBox(width: 8),
               IconButton(
                 onPressed: () => _BudgetGroupModeEditDialog.show(context, row),
                 icon: Icon(Icons.edit_outlined),
                 tooltip: '예산 그룹 수정',
+                visualDensity: VisualDensity.compact,
               ),
               IconButton(
                 onPressed: () => _confirmDeleteBudgetGroup(context, ref, row),
                 icon: Icon(Icons.delete_outline),
                 tooltip: '예산 그룹 삭제',
                 color: context.desktopExpense,
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),
@@ -388,44 +426,36 @@ class _BudgetGroupCard extends ConsumerWidget {
               ),
             ),
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 10),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               _AmountPair(label: '예산', amount: row.budgetAmount),
-              SizedBox(width: 24),
+              SizedBox(width: 18),
               _AmountPair(label: '사용', amount: row.spentAmount),
-              SizedBox(width: 24),
-              _AmountPair(
-                label: '잔액',
-                amount: row.budgetAmount - row.spentAmount,
-              ),
+              SizedBox(width: 18),
+              _AmountPair(label: '잔액', amount: remaining),
               const Spacer(),
               Text(
                 '${row.usagePercent}%',
                 style: TextStyle(
-                  color: overBudget ? context.desktopExpense : context.desktopMuted,
+                  color: overBudget
+                      ? context.desktopExpense
+                      : context.desktopMuted,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          if (row.adjustment != 0 || row.carryForward) ...[
+          if (overBudget) ...[
             SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (row.adjustment != 0)
-                  _InfoChip(label: '조정 ${formatKRW(row.adjustment)}'),
-                if (row.carryForward) const _InfoChip(label: '이월'),
-              ],
-            ),
+            _OverBudgetNotice(amount: overAmount),
           ],
           if (row.categories.isNotEmpty) ...[
             SizedBox(height: 10),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 for (final category in row.categories)
                   _InfoChip(label: category.name),
@@ -433,6 +463,44 @@ class _BudgetGroupCard extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _OverBudgetNotice extends StatelessWidget {
+  const _OverBudgetNotice({required this.amount});
+
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.desktopExpense.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              size: 16,
+              color: context.desktopExpense,
+            ),
+            SizedBox(width: 6),
+            Text(
+              '예산 초과 ${formatKRW(amount)}',
+              style: TextStyle(
+                color: context.desktopExpense,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -520,7 +588,7 @@ class _InfoChip extends StatelessWidget {
         border: Border.all(color: context.desktopBorder),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         child: Text(label, style: TextStyle(fontSize: 12)),
       ),
     );
@@ -683,10 +751,7 @@ class _BudgetGroupCreateDialogState
                 title: Text('carry-forward 사용'),
               ),
               SizedBox(height: 12),
-              Text(
-                '연결 카테고리',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
+              Text('연결 카테고리', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height: 8),
               categories.when(
                 data: (items) {

@@ -23,6 +23,7 @@ class Backup {
     required this.recurringTransactions,
     this.notes = const [],
     this.noteChecklistItems = const [],
+    this.calendarEvents = const [],
   });
 
   final String exportedAt;
@@ -38,6 +39,7 @@ class Backup {
   final List<RecurringTransaction> recurringTransactions;
   final List<Note> notes;
   final List<NoteChecklistItem> noteChecklistItems;
+  final List<CalendarEvent> calendarEvents;
 
   Map<String, dynamic> toJson() => {
     'version': backupVersion,
@@ -60,6 +62,7 @@ class Backup {
           .toList(),
       'notes': notes.map(_noteBackupJson).toList(),
       'noteChecklistItems': noteChecklistItems.map((e) => e.toJson()).toList(),
+      'calendarEvents': calendarEvents.map((e) => e.toJson()).toList(),
     },
   };
 
@@ -152,6 +155,9 @@ BackupParseResult parseBackup(String jsonString) {
               (j) => NoteChecklistItem.fromJson(_bools(j, const ['isChecked'])),
             )
             .toList(),
+        calendarEvents: _list(
+          data['calendarEvents'],
+        ).map((j) => CalendarEvent.fromJson(_calendarEventJson(j))).toList(),
       ),
     );
   } catch (e) {
@@ -214,6 +220,13 @@ Map<String, Object?> _noteBackupJson(Note note) {
     json['alarmClipEndMs'] = null;
   }
   return json;
+}
+
+Map<String, Object?> _calendarEventJson(Map<String, dynamic> m) {
+  m['scheduleType'] ??= 'none';
+  m['notificationLeadMinutes'] ??= '';
+  m['notificationEnabled'] ??= false;
+  return _bools(m, const ['allDay', 'notificationEnabled']);
 }
 
 Map<String, Object?> _withSyncFields(Map<String, dynamic> m) {

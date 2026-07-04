@@ -33,8 +33,8 @@ class MobileShell extends ConsumerWidget {
     _MobileNavItem('/transactions', '내역', Icons.receipt_long_outlined),
     _MobileNavItem('/stats', '통계', Icons.bar_chart_outlined),
     _MobileNavItem('/accounts', '자산', Icons.account_balance_wallet_outlined),
-    _MobileNavItem('/investments', '투자', Icons.trending_up),
     _MobileNavItem('/notes', '메모', Icons.note_alt_outlined),
+    _MobileNavItem('/calendar', '캘린더', Icons.calendar_month_outlined),
     _MobileNavItem('/settings', '설정', Icons.settings_outlined),
   ];
 

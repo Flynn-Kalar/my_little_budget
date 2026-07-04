@@ -33,7 +33,10 @@ class MobileTagsScreen extends ConsumerWidget {
           builder: (items) {
             if (items.isEmpty) return const EmptyMobileCard('태그가 없습니다.');
             return Column(
-              children: [for (final tag in items) _TagCard(tag: tag)],
+              children: [
+                for (var i = 0; i < items.length; i++)
+                  _TagCard(tag: items[i], tags: items, index: i),
+              ],
             );
           },
         ),
@@ -56,9 +59,23 @@ class MobileTagsScreen extends ConsumerWidget {
 }
 
 class _TagCard extends ConsumerWidget {
-  const _TagCard({required this.tag});
+  const _TagCard({required this.tag, required this.tags, required this.index});
 
   final Tag tag;
+  final List<Tag> tags;
+  final int index;
+
+  Future<void> _move(WidgetRef ref, int direction) async {
+    final target = index + direction;
+    if (target < 0 || target >= tags.length) return;
+    final ordered = [...tags];
+    final moving = ordered.removeAt(index);
+    ordered.insert(target, moving);
+    await ref
+        .read(tagsDaoProvider)
+        .updateTagOrder(ordered.map((tag) => tag.id).toList());
+    refreshTags(ref);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,15 +84,66 @@ class _TagCard extends ConsumerWidget {
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(backgroundColor: _parseColor(tag.color)),
         title: Text('#${tag.name}'),
-        trailing: IconButton(
-          onPressed: () async {
-            await ref.read(tagsDaoProvider).setTagPinned(tag.id, !tag.isPinned);
-            refreshTags(ref);
-          },
-          icon: Icon(
-            tag.isPinned ? Icons.star_rounded : Icons.star_border_rounded,
-          ),
-          tooltip: tag.isPinned ? '고정 해제' : '태그 고정',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: () async {
+                await ref
+                    .read(tagsDaoProvider)
+                    .setTagPinned(tag.id, !tag.isPinned);
+                refreshTags(ref);
+              },
+              icon: Icon(
+                tag.isPinned ? Icons.star_rounded : Icons.star_border_rounded,
+              ),
+              tooltip: tag.isPinned ? '고정 해제' : '태그 고정',
+            ),
+            PopupMenuButton<String>(
+              tooltip: '태그 메뉴',
+              onSelected: (value) async {
+                if (value == 'edit') {
+                  final action = await _TagSheet.show(context, tag: tag);
+                  if (!context.mounted || action == null) return;
+                  final message = action == _TagAction.deleted
+                      ? '태그를 삭제했습니다.'
+                      : '태그를 수정했습니다.';
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(message)));
+                } else if (value == 'up') {
+                  _move(ref, -1);
+                } else if (value == 'down') {
+                  _move(ref, 1);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: ListTile(
+                    leading: Icon(Icons.edit_outlined),
+                    title: Text('수정'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'up',
+                  enabled: index > 0,
+                  child: const ListTile(
+                    leading: Icon(Icons.arrow_upward),
+                    title: Text('위로 이동'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'down',
+                  enabled: index < tags.length - 1,
+                  child: const ListTile(
+                    leading: Icon(Icons.arrow_downward),
+                    title: Text('아래로 이동'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         onTap: () async {
           final action = await _TagSheet.show(context, tag: tag);

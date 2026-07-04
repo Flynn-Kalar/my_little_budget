@@ -26,59 +26,152 @@ class TransactionList extends ConsumerWidget {
     final type = ref.watch(typeFilterProvider);
 
     return async.when(
-      loading: () => Padding(
-        padding: EdgeInsets.all(40),
-        child: Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('불러오기 오류: $e')),
+      data: (rows) => SingleChildScrollView(
+        key: const ValueKey('desktop-transactions-list-scroll'),
+        child: _TransactionListBody(rows: rows, filter: filter, type: type),
       ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.all(40),
-        child: Center(child: Text('불러오기 오류: $e')),
-      ),
-      data: (rows) {
-        if (rows.isEmpty) {
-          final hasSearch = filter.q?.trim().isNotEmpty ?? false;
-          final hasFilter = type != null || hasActiveTransactionFilter(filter);
-          final message = hasSearch
-              ? '검색 결과가 없습니다.'
-              : hasFilter
-              ? '필터 결과가 없습니다.'
-              : '이번 달엔 아직 기록이 없어요.';
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 48),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              border: Border.all(color: context.desktopBorder),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(message, style: TextStyle(color: context.desktopMuted)),
-          );
-        }
+    );
+  }
+}
 
-        final groups = <String, List<TransactionRow>>{};
-        for (final r in rows) {
-          (groups[r.occurredOn] ??= []).add(r);
-        }
+class _TransactionListBody extends StatelessWidget {
+  const _TransactionListBody({
+    required this.rows,
+    required this.filter,
+    required this.type,
+  });
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final entry in groups.entries) ...[
-              Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 6),
-                child: Text(
-                  _dateHeader(entry.key),
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: context.desktopMuted,
-                  ),
-                ),
+  final List<TransactionRow> rows;
+  final TransactionFilter filter;
+  final String? type;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      final hasSearch = filter.q?.trim().isNotEmpty ?? false;
+      final hasFilter = type != null || hasActiveTransactionFilter(filter);
+      final message = hasSearch
+          ? '검색 결과가 없습니다.'
+          : hasFilter
+          ? '필터 결과가 없습니다.'
+          : '이번 달엔 아직 기록이 없어요.';
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border.all(color: context.desktopBorder),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(message, style: TextStyle(color: context.desktopMuted)),
+      );
+    }
+
+    final groups = <String, List<TransactionRow>>{};
+    final totals = <String, _DailyTotals>{};
+    for (final r in rows) {
+      (groups[r.occurredOn] ??= []).add(r);
+      totals[r.occurredOn] = (totals[r.occurredOn] ?? const _DailyTotals()).add(
+        r,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final entry in groups.entries) ...[
+          _DateHeader(
+            date: entry.key,
+            totals: totals[entry.key] ?? const _DailyTotals(),
+          ),
+          for (final row in entry.value) _Row(row: row),
+        ],
+      ],
+    );
+  }
+}
+
+class _DailyTotals {
+  const _DailyTotals({this.income = 0, this.expense = 0});
+
+  final int income;
+  final int expense;
+
+  _DailyTotals add(TransactionRow row) => switch (row.type) {
+    'income' => _DailyTotals(income: income + row.amount, expense: expense),
+    'expense' => _DailyTotals(income: income, expense: expense + row.amount),
+    _ => this,
+  };
+}
+
+class _DateHeader extends StatelessWidget {
+  const _DateHeader({required this.date, required this.totals});
+
+  final String date;
+  final _DailyTotals totals;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 6),
+      child: Row(
+        key: ValueKey('desktop-transactions-date-header-$date'),
+        children: [
+          Expanded(
+            child: Text(
+              _dateHeader(date),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: context.desktopMuted,
               ),
-              for (final row in entry.value) _Row(row: row),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 12,
+            runSpacing: 4,
+            children: [
+              _DailyTotalText(
+                key: ValueKey('desktop-transactions-date-income-$date'),
+                label: '수입',
+                value: totals.income,
+                color: context.desktopIncome,
+              ),
+              _DailyTotalText(
+                key: ValueKey('desktop-transactions-date-expense-$date'),
+                label: '지출',
+                value: totals.expense,
+                color: context.desktopExpense,
+              ),
             ],
-          ],
-        );
-      },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DailyTotalText extends StatelessWidget {
+  const _DailyTotalText({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '$label ${formatKRW(value)}',
+      textAlign: TextAlign.end,
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color),
     );
   }
 }

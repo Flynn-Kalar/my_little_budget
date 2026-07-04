@@ -35,6 +35,13 @@ class MobileTransactionsScreen extends ConsumerWidget {
           icon: const Icon(Icons.savings_outlined, size: 18),
           label: const Text('예산'),
         ),
+        const SizedBox(width: 8),
+        FilledButton.tonalIcon(
+          key: const ValueKey('mobile-transactions-investments-button'),
+          onPressed: () => context.go('/investments'),
+          icon: const Icon(Icons.trending_up, size: 18),
+          label: const Text('투자'),
+        ),
       ],
       onAdd: () => _TransactionSheet.show(context),
       addTooltip: '거래 추가',
@@ -242,15 +249,21 @@ class _GroupedTransactions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final groups = <String, List<TransactionRow>>{};
+    final totals = <String, _DailyTotals>{};
     for (final row in rows) {
       (groups[row.occurredOn] ??= []).add(row);
+      totals[row.occurredOn] = (totals[row.occurredOn] ?? const _DailyTotals())
+          .add(row);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final entry in groups.entries) ...[
-          _DateHeader(date: entry.key),
+          _DateHeader(
+            date: entry.key,
+            totals: totals[entry.key] ?? const _DailyTotals(),
+          ),
           for (final row in entry.value) _TransactionCard(row: row),
         ],
       ],
@@ -258,24 +271,90 @@ class _GroupedTransactions extends StatelessWidget {
   }
 }
 
+class _DailyTotals {
+  const _DailyTotals({this.income = 0, this.expense = 0});
+
+  final int income;
+  final int expense;
+
+  _DailyTotals add(TransactionRow row) => switch (row.type) {
+    'income' => _DailyTotals(income: income + row.amount, expense: expense),
+    'expense' => _DailyTotals(income: income, expense: expense + row.amount),
+    _ => this,
+  };
+}
+
 class _DateHeader extends StatelessWidget {
-  const _DateHeader({required this.date});
+  const _DateHeader({required this.date, required this.totals});
 
   final String date;
+  final _DailyTotals totals;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
-      child: Text(
-        _dateLabel(date),
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w800,
-          color: theme.colorScheme.onSurface,
-        ),
+      child: Row(
+        key: ValueKey('mobile-transactions-date-header-$date'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              _dateLabel(date),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 10,
+              runSpacing: 4,
+              children: [
+                _DailyTotalText(
+                  key: ValueKey('mobile-transactions-date-income-$date'),
+                  label: '수입',
+                  value: totals.income,
+                  color: context.appIncome,
+                ),
+                _DailyTotalText(
+                  key: ValueKey('mobile-transactions-date-expense-$date'),
+                  label: '지출',
+                  value: totals.expense,
+                  color: context.appExpense,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _DailyTotalText extends StatelessWidget {
+  const _DailyTotalText({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '$label ${formatKRW(value)}',
+      textAlign: TextAlign.end,
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color),
     );
   }
 }

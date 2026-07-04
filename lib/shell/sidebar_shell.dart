@@ -24,8 +24,12 @@ const _topItems = <_NavItem>[
     label: '자산',
     icon: Icons.account_balance_wallet_outlined,
   ),
-  _NavItem(path: '/investments', label: '투자', icon: Icons.trending_up),
   _NavItem(path: '/notes', label: '메모', icon: Icons.note_alt_outlined),
+  _NavItem(
+    path: '/calendar',
+    label: '캘린더',
+    icon: Icons.calendar_month_outlined,
+  ),
 ];
 
 const _bottomItems = <_NavItem>[

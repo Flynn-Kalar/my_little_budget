@@ -17,6 +17,7 @@ void main() {
 
     expect(result.isOk, true, reason: result.error);
     expect(probe.tables, supabaseSyncTableNames);
+    expect(probe.tables, contains('mlb_calendar_events'));
     expect(result.value!.tables, supabaseSyncTableNames);
   });
 
