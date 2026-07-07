@@ -29,19 +29,38 @@ class MobileAccountsScreen extends ConsumerWidget {
           builder: (value) {
             if (value.isEmpty) return const EmptyMobileCard('등록된 자산이 없습니다.');
             final included = value.where((row) => !row.excludeFromTotal);
-            final total = included.fold<int>(
+            final totalAssets = included.fold<int>(
               0,
-              (sum, row) => sum + row.balance,
+              (sum, row) => row.balance > 0 ? sum + row.balance : sum,
             );
+            final totalDebt = included.fold<int>(
+              0,
+              (sum, row) => row.balance < 0 ? sum - row.balance : sum,
+            );
+            final netWorth = totalAssets - totalDebt;
             final income = context.appIncome;
             final expense = context.appExpense;
             return Column(
               children: [
                 MobileCard(
-                  child: AmountLine(
-                    label: '총 자산',
-                    value: formatKRW(total),
-                    valueColor: total < 0 ? expense : income,
+                  child: Column(
+                    children: [
+                      AmountLine(
+                        label: '총 자산',
+                        value: formatKRW(totalAssets),
+                        valueColor: income,
+                      ),
+                      AmountLine(
+                        label: '총 부채',
+                        value: formatKRW(totalDebt),
+                        valueColor: totalDebt > 0 ? expense : null,
+                      ),
+                      AmountLine(
+                        label: '순자산',
+                        value: formatKRW(netWorth),
+                        valueColor: netWorth < 0 ? expense : income,
+                      ),
+                    ],
                   ),
                 ),
                 for (var i = 0; i < value.length; i++)
@@ -132,15 +151,27 @@ class _AccountCard extends ConsumerWidget {
     final income = context.appIncome;
     final expense = context.appExpense;
     return MobileCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: InkWell(
         onTap: () => context.go('/accounts/${account.accountId}'),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              child: Icon(
+                _kindIcon(account.kind, account.isInvestment),
+                size: 18,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     account.name,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -148,75 +179,113 @@ class _AccountCard extends ConsumerWidget {
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
-                ),
-                if (account.isInvestment)
-                  Icon(
-                    Icons.trending_up,
-                    size: 18,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Text(
+                        _kindLabel(account.kind),
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.78,
+                          ),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (account.isInvestment) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.trending_up,
+                          size: 14,
+                          color: context.appIncome,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          '투자',
+                          style: TextStyle(
+                            color: context.appIncome,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                PopupMenuButton<String>(
-                  tooltip: '자산 메뉴',
-                  onSelected: (value) {
-                    if (value == 'detail') {
-                      context.go('/accounts/${account.accountId}');
-                    } else if (value == 'edit') {
-                      _AccountSheet.show(context, account: account);
-                    } else if (value == 'up') {
-                      _move(ref, -1);
-                    } else if (value == 'down') {
-                      _move(ref, 1);
-                    } else if (value == 'archive') {
-                      _archive(context, ref);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'detail',
-                      child: ListTile(
-                        leading: Icon(Icons.receipt_long_outlined),
-                        title: Text('거래내역 보기'),
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: ListTile(
-                        leading: Icon(Icons.edit_outlined),
-                        title: Text('수정'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'up',
-                      enabled: index > 0,
-                      child: const ListTile(
-                        leading: Icon(Icons.arrow_upward),
-                        title: Text('위로 이동'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'down',
-                      enabled: index < allAccounts.length - 1,
-                      child: const ListTile(
-                        leading: Icon(Icons.arrow_downward),
-                        title: Text('아래로 이동'),
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'archive',
-                      child: ListTile(
-                        leading: Icon(Icons.archive_outlined),
-                        title: Text('보관'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            AmountLine(
-              label: _kindLabel(account.kind),
-              value: formatKRW(account.balance),
-              valueColor: account.balance < 0 ? expense : income,
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 132),
+              child: Text(
+                formatKRW(account.balance),
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: account.balance < 0 ? expense : income,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 42,
+              child: PopupMenuButton<String>(
+                tooltip: '자산 메뉴',
+                iconSize: 22,
+                padding: EdgeInsets.zero,
+                onSelected: (value) {
+                  if (value == 'detail') {
+                    context.go('/accounts/${account.accountId}');
+                  } else if (value == 'edit') {
+                    _AccountSheet.show(context, account: account);
+                  } else if (value == 'up') {
+                    _move(ref, -1);
+                  } else if (value == 'down') {
+                    _move(ref, 1);
+                  } else if (value == 'archive') {
+                    _archive(context, ref);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'detail',
+                    child: ListTile(
+                      leading: Icon(Icons.receipt_long_outlined),
+                      title: Text('거래내역 보기'),
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('수정'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'up',
+                    enabled: index > 0,
+                    child: const ListTile(
+                      leading: Icon(Icons.arrow_upward),
+                      title: Text('위로 이동'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'down',
+                    enabled: index < allAccounts.length - 1,
+                    child: const ListTile(
+                      leading: Icon(Icons.arrow_downward),
+                      title: Text('아래로 이동'),
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'archive',
+                    child: ListTile(
+                      leading: Icon(Icons.archive_outlined),
+                      title: Text('보관'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -479,7 +548,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
                 decoration: const InputDecoration(
                   labelText: '카드 한도',
                   suffixText: '원',
-                  helperText: '월 지출 합계가 한도의 80% 이상이면 경고합니다.',
+                  helperText: '현재 카드 부채가 한도의 80% 이상이면 경고합니다.',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -549,3 +618,14 @@ String _kindLabel(String kind) => switch (kind) {
   'other' => '기타',
   _ => kind,
 };
+
+IconData _kindIcon(String kind, bool investment) {
+  if (investment) return Icons.trending_up;
+  return switch (kind) {
+    'cash' => Icons.payments_outlined,
+    'bank' => Icons.account_balance_outlined,
+    'card' => Icons.credit_card,
+    'other' => Icons.account_balance_wallet_outlined,
+    _ => Icons.account_balance_wallet_outlined,
+  };
+}

@@ -52,6 +52,7 @@ Map<String, List<NoteCalendarEntry>> noteCalendarEntriesByDate(
 
   for (final entry in notes) {
     final note = entry.note;
+    if (!note.showOnCalendar) continue;
     final type = NoteScheduleTypeStorage.parse(note.scheduleType);
     if (type == NoteScheduleType.none) continue;
     if (type == NoteScheduleType.once) {

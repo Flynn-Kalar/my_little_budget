@@ -89,6 +89,7 @@ AND EXISTS (
     List<ChecklistItemDraft>? checklistItems,
     bool completed = false,
     bool pinned = false,
+    bool showOnCalendar = false,
     NoteAlarmSettings alarmSettings = const NoteAlarmSettings(),
   }) {
     final effectiveItems =
@@ -107,6 +108,7 @@ AND EXISTS (
         schedule: schedule,
         completed: completed,
         pinned: pinned,
+        showOnCalendar: showOnCalendar,
         alarmSettings: alarmSettings,
       );
       if (normalizedItems != null) {
@@ -125,6 +127,7 @@ AND EXISTS (
     required NoteScheduleDraft? schedule,
     required bool completed,
     required bool pinned,
+    required bool showOnCalendar,
     required NoteAlarmSettings alarmSettings,
   }) async {
     final normalizedTitle = title.trim();
@@ -164,6 +167,7 @@ AND EXISTS (
           richContent: Value(richContent),
           completed: Value(completed),
           pinned: Value(pinned),
+          showOnCalendar: Value(showOnCalendar),
           alarmSoundKind: Value(alarmSettings.soundKind.name),
           alarmSoundUri: Value(alarmSettings.soundUri),
           alarmSoundName: Value(alarmSettings.soundName),
@@ -196,6 +200,7 @@ AND EXISTS (
         content: Value(content.trim()),
         richContent: Value(richContent),
         pinned: Value(pinned),
+        showOnCalendar: Value(showOnCalendar),
         updatedAt: Value(now),
         alarmSoundKind: Value(alarmSettings.soundKind.name),
         alarmSoundUri: Value(alarmSettings.soundUri),

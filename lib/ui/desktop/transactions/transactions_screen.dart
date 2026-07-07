@@ -8,7 +8,6 @@ import 'widgets/month_nav.dart';
 import 'widgets/summary_bar.dart';
 import 'widgets/transaction_list.dart';
 import 'widgets/transactions_side_panel.dart';
-import 'widgets/type_filter.dart';
 
 const _contentGap = 24.0;
 const _compactMainColumnWidth = 720.0;
@@ -143,11 +142,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             key: const ValueKey('desktop-transactions-filter-row'),
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const TypeFilter(),
-              if (!_isFilterExpanded) ...[
-                const SizedBox(width: 8),
-                Expanded(child: _buildFilterPanel()),
-              ],
+              if (!_isFilterExpanded) Flexible(child: _buildFilterPanel()),
             ],
           ),
           if (_isFilterExpanded) ...[

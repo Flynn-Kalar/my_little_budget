@@ -110,6 +110,97 @@ void main() {
     expect(find.text('저장'), findsOneWidget);
   });
 
+  testWidgets('PC 내역 화면: 행 메뉴에서 거래를 삭제한다', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final accId = (await db.accountsDao.getActiveAccounts()).first.id;
+    final cat = (await db.categoriesDao.getActiveCategories('expense')).first;
+    await db.transactionsDao.saveTransaction(
+      draft: TransactionDraft(
+        type: 'expense',
+        amount: 12345,
+        occurredOn: currentDateKey(),
+        occurredTime: '00:00',
+        accountId: accId,
+        categoryId: cat.id,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      await db.transactionsDao.listTransactionsByMonth(currentMonthKey()),
+      hasLength(1),
+    );
+
+    await tester.tap(find.byTooltip('거래 메뉴').first);
+    await tester.pumpAndSettle();
+    expect(find.text('수정'), findsOneWidget);
+    expect(find.text('복사'), findsOneWidget);
+    expect(find.text('삭제'), findsOneWidget);
+
+    await tester.tap(find.text('삭제').last);
+    await tester.pumpAndSettle();
+    expect(find.text('거래 삭제'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, '삭제'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('거래를 삭제했습니다.'), findsOneWidget);
+    expect(
+      await db.transactionsDao.listTransactionsByMonth(currentMonthKey()),
+      isEmpty,
+    );
+  });
+
+  testWidgets('PC 내역 화면: 빠른 입력 태그 엔터 후 메모로 포커스 이동한다', (tester) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tagField = find.byKey(
+      const ValueKey('desktop-transactions-inline-tag'),
+    );
+    final memoField = find.byKey(
+      const ValueKey('desktop-transactions-memo-field'),
+    );
+    expect(tagField, findsOneWidget);
+    expect(memoField, findsOneWidget);
+
+    await tester.tap(tagField);
+    await tester.enterText(tagField, '테스트태그');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pump();
+    await tester.pump();
+
+    final memo = tester.widget<TextField>(memoField);
+    expect(memo.focusNode?.hasFocus, isTrue);
+  });
+
   testWidgets('PC 내역 화면: 상단 접기/펴기 상태를 전환한다', (tester) async {
     tester.view.physicalSize = const Size(1400, 1000);
     tester.view.devicePixelRatio = 1.0;
@@ -192,18 +283,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final typeChip = find.widgetWithText(ChoiceChip, '전체');
     final filterButton = find.widgetWithText(OutlinedButton, '검색·필터');
-    expect(typeChip, findsOneWidget);
     expect(filterButton, findsOneWidget);
-    expect(tester.getCenter(typeChip).dy, tester.getCenter(filterButton).dy);
-
-    await tester.tap(filterButton);
-    await tester.pumpAndSettle();
 
     final filterRow = find.byKey(
       const ValueKey('desktop-transactions-filter-row'),
     );
+    expect(
+      find.descendant(of: filterRow, matching: find.byType(ChoiceChip)),
+      findsNothing,
+    );
+
+    await tester.tap(filterButton);
+    await tester.pumpAndSettle();
+
     final expandedFilter = find.byKey(
       const ValueKey('desktop-transactions-expanded-filter'),
     );
@@ -220,6 +313,16 @@ void main() {
       tester.getSize(expandedFilter).width,
       tester.getSize(filterRow).width,
     );
+    for (final label in ['수입', '지출', '이체']) {
+      expect(
+        find.descendant(
+          of: expandedFilter,
+          matching: find.widgetWithText(ChoiceChip, label),
+        ),
+        findsOneWidget,
+      );
+    }
+    expect(find.widgetWithText(ChoiceChip, '전체'), findsNothing);
 
     final search = find.byKey(const ValueKey('transactions-search-field'));
     final minAmount = find.byKey(
@@ -243,6 +346,12 @@ void main() {
     expect(account, findsOneWidget);
     expect(fromDate, findsOneWidget);
     expect(toDate, findsOneWidget);
+    expect(
+      tester.getCenter(account).dy,
+      greaterThan(tester.getCenter(search).dy),
+    );
+    expect(tester.getCenter(fromDate).dy, tester.getCenter(account).dy);
+    expect(tester.getCenter(toDate).dy, tester.getCenter(account).dy);
   });
 
   testWidgets('PC 내역 화면: 1920 작업 영역에서 wide 컬럼을 사용한다', (tester) async {
@@ -530,7 +639,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('예정 거래 1건'), findsOneWidget);
+    expect(find.text('지출 ${formatKRW(1234)}'), findsWidgets);
     expect(find.text('예정'), findsWidgets);
+    expect(find.text('future-planned-row'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('desktop-transactions-planned-toggle')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('예정 거래 1건'), findsOneWidget);
+    expect(find.text('future-planned-row'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey('desktop-transactions-planned-toggle')),
+    );
+    await tester.pumpAndSettle();
+
     expect(find.text('future-planned-row'), findsOneWidget);
 
     final amount = find.byKey(

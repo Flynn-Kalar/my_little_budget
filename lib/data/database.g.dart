@@ -7075,6 +7075,21 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         ),
         defaultValue: const Constant(true),
       );
+  static const VerificationMeta _showOnCalendarMeta = const VerificationMeta(
+    'showOnCalendar',
+  );
+  @override
+  late final GeneratedColumn<bool> showOnCalendar = GeneratedColumn<bool>(
+    'show_on_calendar',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("show_on_calendar" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _completedMeta = const VerificationMeta(
     'completed',
   );
@@ -7154,6 +7169,7 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     alarmClipStartMs,
     alarmClipEndMs,
     alarmVibrationEnabled,
+    showOnCalendar,
     completed,
     pinned,
     createdAt,
@@ -7377,6 +7393,15 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         ),
       );
     }
+    if (data.containsKey('show_on_calendar')) {
+      context.handle(
+        _showOnCalendarMeta,
+        showOnCalendar.isAcceptableOrUnknown(
+          data['show_on_calendar']!,
+          _showOnCalendarMeta,
+        ),
+      );
+    }
     if (data.containsKey('completed')) {
       context.handle(
         _completedMeta,
@@ -7510,6 +7535,10 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         DriftSqlType.bool,
         data['${effectivePrefix}alarm_vibration_enabled'],
       )!,
+      showOnCalendar: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}show_on_calendar'],
+      )!,
       completed: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}completed'],
@@ -7561,6 +7590,7 @@ class Note extends DataClass implements Insertable<Note> {
   final int alarmClipStartMs;
   final int? alarmClipEndMs;
   final bool alarmVibrationEnabled;
+  final bool showOnCalendar;
   final bool completed;
   final bool pinned;
   final String createdAt;
@@ -7591,6 +7621,7 @@ class Note extends DataClass implements Insertable<Note> {
     required this.alarmClipStartMs,
     this.alarmClipEndMs,
     required this.alarmVibrationEnabled,
+    required this.showOnCalendar,
     required this.completed,
     required this.pinned,
     required this.createdAt,
@@ -7654,6 +7685,7 @@ class Note extends DataClass implements Insertable<Note> {
       map['alarm_clip_end_ms'] = Variable<int>(alarmClipEndMs);
     }
     map['alarm_vibration_enabled'] = Variable<bool>(alarmVibrationEnabled);
+    map['show_on_calendar'] = Variable<bool>(showOnCalendar);
     map['completed'] = Variable<bool>(completed);
     map['pinned'] = Variable<bool>(pinned);
     map['created_at'] = Variable<String>(createdAt);
@@ -7714,6 +7746,7 @@ class Note extends DataClass implements Insertable<Note> {
           ? const Value.absent()
           : Value(alarmClipEndMs),
       alarmVibrationEnabled: Value(alarmVibrationEnabled),
+      showOnCalendar: Value(showOnCalendar),
       completed: Value(completed),
       pinned: Value(pinned),
       createdAt: Value(createdAt),
@@ -7762,6 +7795,7 @@ class Note extends DataClass implements Insertable<Note> {
       alarmVibrationEnabled: serializer.fromJson<bool>(
         json['alarmVibrationEnabled'],
       ),
+      showOnCalendar: serializer.fromJson<bool>(json['showOnCalendar']),
       completed: serializer.fromJson<bool>(json['completed']),
       pinned: serializer.fromJson<bool>(json['pinned']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
@@ -7801,6 +7835,7 @@ class Note extends DataClass implements Insertable<Note> {
       'alarmClipStartMs': serializer.toJson<int>(alarmClipStartMs),
       'alarmClipEndMs': serializer.toJson<int?>(alarmClipEndMs),
       'alarmVibrationEnabled': serializer.toJson<bool>(alarmVibrationEnabled),
+      'showOnCalendar': serializer.toJson<bool>(showOnCalendar),
       'completed': serializer.toJson<bool>(completed),
       'pinned': serializer.toJson<bool>(pinned),
       'createdAt': serializer.toJson<String>(createdAt),
@@ -7834,6 +7869,7 @@ class Note extends DataClass implements Insertable<Note> {
     int? alarmClipStartMs,
     Value<int?> alarmClipEndMs = const Value.absent(),
     bool? alarmVibrationEnabled,
+    bool? showOnCalendar,
     bool? completed,
     bool? pinned,
     String? createdAt,
@@ -7879,6 +7915,7 @@ class Note extends DataClass implements Insertable<Note> {
         ? alarmClipEndMs.value
         : this.alarmClipEndMs,
     alarmVibrationEnabled: alarmVibrationEnabled ?? this.alarmVibrationEnabled,
+    showOnCalendar: showOnCalendar ?? this.showOnCalendar,
     completed: completed ?? this.completed,
     pinned: pinned ?? this.pinned,
     createdAt: createdAt ?? this.createdAt,
@@ -7953,6 +7990,9 @@ class Note extends DataClass implements Insertable<Note> {
       alarmVibrationEnabled: data.alarmVibrationEnabled.present
           ? data.alarmVibrationEnabled.value
           : this.alarmVibrationEnabled,
+      showOnCalendar: data.showOnCalendar.present
+          ? data.showOnCalendar.value
+          : this.showOnCalendar,
       completed: data.completed.present ? data.completed.value : this.completed,
       pinned: data.pinned.present ? data.pinned.value : this.pinned,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -7988,6 +8028,7 @@ class Note extends DataClass implements Insertable<Note> {
           ..write('alarmClipStartMs: $alarmClipStartMs, ')
           ..write('alarmClipEndMs: $alarmClipEndMs, ')
           ..write('alarmVibrationEnabled: $alarmVibrationEnabled, ')
+          ..write('showOnCalendar: $showOnCalendar, ')
           ..write('completed: $completed, ')
           ..write('pinned: $pinned, ')
           ..write('createdAt: $createdAt, ')
@@ -8023,6 +8064,7 @@ class Note extends DataClass implements Insertable<Note> {
     alarmClipStartMs,
     alarmClipEndMs,
     alarmVibrationEnabled,
+    showOnCalendar,
     completed,
     pinned,
     createdAt,
@@ -8058,6 +8100,7 @@ class Note extends DataClass implements Insertable<Note> {
           other.alarmClipStartMs == this.alarmClipStartMs &&
           other.alarmClipEndMs == this.alarmClipEndMs &&
           other.alarmVibrationEnabled == this.alarmVibrationEnabled &&
+          other.showOnCalendar == this.showOnCalendar &&
           other.completed == this.completed &&
           other.pinned == this.pinned &&
           other.createdAt == this.createdAt &&
@@ -8090,6 +8133,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
   final Value<int> alarmClipStartMs;
   final Value<int?> alarmClipEndMs;
   final Value<bool> alarmVibrationEnabled;
+  final Value<bool> showOnCalendar;
   final Value<bool> completed;
   final Value<bool> pinned;
   final Value<String> createdAt;
@@ -8120,6 +8164,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     this.alarmClipStartMs = const Value.absent(),
     this.alarmClipEndMs = const Value.absent(),
     this.alarmVibrationEnabled = const Value.absent(),
+    this.showOnCalendar = const Value.absent(),
     this.completed = const Value.absent(),
     this.pinned = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -8151,6 +8196,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     this.alarmClipStartMs = const Value.absent(),
     this.alarmClipEndMs = const Value.absent(),
     this.alarmVibrationEnabled = const Value.absent(),
+    this.showOnCalendar = const Value.absent(),
     this.completed = const Value.absent(),
     this.pinned = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -8182,6 +8228,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     Expression<int>? alarmClipStartMs,
     Expression<int>? alarmClipEndMs,
     Expression<bool>? alarmVibrationEnabled,
+    Expression<bool>? showOnCalendar,
     Expression<bool>? completed,
     Expression<bool>? pinned,
     Expression<String>? createdAt,
@@ -8218,6 +8265,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
       if (alarmClipEndMs != null) 'alarm_clip_end_ms': alarmClipEndMs,
       if (alarmVibrationEnabled != null)
         'alarm_vibration_enabled': alarmVibrationEnabled,
+      if (showOnCalendar != null) 'show_on_calendar': showOnCalendar,
       if (completed != null) 'completed': completed,
       if (pinned != null) 'pinned': pinned,
       if (createdAt != null) 'created_at': createdAt,
@@ -8251,6 +8299,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     Value<int>? alarmClipStartMs,
     Value<int?>? alarmClipEndMs,
     Value<bool>? alarmVibrationEnabled,
+    Value<bool>? showOnCalendar,
     Value<bool>? completed,
     Value<bool>? pinned,
     Value<String>? createdAt,
@@ -8286,6 +8335,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
       alarmClipEndMs: alarmClipEndMs ?? this.alarmClipEndMs,
       alarmVibrationEnabled:
           alarmVibrationEnabled ?? this.alarmVibrationEnabled,
+      showOnCalendar: showOnCalendar ?? this.showOnCalendar,
       completed: completed ?? this.completed,
       pinned: pinned ?? this.pinned,
       createdAt: createdAt ?? this.createdAt,
@@ -8379,6 +8429,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
         alarmVibrationEnabled.value,
       );
     }
+    if (showOnCalendar.present) {
+      map['show_on_calendar'] = Variable<bool>(showOnCalendar.value);
+    }
     if (completed.present) {
       map['completed'] = Variable<bool>(completed.value);
     }
@@ -8422,6 +8475,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
           ..write('alarmClipStartMs: $alarmClipStartMs, ')
           ..write('alarmClipEndMs: $alarmClipEndMs, ')
           ..write('alarmVibrationEnabled: $alarmVibrationEnabled, ')
+          ..write('showOnCalendar: $showOnCalendar, ')
           ..write('completed: $completed, ')
           ..write('pinned: $pinned, ')
           ..write('createdAt: $createdAt, ')
@@ -16168,6 +16222,7 @@ typedef $$NotesTableCreateCompanionBuilder =
       Value<int> alarmClipStartMs,
       Value<int?> alarmClipEndMs,
       Value<bool> alarmVibrationEnabled,
+      Value<bool> showOnCalendar,
       Value<bool> completed,
       Value<bool> pinned,
       Value<String> createdAt,
@@ -16200,6 +16255,7 @@ typedef $$NotesTableUpdateCompanionBuilder =
       Value<int> alarmClipStartMs,
       Value<int?> alarmClipEndMs,
       Value<bool> alarmVibrationEnabled,
+      Value<bool> showOnCalendar,
       Value<bool> completed,
       Value<bool> pinned,
       Value<String> createdAt,
@@ -16365,6 +16421,11 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
 
   ColumnFilters<bool> get alarmVibrationEnabled => $composableBuilder(
     column: $table.alarmVibrationEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get showOnCalendar => $composableBuilder(
+    column: $table.showOnCalendar,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16548,6 +16609,11 @@ class $$NotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get showOnCalendar => $composableBuilder(
+    column: $table.showOnCalendar,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get completed => $composableBuilder(
     column: $table.completed,
     builder: (column) => ColumnOrderings(column),
@@ -16695,6 +16761,11 @@ class $$NotesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get showOnCalendar => $composableBuilder(
+    column: $table.showOnCalendar,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get completed =>
       $composableBuilder(column: $table.completed, builder: (column) => column);
 
@@ -16788,6 +16859,7 @@ class $$NotesTableTableManager
                 Value<int> alarmClipStartMs = const Value.absent(),
                 Value<int?> alarmClipEndMs = const Value.absent(),
                 Value<bool> alarmVibrationEnabled = const Value.absent(),
+                Value<bool> showOnCalendar = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
                 Value<bool> pinned = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
@@ -16818,6 +16890,7 @@ class $$NotesTableTableManager
                 alarmClipStartMs: alarmClipStartMs,
                 alarmClipEndMs: alarmClipEndMs,
                 alarmVibrationEnabled: alarmVibrationEnabled,
+                showOnCalendar: showOnCalendar,
                 completed: completed,
                 pinned: pinned,
                 createdAt: createdAt,
@@ -16851,6 +16924,7 @@ class $$NotesTableTableManager
                 Value<int> alarmClipStartMs = const Value.absent(),
                 Value<int?> alarmClipEndMs = const Value.absent(),
                 Value<bool> alarmVibrationEnabled = const Value.absent(),
+                Value<bool> showOnCalendar = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
                 Value<bool> pinned = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
@@ -16881,6 +16955,7 @@ class $$NotesTableTableManager
                 alarmClipStartMs: alarmClipStartMs,
                 alarmClipEndMs: alarmClipEndMs,
                 alarmVibrationEnabled: alarmVibrationEnabled,
+                showOnCalendar: showOnCalendar,
                 completed: completed,
                 pinned: pinned,
                 createdAt: createdAt,

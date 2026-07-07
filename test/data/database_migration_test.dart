@@ -218,6 +218,7 @@ WHERE id = 1
         'reset_weekdays',
         'snooze_minutes',
         'rich_content',
+        'show_on_calendar',
         'alarm_sound_kind',
         'alarm_clip_start_ms',
         'alarm_vibration_enabled',
@@ -270,6 +271,7 @@ VALUES (7, '기존 반복 메모', '보존할 본문', 'daily', '06:00')
     expect(note?.title, '기존 반복 메모');
     expect(note?.content, '보존할 본문');
     expect(note?.scheduleType, 'daily');
+    expect(note?.showOnCalendar, isFalse);
 
     final checklistTable = await db
         .customSelect(

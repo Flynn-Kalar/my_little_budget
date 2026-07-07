@@ -110,7 +110,8 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
   }
 
   void _focusAfterTime() {
-    if (_syncDateAndTime()) _focus(_memoFocus);
+    if (!_syncDateAndTime()) return;
+    _focus(_type == 'transfer' ? _memoFocus : _tagFocus);
   }
 
   void _focusAfterAccount() {
@@ -118,11 +119,13 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
   }
 
   void _focusAfterCategory() {
-    _focus(_tagFocus);
+    _focus(_dateFocus);
   }
 
   void _focusAfterTag() {
-    _focus(_dateFocus);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus(_memoFocus);
+    });
   }
 
   void _focusAfterFromAccount() {
@@ -464,11 +467,12 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                 SizedBox(
                   width: 150,
                   child: FocusTraversalOrder(
-                    order: NumericFocusOrder(_type == 'transfer' ? 4 : 5),
+                    order: const NumericFocusOrder(4),
                     child: TextField(
                       key: const ValueKey('desktop-transactions-inline-date'),
                       controller: _dateCtrl,
                       focusNode: _dateFocus,
+                      textAlign: TextAlign.center,
                       textInputAction: TextInputAction.next,
                       decoration: InputDecoration(
                         hintText: '\uB0A0\uC9DC',
@@ -489,11 +493,12 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                 SizedBox(
                   width: 74,
                   child: FocusTraversalOrder(
-                    order: NumericFocusOrder(_type == 'transfer' ? 5 : 6),
+                    order: const NumericFocusOrder(5),
                     child: TextField(
                       key: const ValueKey('desktop-transactions-inline-time'),
                       controller: _timeCtrl,
                       focusNode: _timeFocus,
+                      textAlign: TextAlign.center,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         hintText: '\uC2DC\uAC04',
@@ -508,7 +513,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                 if (_type != 'transfer') ...[
                   Expanded(
                     child: FocusTraversalOrder(
-                      order: const NumericFocusOrder(4),
+                      order: const NumericFocusOrder(6),
                       child: TagAutocompleteField(
                         value: _tags,
                         suggestions: tagSuggestions,
@@ -516,7 +521,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                         focusNode: _tagFocus,
                         onChanged: (v) => setState(() => _tags = v),
                         onSubmitted: (result) {
-                          if (result == TagSubmitResult.empty) {
+                          if (result != TagSubmitResult.none) {
                             _focusAfterTag();
                           }
                         },

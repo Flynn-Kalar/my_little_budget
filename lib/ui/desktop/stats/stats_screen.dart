@@ -1056,7 +1056,7 @@ class _TrendCard extends StatelessWidget {
                   amount: totalNet,
                   color: totalNet < 0
                       ? context.desktopExpense
-                      : context.desktopAccent,
+                      : _trendNetColor(context),
                 ),
               ),
             ],
@@ -1184,7 +1184,7 @@ class _TrendChart extends StatelessWidget {
             (row) => row.expense,
             context.desktopExpense,
           ),
-          _lineData(context, rows, (row) => row.net, context.desktopAccent),
+          _lineData(context, rows, (row) => row.net, _trendNetColor(context)),
         ],
       ),
     );
@@ -1242,12 +1242,19 @@ LineTooltipItem _trendTooltipItem(
   final color = switch (spot.barIndex) {
     0 => context.desktopIncome,
     1 => context.desktopExpense,
-    _ => context.desktopAccent,
+    _ => _trendNetColor(context),
   };
   return LineTooltipItem(
     '$label ${formatKRW(amount)}',
     TextStyle(color: color, fontWeight: FontWeight.w800),
   );
+}
+
+Color _trendNetColor(BuildContext context) {
+  final theme = Theme.of(context);
+  return theme.brightness == Brightness.dark
+      ? context.desktopAccent
+      : context.desktopWarning;
 }
 
 class _TrendSummaryTile extends StatelessWidget {

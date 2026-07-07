@@ -66,6 +66,7 @@ void main() {
     );
     expect(destinations.map((item) => item.label), isNot(contains('예산')));
     expect(destinations.map((item) => item.label), isNot(contains('투자')));
+    expect(destinations.map((item) => item.label), isNot(contains('캘린더')));
 
     const budgetButton = ValueKey('mobile-transactions-budget-button');
     expect(find.byKey(budgetButton), findsOneWidget);
@@ -74,7 +75,14 @@ void main() {
 
     final navigationBar = find.byType(NavigationBar);
     final router = GoRouter.of(tester.element(navigationBar));
-    expect(router.routeInformationProvider.value.uri.path, '/budget');
+    expect(
+      find.byKey(const ValueKey('mobile-budget-copy-previous-button')),
+      findsOneWidget,
+    );
+    expect(router.canPop(), isTrue);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byKey(budgetButton), findsOneWidget);
 
     router.go('/transactions');
     await tester.pumpAndSettle();
@@ -85,7 +93,14 @@ void main() {
     expect(find.byKey(investmentsButton), findsOneWidget);
     await tester.tap(find.byKey(investmentsButton));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/investments');
+    expect(
+      find.byKey(const ValueKey('mobile-investments-search-filter-bar')),
+      findsOneWidget,
+    );
+    expect(router.canPop(), isTrue);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byKey(investmentsButton), findsOneWidget);
 
     router.go('/stats');
     await tester.pumpAndSettle();
@@ -94,10 +109,14 @@ void main() {
     expect(find.byKey(yearlyButton), findsOneWidget);
     await tester.tap(find.byKey(yearlyButton));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/stats/yearly');
+    expect(find.text('연간 통계'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byKey(yearlyButton), findsOneWidget);
   });
 
-  testWidgets('메모 캘린더는 메모 헤더에서 진입한다', (tester) async {
+  testWidgets('데스크톱 메모 헤더에서 통합 캘린더로 진입한다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1200, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -122,21 +141,14 @@ void main() {
     await tester.tap(find.byKey(calendarButton));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(router.routeInformationProvider.value.uri.path, '/notes/calendar');
-
-    const backButton = ValueKey('desktop-notes-calendar-back-button');
-    expect(find.byKey(backButton), findsOneWidget);
-    await tester.tap(find.byKey(backButton));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(router.routeInformationProvider.value.uri.path, '/notes');
+    expect(find.text('캘린더'), findsWidgets);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
     await db.close();
   });
 
-  testWidgets('모바일 메모 캘린더는 메모 헤더에서 진입한다', (tester) async {
+  testWidgets('모바일 메모 헤더에서 통합 캘린더로 진입한다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -161,14 +173,12 @@ void main() {
     await tester.tap(find.byKey(calendarButton));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(router.routeInformationProvider.value.uri.path, '/notes/calendar');
-
-    const backButton = ValueKey('mobile-notes-calendar-back-button');
-    expect(find.byKey(backButton), findsOneWidget);
-    await tester.tap(find.byKey(backButton));
+    expect(find.text('캘린더'), findsWidgets);
+    expect(router.canPop(), isTrue);
+    router.pop();
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(router.routeInformationProvider.value.uri.path, '/notes');
+    expect(find.byKey(calendarButton), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));

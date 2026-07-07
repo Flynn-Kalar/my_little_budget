@@ -386,6 +386,7 @@ class _MemoAutocompleteFieldState extends State<MemoAutocompleteField> {
             return KeyEventResult.ignored;
           },
           child: TextField(
+            key: const ValueKey('desktop-transactions-memo-field'),
             controller: controller,
             focusNode: focusNode,
             textInputAction: TextInputAction.done,
@@ -637,6 +638,7 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
         return TextField(
+          key: const ValueKey('desktop-transactions-inline-tag'),
           controller: controller,
           focusNode: focusNode,
           textInputAction: widget.textInputAction ?? TextInputAction.next,

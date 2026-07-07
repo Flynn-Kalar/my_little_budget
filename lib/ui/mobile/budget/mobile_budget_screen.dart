@@ -175,6 +175,7 @@ class _BudgetCard extends StatelessWidget {
         : (row.spentAmount / row.budgetAmount).clamp(0.0, 1.0);
 
     return MobileCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       child: InkWell(
         onTap: () => _BudgetGroupSheet.show(context, row: row),
         child: Column(
@@ -196,32 +197,41 @@ class _BudgetCard extends StatelessWidget {
                   onPressed: () => _BudgetGroupSheet.show(context, row: row),
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: '예산 수정',
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
+            Text(
+              '${formatKRW(row.budgetAmount)} · ${formatKRW(row.spentAmount)} 사용 · ${row.usagePercent}%',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: over
+                    ? danger
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.78),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
             LinearProgressIndicator(
               value: progress,
               minHeight: 8,
               color: over ? danger : positive,
               backgroundColor: theme.dividerColor,
             ),
-            const SizedBox(height: 10),
-            AmountLine(label: '예산', value: formatKRW(row.budgetAmount)),
-            AmountLine(label: '사용', value: formatKRW(row.spentAmount)),
-            AmountLine(
-              label: '사용률',
-              value: '${row.usagePercent}%',
-              valueColor: over ? danger : null,
-            ),
             if (row.categories.isNotEmpty) ...[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
-                runSpacing: 6,
+                runSpacing: 4,
                 children: [
                   for (final category in row.categories)
-                    Chip(label: Text(category.name)),
+                    Chip(
+                      label: Text(category.name),
+                      visualDensity: VisualDensity.compact,
+                    ),
                 ],
               ),
             ],

@@ -24,7 +24,9 @@ class MobileStatsScreen extends ConsumerWidget {
       actions: [
         FilledButton.tonalIcon(
           key: const ValueKey('mobile-stats-yearly-button'),
-          onPressed: () => context.go('/stats/yearly'),
+          onPressed: () {
+            context.push('/stats/yearly');
+          },
           icon: const Icon(Icons.calendar_view_month_outlined, size: 18),
           label: const Text('연간'),
         ),
@@ -387,15 +389,106 @@ class _Trend extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            children: [
+              _TrendLegendItem(label: '수입', color: context.appIncome),
+              _TrendLegendItem(label: '지출', color: context.appExpense),
+              _TrendLegendItem(label: '순액', color: context.appAccent),
+            ],
+          ),
           const SizedBox(height: 10),
           SizedBox(height: 170, child: _MobileTrendChart(rows: rows)),
           const SizedBox(height: 8),
-          for (final row in rows.take(12))
-            AmountLine(
-              label: '${parseMonthKey(row.month).month}월',
-              value: formatKRW(row.net),
-              valueColor: row.net < 0 ? expense : income,
+          for (final row in rows.take(6))
+            _MonthlyTrendLine(row: row, income: income, expense: expense),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendLegendItem extends StatelessWidget {
+  const _TrendLegendItem({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.76),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthlyTrendLine extends StatelessWidget {
+  const _MonthlyTrendLine({
+    required this.row,
+    required this.income,
+    required this.expense,
+  });
+
+  final MonthlyTrendRow row;
+  final Color income;
+  final Color expense;
+
+  @override
+  Widget build(BuildContext context) {
+    final month = parseMonthKey(row.month).month;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 34,
+            child: Text(
+              '$month월',
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
+          ),
+          Expanded(
+            child: Text(
+              '수입 ${formatKRW(row.income)} · 지출 ${formatKRW(row.expense)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.72),
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            formatKRW(row.net),
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: row.net < 0 ? expense : income,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -416,7 +509,15 @@ class _MobileTrendChart extends StatelessWidget {
       LineChartData(
         minY: minY.toDouble(),
         maxY: maxY.toDouble(),
-        lineTouchData: const LineTouchData(enabled: true),
+        lineTouchData: LineTouchData(
+          enabled: true,
+          touchTooltipData: const LineTouchTooltipData(
+            fitInsideHorizontally: true,
+            fitInsideVertically: true,
+            maxContentWidth: 96,
+            tooltipPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          ),
+        ),
         gridData: FlGridData(
           drawVerticalLine: false,
           horizontalInterval: _axisStep.toDouble(),

@@ -56,64 +56,66 @@ class SidebarShell extends ConsumerWidget {
     };
 
     return Scaffold(
-      body: Row(
-        children: [
-          Container(
-            width: 224,
-            decoration: BoxDecoration(
-              color: sidebarBg,
-              border: Border(right: BorderSide(color: border)),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'my_little_budget',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.3,
+      body: SafeArea(
+        child: Row(
+          children: [
+            Container(
+              width: 224,
+              decoration: BoxDecoration(
+                color: sidebarBg,
+                border: Border(right: BorderSide(color: border)),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'my_little_budget',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.3,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '나만의 작은 가계부',
-                        style: TextStyle(fontSize: 11, color: muted),
-                      ),
-                    ],
+                        SizedBox(height: 4),
+                        Text(
+                          '나만의 작은 가계부',
+                          style: TextStyle(fontSize: 11, color: muted),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(height: 16),
-                ..._topItems.map(
-                  (item) => _NavTile(
-                    item: item,
-                    current: location,
-                    badge: badgeFor(item.path),
+                  SizedBox(height: 16),
+                  ..._topItems.map(
+                    (item) => _NavTile(
+                      item: item,
+                      current: location,
+                      badge: badgeFor(item.path),
+                    ),
                   ),
-                ),
-                const Spacer(),
-                ..._bottomItems.map(
-                  (item) => _NavTile(item: item, current: location),
-                ),
-              ],
+                  const Spacer(),
+                  ..._bottomItems.map(
+                    (item) => _NavTile(item: item, current: location),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: ColoredBox(
-              color: background,
-              child: Padding(padding: const EdgeInsets.all(32), child: child),
+            Expanded(
+              child: ColoredBox(
+                color: background,
+                child: Padding(padding: const EdgeInsets.all(32), child: child),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

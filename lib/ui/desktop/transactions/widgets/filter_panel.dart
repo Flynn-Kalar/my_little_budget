@@ -10,6 +10,7 @@ import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/database.dart';
 import '../providers.dart';
 import 'form_fields.dart';
+import 'type_filter.dart';
 
 class FilterPanel extends ConsumerStatefulWidget {
   const FilterPanel({super.key, this.onExpandedChanged});
@@ -104,11 +105,13 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
       _fromDate = null;
       _toDate = null;
     });
+    ref.read(typeFilterProvider.notifier).state = null;
     ref.read(searchFilterProvider.notifier).state = const TransactionFilter();
   }
 
-  int _activeFilterCount(TransactionFilter filter) {
+  int _activeFilterCount(TransactionFilter filter, String? typeFilter) {
     var count = 0;
+    if (typeFilter != null) count++;
     if (filter.q?.trim().isNotEmpty ?? false) count++;
     if (filter.minAmount != null) count++;
     if (filter.maxAmount != null) count++;
@@ -142,8 +145,9 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
     final tags = ref.watch(allTagsProvider).asData?.value ?? const [];
     final filter = ref.watch(searchFilterProvider);
-    final hasFilter = hasActiveTransactionFilter(filter);
-    final activeCount = _activeFilterCount(filter);
+    final typeFilter = ref.watch(typeFilterProvider);
+    final hasFilter = typeFilter != null || hasActiveTransactionFilter(filter);
+    final activeCount = _activeFilterCount(filter, typeFilter);
 
     if (!_expanded) {
       return Wrap(
@@ -211,6 +215,11 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
               ],
             ),
             const SizedBox(height: 12),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: _TypeFilterSection(),
+            ),
+            const SizedBox(height: 12),
             _FilterControls(
               qCtrl: _qCtrl,
               minCtrl: _minCtrl,
@@ -249,6 +258,18 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TypeFilterSection extends StatelessWidget {
+  const _TypeFilterSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [_SectionLabel('거래 유형'), SizedBox(height: 8), TypeFilter()],
     );
   }
 }
@@ -362,6 +383,15 @@ class _FilterControls extends StatelessWidget {
                 ),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          key: const ValueKey('desktop-transactions-filter-account-date-row'),
+          spacing: 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
             AccountDropdown(
               key: const ValueKey('transactions-account-filter-field'),
               hint: '자산 전체',

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:my_little_budget/app.dart';
 import 'package:my_little_budget/core/date.dart';
 import 'package:my_little_budget/core/money.dart';
+import 'package:my_little_budget/core/theme/theme_colors.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/features/accounts/validation.dart';
@@ -147,6 +148,7 @@ void main() {
     expect(find.text('최근 12개월 추세'), findsOneWidget);
     expect(find.text(formatKRW(2139650)), findsWidgets);
     final chart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(chart.data.lineBarsData[2].color, defaultTheme.warning);
     final tooltip = chart.data.lineTouchData.touchTooltipData;
     expect(tooltip.fitInsideHorizontally, isTrue);
     expect(tooltip.fitInsideVertically, isTrue);

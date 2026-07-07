@@ -171,7 +171,7 @@ class _State extends ConsumerState<AccountFormDialog> {
                     suffixText: '원',
                     isDense: true,
                     border: OutlineInputBorder(),
-                    helperText: '월 지출 합계가 한도의 80% 이상이면 경고합니다.',
+                    helperText: '현재 카드 부채가 한도의 80% 이상이면 경고합니다.',
                   ),
                 ),
               ],

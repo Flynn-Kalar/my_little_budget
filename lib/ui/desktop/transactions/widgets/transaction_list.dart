@@ -5,6 +5,7 @@ import '../../../../core/date.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
+import '../../../../data/providers.dart';
 import '../../color_hex.dart';
 import '../providers.dart';
 import 'transaction_edit_dialog.dart';
@@ -68,7 +69,7 @@ class _ConstrainedTransactionList extends StatelessWidget {
   }
 }
 
-class _TransactionListBody extends StatelessWidget {
+class _TransactionListBody extends StatefulWidget {
   const _TransactionListBody({
     required this.rows,
     required this.filter,
@@ -80,7 +81,17 @@ class _TransactionListBody extends StatelessWidget {
   final String? type;
 
   @override
+  State<_TransactionListBody> createState() => _TransactionListBodyState();
+}
+
+class _TransactionListBodyState extends State<_TransactionListBody> {
+  bool _plannedExpanded = true;
+
+  @override
   Widget build(BuildContext context) {
+    final rows = widget.rows;
+    final filter = widget.filter;
+    final type = widget.type;
     if (rows.isEmpty) {
       final hasSearch = filter.q?.trim().isNotEmpty ?? false;
       final hasFilter = type != null || hasActiveTransactionFilter(filter);
@@ -110,7 +121,15 @@ class _TransactionListBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (futureRows.isNotEmpty)
-          _Section(title: '예정 거래', rows: futureRows.toList(), planned: true),
+          _Section(
+            title: '예정 거래',
+            rows: futureRows.toList(),
+            planned: true,
+            collapsible: true,
+            expanded: _plannedExpanded,
+            onToggle: () =>
+                setState(() => _plannedExpanded = !_plannedExpanded),
+          ),
         if (futureRows.isNotEmpty && completedRows.isNotEmpty)
           const SizedBox(height: 10),
         if (completedRows.isNotEmpty)
@@ -127,35 +146,52 @@ class _Section extends StatelessWidget {
     required this.title,
     required this.rows,
     this.planned = false,
+    this.collapsible = false,
+    this.expanded = true,
+    this.onToggle,
   });
 
   final String title;
   final List<TransactionRow> rows;
   final bool planned;
+  final bool collapsible;
+  final bool expanded;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
     final groups = <String, List<TransactionRow>>{};
     final totals = <String, _DailyTotals>{};
+    var sectionTotals = const _DailyTotals();
     for (final r in rows) {
       (groups[r.occurredOn] ??= []).add(r);
       totals[r.occurredOn] = (totals[r.occurredOn] ?? const _DailyTotals()).add(
         r,
       );
+      sectionTotals = sectionTotals.add(r);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: title, count: rows.length, planned: planned),
-        for (final entry in groups.entries) ...[
-          _DateHeader(
-            date: entry.key,
-            totals: totals[entry.key] ?? const _DailyTotals(),
-            planned: planned,
-          ),
-          for (final row in entry.value) _Row(row: row, planned: planned),
-        ],
+        _SectionHeader(
+          title: title,
+          count: rows.length,
+          planned: planned,
+          totals: sectionTotals,
+          collapsible: collapsible,
+          expanded: expanded,
+          onToggle: onToggle,
+        ),
+        if (expanded)
+          for (final entry in groups.entries) ...[
+            _DateHeader(
+              date: entry.key,
+              totals: totals[entry.key] ?? const _DailyTotals(),
+              planned: planned,
+            ),
+            for (final row in entry.value) _Row(row: row, planned: planned),
+          ],
       ],
     );
   }
@@ -166,23 +202,39 @@ class _SectionHeader extends StatelessWidget {
     required this.title,
     required this.count,
     required this.planned,
+    required this.totals,
+    this.collapsible = false,
+    this.expanded = true,
+    this.onToggle,
   });
 
   final String title;
   final int count;
   final bool planned;
+  final _DailyTotals totals;
+  final bool collapsible;
+  final bool expanded;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 4),
       child: Row(
         children: [
-          Icon(
-            planned ? Icons.schedule_outlined : Icons.check_circle_outline,
-            size: 16,
-            color: planned ? context.desktopWarning : context.desktopMuted,
-          ),
+          if (collapsible) ...[
+            Icon(
+              expanded ? Icons.expand_more : Icons.chevron_right,
+              size: 18,
+              color: planned ? context.desktopWarning : context.desktopMuted,
+            ),
+            const SizedBox(width: 2),
+          ] else
+            Icon(
+              planned ? Icons.schedule_outlined : Icons.check_circle_outline,
+              size: 16,
+              color: planned ? context.desktopWarning : context.desktopMuted,
+            ),
           const SizedBox(width: 6),
           Text(
             '$title $count건',
@@ -192,7 +244,43 @@ class _SectionHeader extends StatelessWidget {
               color: planned ? context.desktopWarning : context.desktopMuted,
             ),
           ),
+          const Spacer(),
+          _SectionSummaryText(totals: totals),
         ],
+      ),
+    );
+    if (!collapsible) return content;
+    return InkWell(
+      key: const ValueKey('desktop-transactions-planned-toggle'),
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(6),
+      child: content,
+    );
+  }
+}
+
+class _SectionSummaryText extends StatelessWidget {
+  const _SectionSummaryText({required this.totals});
+
+  final _DailyTotals totals;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = [
+      if (totals.income > 0) '수입 ${formatKRW(totals.income)}',
+      if (totals.expense > 0) '지출 ${formatKRW(totals.expense)}',
+      if (totals.transferCount > 0)
+        '이체 ${totals.transferCount}건 · ${formatKRW(totals.transferAmount)}',
+    ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Text(
+      parts.join(' · '),
+      textAlign: TextAlign.end,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        color: context.desktopMuted,
       ),
     );
   }
@@ -350,13 +438,44 @@ class _TransferTotalText extends StatelessWidget {
   }
 }
 
-class _Row extends StatelessWidget {
+class _Row extends ConsumerWidget {
   const _Row({required this.row, required this.planned});
   final TransactionRow row;
   final bool planned;
 
+  Future<void> _confirmAndDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('거래 삭제'),
+        content: const Text('이 거래를 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: context.desktopExpense,
+            ),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    await ref.read(transactionsDaoProvider).deleteTransaction(row.id);
+    refreshTransactions(ref);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('거래를 삭제했습니다.')));
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isTransfer = row.type == 'transfer';
     final isIncome = row.type == 'income';
     final showTime = row.occurredTime != '00:00';
@@ -525,11 +644,21 @@ class _Row extends StatelessWidget {
                         TransactionEditDialog.show(context, row);
                       } else if (value == 'copy') {
                         TransactionEditDialog.showDuplicate(context, row);
+                      } else if (value == 'delete') {
+                        _confirmAndDelete(context, ref);
                       }
                     },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'edit', child: Text('수정')),
-                      PopupMenuItem(value: 'copy', child: Text('복사')),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'edit', child: Text('수정')),
+                      const PopupMenuItem(value: 'copy', child: Text('복사')),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          '삭제',
+                          style: TextStyle(color: context.desktopExpense),
+                        ),
+                      ),
                     ],
                   ),
                 ),

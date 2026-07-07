@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
 import '../../../core/theme/app_theme.dart';
@@ -8,6 +9,8 @@ import '../../../data/providers.dart';
 import '../../../features/notes/note_schedule.dart';
 import '../../shared/calendar_entries.dart';
 import '../../shared/calendar_providers.dart';
+import '../../shared/notes_calendar.dart' as note_calendar;
+import '../../shared/notes_providers.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -22,6 +25,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final events = ref.watch(calendarEventsProvider);
+    final notes = ref.watch(notesProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -59,20 +63,35 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => Center(child: Text('캘린더를 불러오지 못했습니다. $error')),
             data: (value) {
-              final entries = calendarOccurrencesByDate(value, _month);
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: _CalendarGrid(month: _month, entries: entries),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    width: 360,
-                    child: _AgendaList(month: _month, entries: entries),
-                  ),
-                ],
+              final eventEntries = calendarOccurrencesByDate(value, _month);
+              return notes.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) =>
+                    Center(child: Text('메모를 불러오지 못했습니다. $error')),
+                data: (noteRows) {
+                  final noteEntries = note_calendar.noteCalendarEntriesByDate(
+                    noteRows,
+                    _month,
+                  );
+                  final entries = _combineCalendarEntries(
+                    eventEntries,
+                    noteEntries,
+                  );
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _CalendarGrid(month: _month, entries: entries),
+                      ),
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 360,
+                        child: _AgendaList(month: _month, entries: entries),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),
@@ -125,7 +144,7 @@ class _CalendarGrid extends StatelessWidget {
   const _CalendarGrid({required this.month, required this.entries});
 
   final String month;
-  final Map<String, List<CalendarOccurrence>> entries;
+  final Map<String, List<_CalendarEntry>> entries;
 
   @override
   Widget build(BuildContext context) {
@@ -182,16 +201,16 @@ class _DayCell extends StatelessWidget {
 
   final DateTime day;
   final bool inMonth;
-  final List<CalendarOccurrence> entries;
+  final List<_CalendarEntry> entries;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final repeating = entries
-        .where((entry) => _isRepeating(entry.event))
+        .where((entry) => entry.event != null && _isRepeating(entry.event!))
         .toList();
     final oneTime = entries
-        .where((entry) => !_isRepeating(entry.event))
+        .where((entry) => entry.event == null || !_isRepeating(entry.event!))
         .toList();
     final visibleOneTimeCount = repeating.isEmpty ? 3 : 2;
     return Container(
@@ -241,13 +260,13 @@ class _DayCell extends StatelessWidget {
 class _EntryPill extends StatelessWidget {
   const _EntryPill({required this.entry});
 
-  final CalendarOccurrence entry;
+  final _CalendarEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final color = _eventColor(entry.event);
+    final color = entry.color(context);
     return InkWell(
-      onTap: () => _CalendarEventDialog.show(context, event: entry.event),
+      onTap: () => entry.open(context),
       borderRadius: BorderRadius.circular(6),
       child: Container(
         width: double.infinity,
@@ -257,9 +276,7 @@ class _EntryPill extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
-          entry.event.allDay
-              ? entry.event.title
-              : '${calendarTimeLabel(entry.start)} ${entry.event.title}',
+          entry.shortLabel,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -276,14 +293,14 @@ class _EntryPill extends StatelessWidget {
 class _RepeatingPill extends StatelessWidget {
   const _RepeatingPill({required this.entries});
 
-  final List<CalendarOccurrence> entries;
+  final List<_CalendarEntry> entries;
 
   @override
   Widget build(BuildContext context) {
     final color = context.desktopAccent;
     final first = entries.first;
     return InkWell(
-      onTap: () => _CalendarEventDialog.show(context, event: first.event),
+      onTap: () => first.open(context),
       borderRadius: BorderRadius.circular(6),
       child: Container(
         width: double.infinity,
@@ -319,7 +336,7 @@ class _AgendaList extends StatelessWidget {
   const _AgendaList({required this.month, required this.entries});
 
   final String month;
-  final Map<String, List<CalendarOccurrence>> entries;
+  final Map<String, List<_CalendarEntry>> entries;
 
   @override
   Widget build(BuildContext context) {
@@ -331,8 +348,9 @@ class _AgendaList extends StatelessWidget {
     final sections = <Widget>[];
     for (final key in keys) {
       final visible = entries[key]!.where((entry) {
-        if (!_isRepeating(entry.event)) return true;
-        return seenRepeating.add(entry.event.id);
+        final event = entry.event;
+        if (event == null || !_isRepeating(event)) return true;
+        return seenRepeating.add(event.id);
       }).toList();
       if (visible.isEmpty) continue;
       sections.add(
@@ -350,20 +368,10 @@ class _AgendaList extends StatelessWidget {
             elevation: 0,
             child: ListTile(
               dense: true,
-              leading: Icon(
-                _isRepeating(entry.event) ? Icons.repeat : Icons.event_outlined,
-                color: _eventColor(entry.event),
-              ),
-              title: Text(entry.event.title),
-              subtitle: Text(
-                _isRepeating(entry.event)
-                    ? '반복 일정 · ${entry.event.allDay ? '종일' : calendarTimeLabel(entry.start)}'
-                    : (entry.event.allDay
-                          ? '종일'
-                          : calendarTimeLabel(entry.start)),
-              ),
-              onTap: () =>
-                  _CalendarEventDialog.show(context, event: entry.event),
+              leading: Icon(entry.icon, color: entry.color(context)),
+              title: Text(entry.title),
+              subtitle: Text(entry.subtitle),
+              onTap: () => entry.open(context),
             ),
           ),
         );
@@ -379,6 +387,92 @@ class _AgendaList extends StatelessWidget {
 
 bool _isRepeating(CalendarEvent event) {
   return NoteScheduleTypeStorage.parse(event.scheduleType).isRepeating;
+}
+
+class _CalendarEntry {
+  const _CalendarEntry.event(this.eventEntry) : noteEntry = null;
+  const _CalendarEntry.note(this.noteEntry) : eventEntry = null;
+
+  final CalendarOccurrence? eventEntry;
+  final note_calendar.NoteCalendarEntry? noteEntry;
+
+  CalendarEvent? get event => eventEntry?.event;
+  DateTime get start => eventEntry?.start ?? noteEntry!.date;
+  String get title => eventEntry?.event.title ?? noteEntry!.note.title;
+
+  String get shortLabel {
+    final event = eventEntry?.event;
+    if (event != null) {
+      return event.allDay
+          ? event.title
+          : '${calendarTimeLabel(start)} ${event.title}';
+    }
+    return '메모 ${noteEntry!.note.title}';
+  }
+
+  String get subtitle {
+    final event = eventEntry?.event;
+    if (event != null) {
+      if (_isRepeating(event)) {
+        return '반복 일정 · ${event.allDay ? '종일' : calendarTimeLabel(start)}';
+      }
+      return event.allDay ? '종일' : calendarTimeLabel(start);
+    }
+    return noteEntry!.label;
+  }
+
+  IconData get icon {
+    final event = eventEntry?.event;
+    if (event != null) {
+      return _isRepeating(event) ? Icons.repeat : Icons.event_outlined;
+    }
+    return noteEntry!.overdue
+        ? Icons.notification_important_outlined
+        : Icons.note_alt_outlined;
+  }
+
+  Color color(BuildContext context) {
+    final event = eventEntry?.event;
+    if (event != null) return _eventColor(event);
+    return noteEntry!.overdue ? context.appExpense : context.appIncome;
+  }
+
+  void open(BuildContext context) {
+    final event = eventEntry?.event;
+    if (event != null) {
+      _CalendarEventDialog.show(context, event: event);
+      return;
+    }
+    final id = noteEntry!.note.id;
+    context.go('/notes?open=$id&tap=${DateTime.now().microsecondsSinceEpoch}');
+  }
+}
+
+Map<String, List<_CalendarEntry>> _combineCalendarEntries(
+  Map<String, List<CalendarOccurrence>> events,
+  Map<String, List<note_calendar.NoteCalendarEntry>> notes,
+) {
+  final result = <String, List<_CalendarEntry>>{};
+  for (final entry in events.entries) {
+    result[entry.key] = [
+      ...?result[entry.key],
+      for (final item in entry.value) _CalendarEntry.event(item),
+    ];
+  }
+  for (final entry in notes.entries) {
+    result[entry.key] = [
+      ...?result[entry.key],
+      for (final item in entry.value) _CalendarEntry.note(item),
+    ];
+  }
+  for (final value in result.values) {
+    value.sort((a, b) {
+      final time = a.start.compareTo(b.start);
+      if (time != 0) return time;
+      return a.title.compareTo(b.title);
+    });
+  }
+  return result;
 }
 
 class _CalendarEventDialog extends ConsumerStatefulWidget {

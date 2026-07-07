@@ -14,7 +14,7 @@ import '../stats/providers.dart' as stats_providers;
 /// 현재 보고 있는 월 (YYYY-MM).
 final selectedMonthProvider = StateProvider<String>((ref) => currentMonthKey());
 
-/// 타입 필터. null = 전체. (상단 칩)
+/// 타입 필터. null = 전체(기본).
 final typeFilterProvider = StateProvider<String?>((ref) => null);
 
 /// 검색/세부 필터 (FilterPanel). type 은 typeFilterProvider 가 따로 관리.

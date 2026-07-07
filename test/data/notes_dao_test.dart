@@ -62,6 +62,24 @@ void main() {
     expect(count.read<int>('total'), 0);
   });
 
+  test('메모는 기본적으로 캘린더에 표시하지 않고 토글 저장을 지원한다', () async {
+    final hiddenId = await db.notesDao.saveNote(title: '기본 숨김', content: '');
+    final hidden = await db.notesDao.getNote(hiddenId);
+    expect(hidden?.showOnCalendar, isFalse);
+
+    final visibleId = await db.notesDao.saveNote(
+      title: '캘린더 표시',
+      content: '',
+      schedule: NoteScheduleDraft(
+        type: NoteScheduleType.once,
+        oneTimeAt: DateTime(2026, 7, 4, 9),
+      ),
+      showOnCalendar: true,
+    );
+    final visible = await db.notesDao.getNote(visibleId);
+    expect(visible?.showOnCalendar, isTrue);
+  });
+
   test('항목 토글이 진행률 집계를 즉시 변경한다', () async {
     final id = await db.notesDao.saveNote(
       title: '진행률',

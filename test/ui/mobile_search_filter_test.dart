@@ -46,7 +46,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(searchFilterProvider).q, isNull);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, '지출'));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(
+          const ValueKey('mobile-transactions-type-filter-inline'),
+        ),
+        matching: find.text('지출'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(container.read(typeFilterProvider), 'expense');
 

@@ -122,15 +122,9 @@ void main() {
 
     expect(_dailyIncome(firstDate, 3000), findsOneWidget);
     expect(_dailyExpense(firstDate, 1000), findsOneWidget);
+    expect(_dailyTransfer(firstDate, 1, 9999), findsOneWidget);
     expect(_dailyIncome(secondDate, 5000), findsOneWidget);
     expect(_dailyExpense(secondDate, 4000), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(ValueKey('mobile-transactions-date-header-$firstDate')),
-        matching: find.textContaining(formatKRW(9999)),
-      ),
-      findsNothing,
-    );
 
     final container = ProviderScope.containerOf(
       tester.element(find.byType(NavigationBar)),
@@ -156,5 +150,12 @@ Finder _dailyExpense(String date, int amount) {
   return find.descendant(
     of: find.byKey(ValueKey('mobile-transactions-date-expense-$date')),
     matching: find.text('지출 ${formatKRW(amount)}'),
+  );
+}
+
+Finder _dailyTransfer(String date, int count, int amount) {
+  return find.descendant(
+    of: find.byKey(ValueKey('mobile-transactions-date-transfer-$date')),
+    matching: find.text('이체 $count건 · ${formatKRW(amount)}'),
   );
 }

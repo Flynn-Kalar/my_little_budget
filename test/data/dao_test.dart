@@ -117,55 +117,62 @@ void main() {
   });
 
   group('card limit warning', () {
-    test('manual card limit warns when monthly expense reaches 80%', () async {
-      final card = (await db.accountsDao.getActiveAccounts()).firstWhere(
-        (account) => account.kind == 'card',
-      );
-      final balance = await db.accountsDao.getAccountBalance(card.id);
-      await db.accountsDao.saveAccount(
-        id: card.id,
-        draft: AccountDraft(
-          name: card.name,
-          kind: card.kind,
-          initialBalance: card.initialBalance,
-          cardLimit: 100000,
-          color: card.color,
-          excludeFromTotal: card.excludeFromTotal,
-          isInvestment: card.isInvestment,
-        ),
-        currentBalance: balance!.balance,
-      );
+    test(
+      'manual card limit warns when current card debt reaches 80%',
+      () async {
+        final card = (await db.accountsDao.getActiveAccounts()).firstWhere(
+          (account) => account.kind == 'card',
+        );
+        await db.accountsDao.saveAccount(
+          id: card.id,
+          draft: AccountDraft(
+            name: card.name,
+            kind: card.kind,
+            initialBalance: card.initialBalance,
+            cardLimit: 100000,
+            color: card.color,
+            excludeFromTotal: card.excludeFromTotal,
+            isInvestment: card.isInvestment,
+          ),
+          currentBalance: -79000,
+        );
 
-      final categoryId = await firstExpenseCategoryId();
-      final firstDraft = TransactionDraft(
-        type: 'expense',
-        amount: 79000,
-        occurredOn: '2026-07-03',
-        occurredTime: '00:00',
-        accountId: card.id,
-        categoryId: categoryId,
-      );
-      await db.transactionsDao.saveTransaction(draft: firstDraft);
-      expect(await db.transactionsDao.cardLimitWarningFor(firstDraft), isNull);
+        final categoryId = await firstExpenseCategoryId();
+        final firstDraft = TransactionDraft(
+          type: 'expense',
+          amount: 500,
+          occurredOn: '2026-07-03',
+          occurredTime: '00:00',
+          accountId: card.id,
+          categoryId: categoryId,
+        );
+        await db.transactionsDao.saveTransaction(draft: firstDraft);
+        expect(
+          await db.transactionsDao.cardLimitWarningFor(firstDraft),
+          isNull,
+        );
 
-      final secondDraft = TransactionDraft(
-        type: 'expense',
-        amount: 1000,
-        occurredOn: '2026-07-04',
-        occurredTime: '00:00',
-        accountId: card.id,
-        categoryId: categoryId,
-      );
-      await db.transactionsDao.saveTransaction(draft: secondDraft);
-      final warning = await db.transactionsDao.cardLimitWarningFor(secondDraft);
+        final secondDraft = TransactionDraft(
+          type: 'expense',
+          amount: 500,
+          occurredOn: '2026-07-04',
+          occurredTime: '00:00',
+          accountId: card.id,
+          categoryId: categoryId,
+        );
+        await db.transactionsDao.saveTransaction(draft: secondDraft);
+        final warning = await db.transactionsDao.cardLimitWarningFor(
+          secondDraft,
+        );
 
-      expect(warning, isNotNull);
-      expect(warning!.accountId, card.id);
-      expect(warning.limit, 100000);
-      expect(warning.used, 80000);
-      expect(warning.remaining, 20000);
-      expect(warning.exceeded, isFalse);
-    });
+        expect(warning, isNotNull);
+        expect(warning!.accountId, card.id);
+        expect(warning.limit, 100000);
+        expect(warning.used, 80000);
+        expect(warning.remaining, 20000);
+        expect(warning.exceeded, isFalse);
+      },
+    );
   });
 
   group('isInvestment 단일 보장 (SPEC §3.1)', () {

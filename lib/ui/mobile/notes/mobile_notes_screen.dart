@@ -61,7 +61,9 @@ class _MobileNotesScreenState extends ConsumerState<MobileNotesScreen> {
       actions: [
         FilledButton.tonalIcon(
           key: const ValueKey('mobile-notes-calendar-button'),
-          onPressed: () => context.go('/notes/calendar'),
+          onPressed: () {
+            context.push('/calendar');
+          },
           icon: const Icon(Icons.calendar_month_outlined, size: 18),
           label: const Text('캘린더'),
         ),
@@ -328,6 +330,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
   late DateTime _anchorDate =
       parseNoteDate(_note?.anchorDate) ?? DateTime.now();
   late bool _pinned = _note?.pinned ?? false;
+  late bool _showOnCalendar = _note?.showOnCalendar ?? false;
   late NoteAlarmSettings _alarmSettings = _note == null
       ? const NoteAlarmSettings()
       : noteAlarmSettingsFromNote(_note!);
@@ -500,6 +503,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
       _weekdays = parseNoteIntList(note.resetWeekdays).toSet();
       _anchorDate = parseNoteDate(note.anchorDate) ?? DateTime.now();
       _pinned = note.pinned;
+      _showOnCalendar = note.showOnCalendar;
       _alarmSettings = noteAlarmSettingsFromNote(note);
       _error = null;
       _editing = true;
@@ -577,6 +581,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
                 item,
             ],
             pinned: _pinned,
+            showOnCalendar: _showOnCalendar,
             alarmSettings: _alarmSettings,
           );
       refreshReminderBadge(ref);
@@ -722,6 +727,15 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
               onChanged: (value) => setState(
                 () => _scheduleType = value ?? NoteScheduleType.none,
               ),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _showOnCalendar,
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(() => _showOnCalendar = value),
+              title: const Text('캘린더에 표시'),
+              subtitle: const Text('꺼두면 알림이나 반복 설정이 있어도 캘린더에는 보이지 않습니다.'),
             ),
             if (_scheduleType == NoteScheduleType.once)
               ListTile(

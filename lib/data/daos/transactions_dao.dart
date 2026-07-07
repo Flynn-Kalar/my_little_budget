@@ -789,31 +789,32 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       return null;
     }
 
-    final range = monthRange(draft.occurredOn.substring(0, 7));
     final row = await customSelect(
       '''
-      SELECT COALESCE(SUM(amount), 0) AS used
-      FROM transactions
-      WHERE type = 'expense'
-        AND account_id = ?
-        AND occurred_on BETWEEN ? AND ?
+      SELECT
+        a.initial_balance
+        + COALESCE((SELECT SUM(amount) FROM transactions WHERE type = 'income'     AND account_id      = a.id), 0)
+        - COALESCE((SELECT SUM(amount) FROM transactions WHERE type = 'expense'    AND account_id      = a.id), 0)
+        + COALESCE((SELECT SUM(amount) FROM transactions WHERE type = 'transfer'   AND to_account_id   = a.id), 0)
+        - COALESCE((SELECT SUM(amount) FROM transactions WHERE type = 'transfer'   AND from_account_id = a.id), 0)
+        + COALESCE((SELECT SUM(amount) FROM transactions WHERE type = 'adjustment' AND account_id      = a.id), 0)
+        AS balance
+      FROM accounts a
+      WHERE a.id = ?
       ''',
-      variables: [
-        Variable<int>(accountId),
-        Variable<String>(range.start),
-        Variable<String>(range.end),
-      ],
-      readsFrom: {transactions},
+      variables: [Variable<int>(accountId)],
+      readsFrom: {accounts, transactions},
     ).getSingle();
-    final used = row.read<int>('used');
-    if (used * 100 < limit * thresholdPercent) return null;
+    final balance = row.read<int>('balance');
+    final usedLimit = balance < 0 ? -balance : 0;
+    if (usedLimit * 100 < limit * thresholdPercent) return null;
 
     return CardLimitWarning(
       accountId: accountId,
       accountName: account.name,
       limit: limit,
-      used: used,
-      remaining: limit - used,
+      used: usedLimit,
+      remaining: limit - usedLimit,
       thresholdPercent: thresholdPercent,
     );
   }

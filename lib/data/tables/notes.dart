@@ -35,6 +35,8 @@ class Notes extends Table {
   IntColumn get alarmClipEndMs => integer().nullable()();
   BoolColumn get alarmVibrationEnabled =>
       boolean().withDefault(const Constant(true))();
+  BoolColumn get showOnCalendar =>
+      boolean().withDefault(const Constant(false))();
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
   BoolColumn get pinned => boolean().withDefault(const Constant(false))();
   TextColumn get createdAt =>

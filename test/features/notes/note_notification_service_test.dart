@@ -227,6 +227,7 @@ NoteWithChecklist _entry({
       alarmSoundKind: 'system',
       alarmClipStartMs: 0,
       alarmVibrationEnabled: true,
+      showOnCalendar: false,
       completed: false,
       pinned: false,
       createdAt: now.toUtc().toIso8601String(),

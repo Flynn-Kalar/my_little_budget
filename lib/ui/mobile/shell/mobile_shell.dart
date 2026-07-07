@@ -34,7 +34,6 @@ class MobileShell extends ConsumerWidget {
     _MobileNavItem('/stats', '통계', Icons.bar_chart_outlined),
     _MobileNavItem('/accounts', '자산', Icons.account_balance_wallet_outlined),
     _MobileNavItem('/notes', '메모', Icons.note_alt_outlined),
-    _MobileNavItem('/calendar', '캘린더', Icons.calendar_month_outlined),
     _MobileNavItem('/settings', '설정', Icons.settings_outlined),
   ];
 
@@ -43,9 +42,12 @@ class MobileShell extends ConsumerWidget {
     final location = GoRouterState.of(context).matchedLocation;
     final pendingReminders =
         ref.watch(pendingReminderCountProvider).asData?.value ?? 0;
-    final selectedIndex = _items.indexWhere(
-      (item) => location == item.path || location.startsWith('${item.path}/'),
-    );
+    final selectedIndex = _items.indexWhere((item) {
+      if (location == '/calendar' || location.startsWith('/calendar/')) {
+        return item.path == '/notes';
+      }
+      return location == item.path || location.startsWith('${item.path}/');
+    });
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

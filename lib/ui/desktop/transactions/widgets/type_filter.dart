@@ -6,8 +6,7 @@ import '../providers.dart';
 class TypeFilter extends ConsumerWidget {
   const TypeFilter({super.key});
 
-  static const _options = <(String?, String)>[
-    (null, '전체'),
+  static const _options = <(String, String)>[
     ('income', '수입'),
     ('expense', '지출'),
     ('transfer', '이체'),
@@ -23,8 +22,8 @@ class TypeFilter extends ConsumerWidget {
         return ChoiceChip(
           label: Text(option.$2, softWrap: false),
           selected: selected,
-          onSelected: (_) =>
-              ref.read(typeFilterProvider.notifier).state = option.$1,
+          onSelected: (value) => ref.read(typeFilterProvider.notifier).state =
+              value ? option.$1 : null,
         );
       }).toList(),
     );

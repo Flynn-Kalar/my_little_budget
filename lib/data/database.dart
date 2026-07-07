@@ -61,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -127,6 +127,9 @@ WHERE reminder_at IS NOT NULL
       }
       if (from < 13 && await _tableExists('accounts')) {
         await m.addColumn(accounts, accounts.cardLimit);
+      }
+      if (from >= 4 && from < 14 && await _tableExists('notes')) {
+        await m.addColumn(notes, notes.showOnCalendar);
       }
     },
     beforeOpen: (details) async {
