@@ -5,7 +5,7 @@
 3. 앱의 `설정 > 데이터 관리`에서 기존 Supabase URL과 anon/publishable key를 입력한다.
 4. `DB 테이블 테스트`를 누른다.
 
-성공하면 앱이 아래 8개 테이블을 PostgREST로 조회할 수 있는 상태다.
+성공하면 앱이 아래 9개 테이블을 PostgREST로 조회할 수 있는 상태다.
 
 - `mlb_accounts`
 - `mlb_categories`
@@ -15,6 +15,7 @@
 - `mlb_investments`
 - `mlb_recurring_transactions`
 - `mlb_tags`
+- `mlb_calendar_events`
 
 현재 SQL은 anon 역할에 `SELECT`만 허용한다. 앱은 아직 이 테이블에 데이터를 업로드하거나 수정하지 않으며, 기존 Supabase Storage JSON 백업/복원도 그대로 유지된다.
 

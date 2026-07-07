@@ -232,7 +232,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           .testConnection(draft);
       if (!mounted) return;
       _showSnack(
-        result.isOk ? 'Supabase DB 엔티티 테이블 8개를 확인했습니다.' : result.error!,
+        result.isOk ? 'Supabase DB 엔티티 테이블 9개를 확인했습니다.' : result.error!,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
