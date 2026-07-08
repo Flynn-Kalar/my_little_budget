@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:my_little_budget/app.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
-import 'package:my_little_budget/ui/shared/investments_providers.dart';
-import 'package:my_little_budget/ui/shared/transactions_providers.dart';
+import 'package:my_little_budget/features/investments/providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 
 void main() {
   testWidgets('모바일 내역 검색과 필터가 한 행에서 동작한다', (tester) async {

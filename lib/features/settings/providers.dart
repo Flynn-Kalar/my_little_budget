@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/database.dart';
-import '../../../data/providers.dart';
-import '../../../data/daos/recurring_dao.dart';
-import '../budget/providers.dart' as budget_providers;
-import '../stats/providers.dart' as stats_providers;
-import '../transactions/providers.dart' as transactions_providers;
+import '../../data/database.dart';
+import '../../data/providers.dart';
+import '../../data/daos/recurring_dao.dart';
+import 'package:my_little_budget/features/budget/providers.dart'
+    as budget_providers;
+import 'package:my_little_budget/features/stats/providers.dart'
+    as stats_providers;
+import 'package:my_little_budget/features/transactions/providers.dart'
+    as transactions_providers;
 
 final allCategoriesProvider = FutureProvider.autoDispose<List<Category>>(
   (ref) => ref.watch(categoriesDaoProvider).getAllCategories(),

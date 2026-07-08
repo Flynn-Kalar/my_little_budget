@@ -12,14 +12,23 @@ import '../../../data/providers.dart';
 import '../../../data/supabase_backup_service.dart';
 import '../../../data/supabase_backup_settings.dart';
 import '../../../data/supabase_table_sync_service.dart';
-import '../../shared/notes_providers.dart';
-import '../accounts/providers.dart' as accounts_providers;
-import '../budget/providers.dart' as budget_providers;
-import '../investments/providers.dart' as investments_providers;
-import '../shell/badges_providers.dart' as badges_providers;
-import '../stats/providers.dart' as stats_providers;
-import '../transactions/providers.dart' as transactions_providers;
-import 'providers.dart' as settings_providers;
+import 'package:my_little_budget/features/notes/providers.dart';
+import 'package:my_little_budget/features/accounts/providers.dart'
+    as accounts_providers;
+import 'package:my_little_budget/features/budget/providers.dart'
+    as budget_providers;
+import 'package:my_little_budget/features/investments/providers.dart'
+    as investments_providers;
+import 'package:my_little_budget/features/budget/badges_providers.dart'
+    as badges_providers;
+import 'package:my_little_budget/features/stats/providers.dart'
+    as stats_providers;
+import 'package:my_little_budget/features/transactions/providers.dart'
+    as transactions_providers;
+import 'package:my_little_budget/features/settings/providers.dart'
+    as settings_providers;
+
+enum _SyncMode { local, auto, windows }
 
 class DataManagementScreen extends ConsumerStatefulWidget {
   const DataManagementScreen({super.key});
@@ -31,6 +40,7 @@ class DataManagementScreen extends ConsumerStatefulWidget {
 
 class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   bool _busy = false;
+  _SyncMode _selectedMode = _SyncMode.local;
   SupabaseBackupRemoteStatus? _remoteStatus;
   String? _remoteStatusError;
   late final _supabaseUrlCtrl = TextEditingController();
@@ -57,7 +67,11 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     final notifier = ref.read(supabaseBackupSettingsProvider.notifier);
     await notifier.whenReady;
     if (!mounted) return;
-    _fillSupabaseControllers(ref.read(supabaseBackupSettingsProvider));
+    final settings = ref.read(supabaseBackupSettingsProvider);
+    _fillSupabaseControllers(settings);
+    setState(() {
+      _selectedMode = settings.isConfigured ? _SyncMode.auto : _SyncMode.local;
+    });
   }
 
   void _fillSupabaseControllers(SupabaseBackupSettings settings) {
@@ -188,6 +202,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       await ref.read(supabaseBackupSettingsProvider.notifier).save(draft);
       if (!mounted) return;
       _fillSupabaseControllers(ref.read(supabaseBackupSettingsProvider));
+      setState(() => _selectedMode = _SyncMode.auto);
       _showSnack('Supabase 연결 설정을 저장했습니다.');
     } catch (e) {
       if (mounted) _showSnack('Supabase 설정 저장에 실패했습니다: $e');
@@ -247,6 +262,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       _fillSupabaseControllers(SupabaseBackupSettings.empty);
       _showSnack('Supabase 연결 설정을 삭제했습니다.');
       setState(() {
+        _selectedMode = _SyncMode.local;
         _remoteStatus = null;
         _remoteStatusError = null;
       });
@@ -337,6 +353,8 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final supabaseSettings = ref.watch(supabaseBackupSettingsProvider);
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 900),
       child: SingleChildScrollView(
@@ -359,61 +377,54 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
             SizedBox(height: 24),
-            _SupabaseSettingsCard(
-              urlController: _supabaseUrlCtrl,
-              anonKeyController: _supabaseAnonKeyCtrl,
-              bucketController: _supabaseBucketCtrl,
-              pathPrefixController: _supabasePathPrefixCtrl,
-              configured: ref
-                  .watch(supabaseBackupSettingsProvider)
-                  .isConfigured,
-              settings: ref.watch(supabaseBackupSettingsProvider),
-              remoteStatus: _remoteStatus,
-              remoteStatusError: _remoteStatusError,
-              busy: _busy,
-              onSave: _saveSupabaseSettings,
-              onTest: _testSupabaseSettings,
-              onTestTables: _testSupabaseTables,
-              onClear: _clearSupabaseSettings,
-              onUpload: _uploadSupabaseBackup,
-              onRestore: _restoreSupabaseBackup,
-              onRefresh: _refreshSupabaseRemoteStatus,
+            _SyncModeSelector(
+              selected: _selectedMode,
+              onChanged: (mode) => setState(() => _selectedMode = mode),
             ),
-            SizedBox(height: 12),
-            _ActionCard(
-              buttonKey: const ValueKey('settings-backup-export-button'),
-              icon: Icons.file_upload_outlined,
-              title: '백업 내보내기',
-              description: '현재 앱 데이터를 하나의 JSON 파일로 저장합니다.',
-              buttonLabel: '백업 파일 만들기',
-              onPressed: _busy ? null : _exportBackup,
+            const SizedBox(height: 16),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: switch (_selectedMode) {
+                _SyncMode.local => _LocalBackupPanel(
+                  key: const ValueKey('settings-local-sync-panel'),
+                  busy: _busy,
+                  onExport: _exportBackup,
+                  onImport: _importBackup,
+                ),
+                _SyncMode.auto => _SupabaseSettingsCard(
+                  key: const ValueKey('settings-auto-sync-panel'),
+                  urlController: _supabaseUrlCtrl,
+                  anonKeyController: _supabaseAnonKeyCtrl,
+                  bucketController: _supabaseBucketCtrl,
+                  pathPrefixController: _supabasePathPrefixCtrl,
+                  configured: supabaseSettings.isConfigured,
+                  settings: supabaseSettings,
+                  remoteStatus: _remoteStatus,
+                  remoteStatusError: _remoteStatusError,
+                  busy: _busy,
+                  onSave: _saveSupabaseSettings,
+                  onTest: _testSupabaseSettings,
+                  onTestTables: _testSupabaseTables,
+                  onClear: _clearSupabaseSettings,
+                  onUpload: _uploadSupabaseBackup,
+                  onRestore: _restoreSupabaseBackup,
+                  onRefresh: _refreshSupabaseRemoteStatus,
+                ),
+                _SyncMode.windows => const _WindowsDownloadPanel(
+                  key: ValueKey('settings-windows-download-panel'),
+                ),
+              },
             ),
-            SizedBox(height: 12),
-            _ActionCard(
-              buttonKey: const ValueKey('settings-backup-import-button'),
-              icon: Icons.file_download_outlined,
-              title: '백업 불러오기',
-              description: '백업 JSON 파일을 확인한 뒤 현재 데이터를 백업 데이터로 교체합니다.',
-              buttonLabel: '백업 파일 선택',
-              danger: true,
-              onPressed: _busy ? null : _importBackup,
-            ),
-            SizedBox(height: 12),
-            _ActionCard(
-              buttonKey: const ValueKey('settings-data-reset-button'),
-              icon: Icons.delete_forever_outlined,
-              title: '데이터 초기화',
-              description: '거래, 예산, 투자, 태그 데이터를 삭제하고 기본 자산과 카테고리를 복구합니다.',
-              buttonLabel: '초기화',
-              danger: true,
-              onPressed: _busy ? null : _resetAllData,
-            ),
-            SizedBox(height: 12),
-            const _WarningCard(),
             if (_busy) ...[
               SizedBox(height: 16),
               const LinearProgressIndicator(minHeight: 3),
             ],
+            SizedBox(height: MediaQuery.sizeOf(context).height * 0.5),
+            _ResetDeviceButton(
+              key: const ValueKey('settings-data-reset-button'),
+              busy: _busy,
+              onPressed: _resetAllData,
+            ),
             SizedBox(height: 40),
           ],
         ),
@@ -422,8 +433,240 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   }
 }
 
+class _SyncModeSelector extends StatelessWidget {
+  const _SyncModeSelector({required this.selected, required this.onChanged});
+
+  final _SyncMode selected;
+  final ValueChanged<_SyncMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SyncModeRow(
+              mode: _SyncMode.local,
+              selected: selected,
+              label: '로컬',
+              onChanged: onChanged,
+            ),
+            const SizedBox(height: 10),
+            _SyncModeRow(
+              mode: _SyncMode.auto,
+              selected: selected,
+              label: '자동 동기화',
+              onChanged: onChanged,
+            ),
+            const SizedBox(height: 10),
+            _SyncModeRow(
+              mode: _SyncMode.windows,
+              selected: selected,
+              label: 'Windows 버전 설치',
+              onChanged: onChanged,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SyncModeRow extends StatelessWidget {
+  const _SyncModeRow({
+    required this.mode,
+    required this.selected,
+    required this.label,
+    required this.onChanged,
+  });
+
+  final _SyncMode mode;
+  final _SyncMode selected;
+  final String label;
+  final ValueChanged<_SyncMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = selected == mode;
+    final color = context.desktopAccent;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => onChanged(mode),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? color : context.desktopMuted,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: isSelected
+                  ? Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LocalBackupPanel extends StatelessWidget {
+  const _LocalBackupPanel({
+    super.key,
+    required this.busy,
+    required this.onExport,
+    required this.onImport,
+  });
+
+  final bool busy;
+  final VoidCallback onExport;
+  final VoidCallback onImport;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: key,
+      children: [
+        _ActionCard(
+          buttonKey: const ValueKey('settings-backup-export-button'),
+          icon: Icons.file_upload_outlined,
+          title: 'JSON 백업 내보내기',
+          description: '현재 앱 데이터를 하나의 JSON 파일로 저장합니다.',
+          buttonLabel: '백업 파일 만들기',
+          onPressed: busy ? null : onExport,
+        ),
+        const SizedBox(height: 12),
+        _ActionCard(
+          buttonKey: const ValueKey('settings-backup-import-button'),
+          icon: Icons.file_download_outlined,
+          title: 'JSON 백업 불러오기',
+          description: '백업 JSON 파일을 확인한 뒤 현재 데이터를 백업 데이터로 교체합니다.',
+          buttonLabel: '백업 파일 선택',
+          danger: true,
+          onPressed: busy ? null : onImport,
+        ),
+      ],
+    );
+  }
+}
+
+class _WindowsDownloadPanel extends StatelessWidget {
+  const _WindowsDownloadPanel({super.key});
+
+  static const _releasesUrl =
+      'https://github.com/Flynn-Kalar/my_little_budget/releases';
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: key,
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.desktop_windows_outlined,
+                  color: context.desktopAccent,
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  '다운로드',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Windows PC 버전은 GitHub Releases에서 받을 수 있습니다.',
+              style: TextStyle(color: context.desktopMuted),
+            ),
+            const SizedBox(height: 12),
+            SelectableText(
+              'Windows 버전 다운로드\n$_releasesUrl',
+              style: TextStyle(
+                color: context.desktopAccent,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Android 버전은 현재 내부 테스트/직접 설치용으로 제공됩니다.',
+              style: TextStyle(color: context.desktopMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ResetDeviceButton extends StatelessWidget {
+  const _ResetDeviceButton({
+    super.key,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: FilledButton.icon(
+        onPressed: busy ? null : onPressed,
+        style: FilledButton.styleFrom(
+          foregroundColor: context.desktopExpense,
+          backgroundColor: context.desktopExpense.withValues(alpha: 0.10),
+        ),
+        icon: const Icon(Icons.delete_forever_outlined),
+        label: const Text('기기 초기화'),
+      ),
+    );
+  }
+}
+
 class _SupabaseSettingsCard extends StatelessWidget {
   const _SupabaseSettingsCard({
+    super.key,
     required this.urlController,
     required this.anonKeyController,
     required this.bucketController,
@@ -481,7 +724,9 @@ class _SupabaseSettingsCard extends StatelessWidget {
                 _StatusChip(configured: configured),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 14),
+            const _AutoSyncSetupGuide(),
+            const SizedBox(height: 12),
             Text(
               '본인 Supabase 프로젝트의 URL, anon/publishable key, Storage bucket을 저장합니다. service_role key는 입력하지 마세요.',
               style: TextStyle(fontSize: 13, color: context.desktopMuted),
@@ -595,6 +840,55 @@ class _SupabaseSettingsCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AutoSyncSetupGuide extends StatefulWidget {
+  const _AutoSyncSetupGuide();
+
+  @override
+  State<_AutoSyncSetupGuide> createState() => _AutoSyncSetupGuideState();
+}
+
+class _AutoSyncSetupGuideState extends State<_AutoSyncSetupGuide> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('settings-auto-sync-setup-guide'),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.desktopBorder),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: _expanded,
+        onExpansionChanged: (value) => setState(() => _expanded = value),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        leading: Icon(Icons.help_outline, color: context.desktopAccent),
+        title: const Text(
+          '자동동기화 설정방법',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        children: [
+          Text(
+            [
+              '1. Supabase 프로젝트를 만들고 Storage bucket을 생성합니다.',
+              '2. Project URL과 anon/publishable key를 복사해 입력합니다.',
+              '3. Storage bucket 이름과 백업 경로 prefix를 입력합니다.',
+              '4. 설정 저장 후 연결 테스트와 DB 테이블 테스트를 실행합니다.',
+              '5. Supabase 백업으로 현재 데이터를 올리고, 필요하면 Supabase 복원으로 내려받습니다.',
+            ].join('\n'),
+            style: TextStyle(
+              color: context.desktopMuted,
+              height: 1.45,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -788,33 +1082,6 @@ class _ActionCard extends StatelessWidget {
               onPressed: onPressed,
               icon: Icon(danger ? Icons.restore_outlined : Icons.save_alt),
               label: Text(buttonLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WarningCard extends StatelessWidget {
-  const _WarningCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.warning_amber_outlined, color: context.desktopExpense),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                '복원은 병합이 아닙니다. 백업 파일을 확인한 뒤 현재 데이터를 모두 덮어쓰기 전에 확인을 요청합니다.',
-                style: TextStyle(color: context.desktopMuted),
-              ),
             ),
           ],
         ),

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shell/sidebar_shell.dart';
-import '../../shared/notes_providers.dart';
+import 'package:my_little_budget/features/notes/providers.dart';
 import '../responsive_page.dart';
 
 class ResponsiveShell extends StatelessWidget {

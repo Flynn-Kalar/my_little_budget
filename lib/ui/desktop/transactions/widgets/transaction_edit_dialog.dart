@@ -8,7 +8,7 @@ import '../../../../core/validation.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 import 'form_fields.dart';
 
 class TransactionEditDialog extends ConsumerStatefulWidget {

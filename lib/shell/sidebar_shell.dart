@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_theme.dart';
-import '../ui/shared/notes_providers.dart';
+import '../features/notes/providers.dart';
 
 class _NavItem {
   const _NavItem({required this.path, required this.label, required this.icon});
@@ -25,11 +25,6 @@ const _topItems = <_NavItem>[
     icon: Icons.account_balance_wallet_outlined,
   ),
   _NavItem(path: '/notes', label: '메모', icon: Icons.note_alt_outlined),
-  _NavItem(
-    path: '/calendar',
-    label: '캘린더',
-    icon: Icons.calendar_month_outlined,
-  ),
 ];
 
 const _bottomItems = <_NavItem>[

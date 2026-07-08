@@ -8,7 +8,7 @@ import '../../../data/daos/accounts_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/accounts/validation.dart';
-import '../../shared/accounts_providers.dart';
+import 'package:my_little_budget/features/accounts/providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileAccountsScreen extends ConsumerWidget {

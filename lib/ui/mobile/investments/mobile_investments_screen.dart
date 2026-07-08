@@ -10,7 +10,7 @@ import '../../../data/providers.dart';
 import '../../../features/investments/cost_basis.dart';
 import '../../../features/investments/quantity_precision.dart';
 import '../../../features/investments/validation.dart';
-import '../../shared/investments_providers.dart';
+import 'package:my_little_budget/features/investments/providers.dart';
 import '../mobile_widgets.dart';
 
 enum _InvestmentTab { holdings, transactions, realizedPnl }

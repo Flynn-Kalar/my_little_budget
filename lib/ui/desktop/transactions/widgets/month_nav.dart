@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/date.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 import 'month_picker_popup.dart';
 
 class MonthNav extends ConsumerStatefulWidget {

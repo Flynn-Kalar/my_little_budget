@@ -6,7 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/categories/validation.dart';
-import '../../shared/settings_providers.dart';
+import 'package:my_little_budget/features/settings/providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileCategoriesScreen extends ConsumerWidget {

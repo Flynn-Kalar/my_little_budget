@@ -15,7 +15,7 @@ import 'package:my_little_budget/features/accounts/validation.dart';
 import 'package:my_little_budget/features/investments/validation.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
 import 'package:my_little_budget/ui/desktop/settings/data_management_screen.dart';
-import 'package:my_little_budget/ui/desktop/stats/providers.dart';
+import 'package:my_little_budget/features/stats/providers.dart';
 
 void main() {
   Future<AppDatabase> pumpAppAt(WidgetTester tester, String route) async {
@@ -534,6 +534,9 @@ void main() {
       find.byKey(const ValueKey('settings-data-reset-button')),
       findsOneWidget,
     );
+    await tester.tap(find.text('자동 동기화'));
+    await tester.pumpAndSettle();
+
     expect(
       find.byKey(const ValueKey('settings-supabase-url-field')),
       findsOneWidget,

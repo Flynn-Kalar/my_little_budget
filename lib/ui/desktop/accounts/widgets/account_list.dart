@@ -8,7 +8,7 @@ import '../../../../data/daos/accounts_dao.dart';
 import '../../../../data/providers.dart';
 import '../../color_hex.dart';
 import '../account_refresh.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/accounts/providers.dart';
 import 'account_form_dialog.dart';
 
 const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};

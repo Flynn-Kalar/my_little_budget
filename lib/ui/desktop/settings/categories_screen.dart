@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/database.dart';
-import 'providers.dart';
+import 'package:my_little_budget/features/settings/providers.dart';
 import 'widgets/category_manager.dart';
 
 class CategoriesScreen extends ConsumerWidget {

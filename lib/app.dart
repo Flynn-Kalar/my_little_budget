@@ -9,7 +9,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_notifier.dart';
 import 'data/providers.dart';
 import 'router/app_router.dart';
-import 'ui/shared/notes_providers.dart';
+import 'features/notes/providers.dart';
 
 class MyLittleBudgetApp extends ConsumerStatefulWidget {
   const MyLittleBudgetApp({super.key});

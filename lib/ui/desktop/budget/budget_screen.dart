@@ -9,7 +9,8 @@ import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/budget/logic.dart';
 import '../../../features/budget/validation.dart';
-import 'providers.dart';
+import 'package:my_little_budget/features/budget/providers.dart';
+import 'widgets/budget_read_only_content.dart';
 
 class BudgetScreen extends ConsumerWidget {
   const BudgetScreen({super.key});
@@ -49,18 +50,24 @@ class BudgetScreen extends ConsumerWidget {
             SizedBox(height: 16),
             income.when(
               data: (value) => _ExpectedIncomeCard(income: value),
-              loading: () => const _BudgetCard(
+              loading: () => const BudgetCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
-              error: (error, _) => _ErrorCard(message: error.toString()),
+              error: (error, _) => BudgetErrorCard(message: error.toString()),
             ),
             SizedBox(height: 12),
             rows.when(
-              data: (value) => _BudgetReadOnlyContent(rows: value),
-              loading: () => const _BudgetCard(
+              data: (value) => BudgetReadOnlyContent(
+                rows: value,
+                onEditGroup: (row) =>
+                    _BudgetGroupModeEditDialog.show(context, row),
+                onDeleteGroup: (row) =>
+                    _confirmDeleteBudgetGroup(context, ref, row),
+              ),
+              loading: () => const BudgetCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
-              error: (error, _) => _ErrorCard(message: error.toString()),
+              error: (error, _) => BudgetErrorCard(message: error.toString()),
             ),
             SizedBox(height: 40),
           ],
@@ -136,54 +143,6 @@ class _AddBudgetGroupButton extends StatelessWidget {
   }
 }
 
-class _BudgetReadOnlyContent extends StatelessWidget {
-  const _BudgetReadOnlyContent({required this.rows});
-
-  final List<BudgetVsActual> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final totalBudget = rows.fold<int>(0, (sum, row) => sum + row.budgetAmount);
-    final totalSpent = rows.fold<int>(0, (sum, row) => sum + row.spentAmount);
-    final remaining = totalBudget - totalSpent;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _BudgetSummary(
-          totalBudget: totalBudget,
-          totalSpent: totalSpent,
-          remaining: remaining,
-        ),
-        SizedBox(height: 16),
-        if (rows.isEmpty)
-          const _EmptyBudgetGroups()
-        else
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final twoColumns = constraints.maxWidth >= 820;
-              final cardWidth = twoColumns
-                  ? (constraints.maxWidth - 12) / 2
-                  : constraints.maxWidth;
-              return Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (final row in rows)
-                    SizedBox(
-                      key: ValueKey('desktop-budget-group-${row.groupId}'),
-                      width: cardWidth,
-                      child: _BudgetGroupCard(row: row),
-                    ),
-                ],
-              );
-            },
-          ),
-      ],
-    );
-  }
-}
-
 class _BudgetMonthNav extends ConsumerWidget {
   const _BudgetMonthNav({required this.month});
 
@@ -231,7 +190,7 @@ class _ExpectedIncomeCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(budgetMonthProvider);
 
-    return _BudgetCard(
+    return BudgetCard(
       child: Row(
         children: [
           Icon(Icons.payments_outlined, color: context.desktopIncome),
@@ -257,250 +216,6 @@ class _ExpectedIncomeCard extends ConsumerWidget {
             tooltip: '예상 수입 수정',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _BudgetSummary extends StatelessWidget {
-  const _BudgetSummary({
-    required this.totalBudget,
-    required this.totalSpent,
-    required this.remaining,
-  });
-
-  final int totalBudget;
-  final int totalSpent;
-  final int remaining;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _SummaryTile(
-            label: '총 예산',
-            amount: totalBudget,
-            icon: Icons.flag_outlined,
-            color: context.desktopIncome,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: _SummaryTile(
-            label: '총 사용액',
-            amount: totalSpent,
-            icon: Icons.receipt_long_outlined,
-            color: context.desktopExpense,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: _SummaryTile(
-            label: '남은 금액',
-            amount: remaining,
-            icon: Icons.savings_outlined,
-            color: remaining < 0
-                ? context.desktopExpense
-                : context.desktopAccent,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryTile extends StatelessWidget {
-  const _SummaryTile({
-    required this.label,
-    required this.amount,
-    required this.icon,
-    required this.color,
-  });
-
-  final String label;
-  final int amount;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return _BudgetCard(
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(color: context.desktopMuted)),
-                SizedBox(height: 4),
-                Text(
-                  formatKRW(amount),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BudgetGroupCard extends ConsumerWidget {
-  const _BudgetGroupCard({required this.row});
-
-  final BudgetVsActual row;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final overBudget = row.spentAmount > row.budgetAmount;
-    final progress = row.budgetAmount <= 0
-        ? null
-        : (row.spentAmount / row.budgetAmount).clamp(0.0, 1.0);
-
-    final remaining = row.budgetAmount - row.spentAmount;
-    final overAmount = row.spentAmount - row.budgetAmount;
-
-    return _BudgetCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      row.groupName,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        _ModeChip(row: row),
-                        if (row.adjustment != 0)
-                          _InfoChip(label: '조정 ${formatKRW(row.adjustment)}'),
-                        if (row.carryForward) const _InfoChip(label: '이월'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 8),
-              IconButton(
-                onPressed: () => _BudgetGroupModeEditDialog.show(context, row),
-                icon: Icon(Icons.edit_outlined),
-                tooltip: '예산 그룹 수정',
-                visualDensity: VisualDensity.compact,
-              ),
-              IconButton(
-                onPressed: () => _confirmDeleteBudgetGroup(context, ref, row),
-                icon: Icon(Icons.delete_outline),
-                tooltip: '예산 그룹 삭제',
-                color: context.desktopExpense,
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: context.desktopBorder,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                overBudget ? context.desktopExpense : context.desktopIncome,
-              ),
-            ),
-          ),
-          SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _AmountPair(label: '예산', amount: row.budgetAmount),
-              SizedBox(width: 18),
-              _AmountPair(label: '사용', amount: row.spentAmount),
-              SizedBox(width: 18),
-              _AmountPair(label: '잔액', amount: remaining),
-              const Spacer(),
-              Text(
-                '${row.usagePercent}%',
-                style: TextStyle(
-                  color: overBudget
-                      ? context.desktopExpense
-                      : context.desktopMuted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          if (overBudget) ...[
-            SizedBox(height: 10),
-            _OverBudgetNotice(amount: overAmount),
-          ],
-          if (row.categories.isNotEmpty) ...[
-            SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final category in row.categories)
-                  _InfoChip(label: category.name),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _OverBudgetNotice extends StatelessWidget {
-  const _OverBudgetNotice({required this.amount});
-
-  final int amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.desktopExpense.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.warning_amber_rounded,
-              size: 16,
-              color: context.desktopExpense,
-            ),
-            SizedBox(width: 6),
-            Text(
-              '예산 초과 ${formatKRW(amount)}',
-              style: TextStyle(
-                color: context.desktopExpense,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -536,109 +251,6 @@ Future<void> _confirmDeleteBudgetGroup(
   ScaffoldMessenger.of(
     context,
   ).showSnackBar(const SnackBar(content: Text('예산 그룹을 삭제했습니다.')));
-}
-
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({required this.row});
-
-  final BudgetVsActual row;
-
-  @override
-  Widget build(BuildContext context) {
-    if (row.accountId != null) {
-      return _InfoChip(label: row.accountName ?? '자산 연동');
-    }
-    if (row.incomePercentage != null) {
-      return _InfoChip(label: '소득 ${row.incomePercentage}%');
-    }
-    return const _InfoChip(label: '고정 예산');
-  }
-}
-
-class _AmountPair extends StatelessWidget {
-  const _AmountPair({required this.label, required this.amount});
-
-  final String label;
-  final int amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(color: context.desktopMuted)),
-        SizedBox(height: 2),
-        Text(formatKRW(amount), style: TextStyle(fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.desktopSelectedSurface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: context.desktopBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        child: Text(label, style: TextStyle(fontSize: 12)),
-      ),
-    );
-  }
-}
-
-class _EmptyBudgetGroups extends StatelessWidget {
-  const _EmptyBudgetGroups();
-
-  @override
-  Widget build(BuildContext context) {
-    return _BudgetCard(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: Text(
-            '이번 달 예산 그룹이 없습니다.',
-            style: TextStyle(color: context.desktopMuted),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return _BudgetCard(
-      child: Text(message, style: TextStyle(color: context.desktopExpense)),
-    );
-  }
-}
-
-class _BudgetCard extends StatelessWidget {
-  const _BudgetCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
-    );
-  }
 }
 
 class _BudgetGroupCreateDialog extends ConsumerStatefulWidget {
@@ -1230,11 +842,14 @@ class _AccountLinkedPreview extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: _AmountPair(label: '예산 preview', amount: flow.available),
+              child: BudgetAmountPair(
+                label: '예산 preview',
+                amount: flow.available,
+              ),
             ),
             SizedBox(width: 16),
             Expanded(
-              child: _AmountPair(label: '사용 preview', amount: flow.spent),
+              child: BudgetAmountPair(label: '사용 preview', amount: flow.spent),
             ),
           ],
         ),
@@ -1380,7 +995,7 @@ class _BudgetGroupModeEditDialogState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _InfoChip(label: _mode.label),
+              BudgetInfoChip(label: _mode.label),
               SizedBox(height: 12),
               if (_mode == _BudgetGroupMode.fixed) ...[
                 TextField(

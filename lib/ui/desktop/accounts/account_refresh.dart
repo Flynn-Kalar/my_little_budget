@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../budget/providers.dart' as budget_providers;
-import '../investments/providers.dart' as investments_providers;
-import '../settings/providers.dart' as settings_providers;
-import '../transactions/providers.dart' as transactions_providers;
-import 'providers.dart' as accounts_providers;
+import 'package:my_little_budget/features/budget/providers.dart' as budget_providers;
+import 'package:my_little_budget/features/investments/providers.dart' as investments_providers;
+import 'package:my_little_budget/features/settings/providers.dart' as settings_providers;
+import 'package:my_little_budget/features/transactions/providers.dart' as transactions_providers;
+import 'package:my_little_budget/features/accounts/providers.dart' as accounts_providers;
 
 void refreshAccountMetadata(WidgetRef ref, {int? accountId}) {
   accounts_providers.refreshAccountsList(ref);

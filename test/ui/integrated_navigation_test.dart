@@ -24,6 +24,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(
+      find.descendant(of: find.byType(InkWell), matching: find.text('캘린더')),
+      findsNothing,
+    );
+
     const budgetButton = ValueKey('desktop-transactions-budget-button');
     expect(find.byKey(budgetButton), findsOneWidget);
     expect(find.text('예산 보기'), findsOneWidget);

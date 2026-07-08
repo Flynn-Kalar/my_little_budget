@@ -7,7 +7,9 @@ import '../../../core/date.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
-import 'providers.dart';
+import 'package:my_little_budget/features/stats/providers.dart';
+import 'widgets/monthly_insight_card.dart';
+import 'widgets/stats_month_nav.dart';
 
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
@@ -35,9 +37,9 @@ class StatsScreen extends ConsumerWidget {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
-            _StatsMonthNav(month: month),
+            StatsMonthNav(month: month),
             SizedBox(height: 16),
-            _MonthlyInsightCard(breakdown: breakdown, trend: trend),
+            MonthlyInsightCard(breakdown: breakdown, trend: trend),
             SizedBox(height: 16),
             breakdown.when(
               data: (rows) {
@@ -104,195 +106,6 @@ int? _netForMonth(AsyncValue<List<MonthlyTrendRow>> trend, String month) {
     },
     orElse: () => null,
   );
-}
-
-class _StatsMonthNav extends ConsumerWidget {
-  const _StatsMonthNav({required this.month});
-
-  final String month;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final d = parseMonthKey(month);
-
-    void shift(int delta) {
-      ref.read(statsMonthProvider.notifier).state = shiftMonth(month, delta);
-      ref.read(statsSelectedCategoryProvider.notifier).state = null;
-      ref.read(statsSelectedTagProvider.notifier).state = null;
-      ref.read(statsDetailPanelOpenProvider.notifier).state = false;
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          onPressed: () => shift(-1),
-          icon: Icon(Icons.chevron_left),
-          tooltip: '이전 달',
-        ),
-        OutlinedButton.icon(
-          onPressed: () {
-            ref.read(statsMonthProvider.notifier).state = currentMonthKey();
-            ref.read(statsSelectedCategoryProvider.notifier).state = null;
-            ref.read(statsSelectedTagProvider.notifier).state = null;
-            ref.read(statsDetailPanelOpenProvider.notifier).state = false;
-          },
-          icon: Icon(Icons.calendar_month, size: 18),
-          label: Text('${d.year}-${d.month.toString().padLeft(2, '0')}'),
-        ),
-        IconButton(
-          onPressed: () => shift(1),
-          icon: Icon(Icons.chevron_right),
-          tooltip: '다음 달',
-        ),
-      ],
-    );
-  }
-}
-
-class _MonthlyInsightCard extends StatelessWidget {
-  const _MonthlyInsightCard({required this.breakdown, required this.trend});
-
-  final AsyncValue<List<CategoryBreakdownRow>> breakdown;
-  final AsyncValue<List<MonthlyTrendRow>> trend;
-
-  @override
-  Widget build(BuildContext context) {
-    return breakdown.when(
-      data: (categoryRows) => trend.when(
-        data: (trendRows) {
-          final monthExpense = categoryRows.fold<int>(
-            0,
-            (sum, row) => sum + row.total,
-          );
-          final previousExpense = trendRows.length >= 2
-              ? trendRows[trendRows.length - 2].expense
-              : 0;
-          final diff = monthExpense - previousExpense;
-          final averageExpense = trendRows.isEmpty
-              ? 0
-              : (trendRows.fold<int>(0, (sum, row) => sum + row.expense) /
-                        trendRows.length)
-                    .round();
-          final topCategory = categoryRows.isEmpty ? null : categoryRows.first;
-
-          return _StatsCard(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _InsightTile(
-                    icon: Icons.payments_outlined,
-                    label: '이번 달 지출',
-                    value: formatKRW(monthExpense),
-                    color: context.desktopExpense,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _InsightTile(
-                    icon: diff <= 0
-                        ? Icons.trending_down_outlined
-                        : Icons.trending_up_outlined,
-                    label: '전월 대비',
-                    value: previousExpense == 0
-                        ? '-'
-                        : '${diff >= 0 ? '+' : ''}${formatKRW(diff)}',
-                    color: diff > 0
-                        ? context.desktopExpense
-                        : context.desktopIncome,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _InsightTile(
-                    icon: Icons.query_stats_outlined,
-                    label: '12개월 평균',
-                    value: formatKRW(averageExpense),
-                    color: context.desktopAccent,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _InsightTile(
-                    icon: Icons.category_outlined,
-                    label: '최다 지출 카테고리',
-                    value: topCategory == null
-                        ? '-'
-                        : '${topCategory.categoryName} · ${formatKRW(topCategory.total)}',
-                    color: topCategory == null
-                        ? context.desktopMuted
-                        : _parseColor(
-                            topCategory.categoryColor,
-                            context.desktopAccent,
-                          ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-        loading: () =>
-            const _StatsCard(child: LinearProgressIndicator(minHeight: 3)),
-        error: (error, _) => _ErrorCard(message: error.toString()),
-      ),
-      loading: () =>
-          const _StatsCard(child: LinearProgressIndicator(minHeight: 3)),
-      error: (error, _) => _ErrorCard(message: error.toString()),
-    );
-  }
-}
-
-class _InsightTile extends StatelessWidget {
-  const _InsightTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.desktopSelectedSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: context.desktopBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 24),
-            SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: TextStyle(color: context.desktopMuted)),
-                  SizedBox(height: 4),
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _ExpenseBreakdownCard extends ConsumerWidget {

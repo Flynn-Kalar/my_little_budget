@@ -7,7 +7,7 @@ import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/categories/validation.dart';
 import '../../../desktop/color_hex.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/settings/providers.dart';
 
 class CategoryForm extends ConsumerStatefulWidget {
   const CategoryForm({

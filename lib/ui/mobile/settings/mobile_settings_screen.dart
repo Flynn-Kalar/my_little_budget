@@ -36,6 +36,11 @@ class MobileSettingsScreen extends StatelessWidget {
           title: '데이터 백업/복원',
           path: '/settings/backup',
         ),
+        _SettingsTile(
+          icon: Icons.info_outline,
+          title: '앱 정보',
+          path: '/settings/about',
+        ),
       ],
     );
   }

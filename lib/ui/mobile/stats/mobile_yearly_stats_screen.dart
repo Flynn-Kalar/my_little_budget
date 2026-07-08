@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
-import '../../shared/stats_providers.dart';
+import 'package:my_little_budget/features/stats/providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileYearlyStatsScreen extends ConsumerWidget {

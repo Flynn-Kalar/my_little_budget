@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../color_hex.dart';
-import 'providers.dart';
+import 'package:my_little_budget/features/accounts/providers.dart';
 import 'widgets/account_tx_list.dart';
 
 /// SPEC §4.3 — 자산 상세 (PC).

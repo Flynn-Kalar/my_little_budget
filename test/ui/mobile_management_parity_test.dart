@@ -124,4 +124,81 @@ void main() {
     expect(find.textContaining('mobile account filter target'), findsOneWidget);
     expect(find.textContaining('mobile account filter other'), findsNothing);
   });
+
+  testWidgets(
+    'mobile account detail transaction rows can be edited and deleted',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+
+      final month = currentMonthKey();
+      final account = (await db.accountsDao.getActiveAccounts()).first;
+      final category = (await db.categoriesDao.getActiveCategories(
+        'expense',
+      )).first;
+      final editId = await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'expense',
+          amount: 1000,
+          occurredOn: '$month-03',
+          occurredTime: '09:00',
+          accountId: account.id,
+          categoryId: category.id,
+          memo: 'mobile account editable row',
+        ),
+      );
+      await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'expense',
+          amount: 2000,
+          occurredOn: '$month-04',
+          occurredTime: '09:00',
+          accountId: account.id,
+          categoryId: category.id,
+          memo: 'mobile account deletable row',
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: MaterialApp(
+            home: MobileAccountDetailScreen(accountId: account.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('mobile account editable row'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsNWidgets(2));
+      await tester.enterText(find.byType(TextField).first, '1500');
+      await tester.tap(find.byType(FilledButton).last);
+      await tester.pumpAndSettle();
+
+      final editedRows = await db.transactionsDao.listTransactionsByAccount(
+        account.id,
+      );
+      final edited = editedRows.singleWhere((row) => row.id == editId);
+      expect(edited.amount, 1500);
+
+      await tester.tap(find.textContaining('mobile account deletable row'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.delete_outline).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(FilledButton).last);
+      await tester.pumpAndSettle();
+
+      final rows = await db.transactionsDao.listTransactionsByAccount(
+        account.id,
+      );
+      expect(
+        rows.any((row) => row.memo == 'mobile account deletable row'),
+        isFalse,
+      );
+    },
+  );
 }

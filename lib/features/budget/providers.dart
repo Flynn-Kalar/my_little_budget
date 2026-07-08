@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../../core/date.dart';
-import '../../../data/daos/budget_dao.dart';
-import '../../../data/database.dart';
-import '../../../data/providers.dart';
-import '../shell/badges_providers.dart';
+import '../../core/date.dart';
+import '../../data/daos/budget_dao.dart';
+import '../../data/database.dart';
+import '../../data/providers.dart';
+import 'badges_providers.dart';
 
 final budgetMonthProvider = StateProvider<String>((ref) => currentMonthKey());
 

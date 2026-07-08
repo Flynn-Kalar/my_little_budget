@@ -8,9 +8,9 @@ import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/notes/note_schedule.dart';
 import '../../shared/calendar_entries.dart';
-import '../../shared/calendar_providers.dart';
+import 'package:my_little_budget/features/calendar/providers.dart';
 import '../../shared/notes_calendar.dart' as note_calendar;
-import '../../shared/notes_providers.dart';
+import 'package:my_little_budget/features/notes/providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileCalendarScreen extends ConsumerStatefulWidget {

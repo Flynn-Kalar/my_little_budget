@@ -8,7 +8,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/recurring_dao.dart';
 import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/settings/providers.dart';
 import 'recurring_form.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];

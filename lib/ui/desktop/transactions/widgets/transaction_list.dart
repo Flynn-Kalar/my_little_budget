@@ -7,7 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../color_hex.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 import 'transaction_edit_dialog.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -85,7 +85,7 @@ class _TransactionListBody extends StatefulWidget {
 }
 
 class _TransactionListBodyState extends State<_TransactionListBody> {
-  bool _plannedExpanded = true;
+  bool _plannedExpanded = false;
 
   @override
   Widget build(BuildContext context) {

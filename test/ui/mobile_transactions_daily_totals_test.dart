@@ -9,7 +9,7 @@ import 'package:my_little_budget/core/money.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
-import 'package:my_little_budget/ui/shared/transactions_providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 
 void main() {
   testWidgets('mobile transaction date headers show visible daily totals', (

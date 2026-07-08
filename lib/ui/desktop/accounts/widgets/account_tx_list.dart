@@ -9,7 +9,7 @@ import '../../../../data/daos/transactions_dao.dart';
 import '../../../../features/investments/quantity_precision.dart';
 import '../../color_hex.dart';
 import '../../transactions/widgets/transaction_edit_dialog.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/accounts/providers.dart';
 import 'adjustment_edit_dialog.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];

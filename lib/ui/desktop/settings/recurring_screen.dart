@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
-import 'providers.dart';
+import 'package:my_little_budget/features/settings/providers.dart';
 import 'widgets/recurring_list.dart';
 
 class RecurringScreen extends ConsumerWidget {

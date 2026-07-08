@@ -11,7 +11,7 @@ import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/recurring/validation.dart';
 import '../../../desktop/transactions/widgets/form_fields.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/settings/providers.dart';
 
 class RecurringForm extends ConsumerStatefulWidget {
   const RecurringForm({

@@ -1,76 +1,122 @@
 # My Little Budget
 
-한국어 데스크톱 가계부 앱입니다. Flutter, Drift, SQLite, Riverpod 기반으로 거래내역, 자산, 예산, 통계, 투자, 설정 관리를 제공합니다.
+로컬 SQLite 기반 개인 가계부 앱입니다. Flutter, Drift, SQLite, Riverpod, GoRouter로 구현되어 있으며 거래, 예산, 통계, 계좌, 투자, 캘린더, 노트, 설정, 백업/복원을 관리합니다.
 
 ## 주요 기능
 
-- 거래내역 입력, 수정, 복제, 삭제, 검색, 필터
-- 자산 생성, 수정, 보관, 복원, 삭제, 상세 거래 필터
-- 월별 예산 관리, 예상 수입, 예산 그룹, 이전 달 예산 복사
+- 수입/지출/이체 거래 입력, 수정, 복제, 삭제, 검색, 필터
+- 월별 예산, 예산 그룹, 이월 예산 관리
 - 월간/연간 통계 조회
-- 투자 BUY/SELL/DIVIDEND 입력, 수정, 삭제, 보유종목, 실현손익 조회
+- 계좌 생성, 보관, 복원, 상세 거래 조회
+- 투자 BUY/SELL/DIVIDEND 기록, 보유 종목, 실현 손익 조회
+- 캘린더 일정과 노트 일정 표시
+- 리치 텍스트 노트, 체크리스트, 반복 노트, 알림
 - 카테고리, 태그, 반복 거래, 테마 설정
-- JSON 백업 내보내기와 전체 복원
+- 로컬 JSON 백업/복원
+- Supabase Storage 기반 JSON 백업/복원 설정
+- Supabase table sync v2 스키마 준비 및 연결 테스트
 
-## 설치
+## 기술 스택
 
-### 사용자 설치
+- Flutter SDK, Dart `^3.11.5`
+- Riverpod `3.x`
+- GoRouter
+- Drift + SQLite
+- SharedPreferences
+- Flutter Local Notifications
+- Flutter Quill
+- Supabase Dart SDK
 
-현재 MVP는 Windows 데스크톱 실행을 기준으로 준비합니다.
+## UI 구조
 
-1. 릴리즈에서 제공되는 Windows 빌드 파일을 받습니다.
-2. 압축 배포인 경우 원하는 폴더에 압축을 풉니다.
-3. `my_little_budget.exe`를 실행합니다.
-4. Windows 보안 경고가 표시되면 배포 출처를 확인한 뒤 실행합니다.
+이 프로젝트는 데스크톱/태블릿 UI와 모바일 UI를 분리합니다.
 
-데이터는 앱 내부 SQLite DB에 저장됩니다. 앱 삭제 또는 PC 이동 전에 반드시 백업 파일을 만들어 두세요.
+- `width >= 900`: 데스크톱 shell + 사이드바
+- `width < 900`: 모바일 shell + 하단 내비게이션
+- 데스크톱 전용 화면: `lib/ui/desktop/**`
+- 모바일 전용 화면: `lib/ui/mobile/**`
+- 공용 provider/widget: `lib/ui/shared/**`
+- 플랫폼 분기: `lib/router/app_router.dart`, `lib/ui/mobile/responsive_page.dart`, `lib/ui/mobile/shell/mobile_shell.dart`
 
-### 개발 환경 실행
+모바일 대응을 위해 `lib/ui/desktop/**` 화면에 `Wrap`, `Padding` 등을 추가하지 않습니다. 모바일 대응은 `lib/ui/mobile/**`에 별도 화면을 추가해서 처리합니다.
 
-필요 도구:
+## 실행
+
+필요 조건:
 
 - Flutter SDK
 - Windows 데스크톱 빌드 환경
+- Android 빌드 시 Android SDK와 JDK 17 호환 환경
 
-명령:
+의존성 설치:
 
 ```powershell
 flutter pub get
+```
+
+Windows 실행:
+
+```powershell
 flutter run -d windows
 ```
 
-릴리즈 빌드:
+Android 기기/에뮬레이터 실행:
+
+```powershell
+flutter run -d android
+```
+
+## 코드 생성
+
+Drift DAO와 데이터베이스 생성 파일을 갱신할 때 사용합니다.
+
+```powershell
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## 검증
+
+```powershell
+flutter analyze
+flutter test
+```
+
+## 빌드
+
+Windows release:
 
 ```powershell
 flutter build windows --release
 ```
 
-Windows release build 산출물 기본 경로:
+기본 산출물 경로:
 
 ```text
 build\windows\x64\runner\Release
 ```
 
-이 폴더 안의 `my_little_budget.exe`와 함께 생성된 DLL/data 파일을 같은 폴더 구조로 배포합니다.
-
-Android 로컬 테스트 APK:
+Android 로컬 테스트용 release-like APK:
 
 ```powershell
-flutter build apk --debug
 cd android
 .\gradlew assembleLocalRelease
 ```
 
-`assembleLocalRelease`는 로컬 테스트 전용 debug-signed release-like APK입니다. Google Play 업로드용 AAB는 반드시 `android/key.properties` 기반 release signing으로 `flutter build appbundle --release`를 사용합니다.
+Google Play 업로드용 AAB:
 
-### Android Internal Testing
+```powershell
+flutter build appbundle --release
+```
 
-Google Play Internal testing으로 본인 계정만 설치할 때도 Play 업로드용 AAB는 release/upload key로 서명해야 합니다. Debug APK 또는 `localRelease` APK는 Play Console에 업로드하지 않습니다.
+기본 산출물 경로:
 
-1. Android SDK와 JDK를 설치하고 `flutter doctor -v`에서 Android toolchain을 통과시킵니다.
-2. upload keystore를 안전한 로컬 위치에 준비합니다.
-3. [android/key.properties.example](android/key.properties.example)을 `android/key.properties`로 복사합니다.
-4. `android/key.properties`에 로컬 비밀값을 채웁니다.
+```text
+build\app\outputs\bundle\release\app-release.aab
+```
+
+## Android 서명
+
+Play 업로드용 release 빌드는 `android/key.properties`가 필요합니다. 예시는 [android/key.properties.example](android/key.properties.example)을 참고합니다.
 
 ```properties
 storeFile=<absolute-or-relative-path-to-upload-keystore.jks>
@@ -79,43 +125,15 @@ storePassword=<upload-keystore-password>
 keyPassword=<upload-key-password>
 ```
 
-5. AAB를 빌드합니다.
+주의 사항:
 
-```powershell
-flutter build appbundle --release
-```
+- `android/key.properties`는 Git에 포함하지 않습니다.
+- `.jks`, `.keystore` 파일은 Git에 포함하지 않습니다.
+- 앱에는 `service_role` key를 저장하지 않습니다. Supabase 설정에는 anon/publishable key만 사용합니다.
 
-AAB 산출물:
+## 백업과 복원
 
-```text
-build/app/outputs/bundle/release/app-release.aab
-```
-
-6. Play Console의 Internal testing 트랙에 AAB를 업로드합니다.
-7. 본인 Google 계정을 테스터로 등록하고 설치 링크로 설치합니다.
-8. 실기기에서 앱 실행, 주요 화면 진입, 앱 재시작 후 설정 유지, 백업 export/import를 확인합니다.
-
-민감정보 주의:
-
-- `android/key.properties`는 git에 포함하지 않습니다.
-- `.jks`, `.keystore` 파일은 git에 포함하지 않습니다.
-- 실제 비밀번호나 key alias를 문서나 코드에 하드코딩하지 않습니다.
-
-검증:
-
-```powershell
-flutter analyze
-flutter test
-```
-
-## 백업
-
-백업은 설정 화면에서 수행합니다.
-
-1. 앱에서 `설정`으로 이동합니다.
-2. `데이터 백업/복원`을 엽니다.
-3. `Create backup file` 버튼을 누릅니다.
-4. 저장 위치를 선택합니다.
+설정 화면의 데이터 관리에서 로컬 JSON 백업/복원을 실행합니다.
 
 백업 파일명 형식:
 
@@ -123,48 +141,68 @@ flutter test
 my_little_budget-backup-yyyyMMdd-HHmmss.json
 ```
 
-백업 파일에는 현재 앱 데이터가 단일 JSON 파일로 저장됩니다. 릴리즈 전후, 다른 PC로 이동하기 전, 대량 import를 하기 전에는 백업을 먼저 만드는 것을 권장합니다.
+복원은 기존 데이터를 병합하지 않고 백업 시점의 데이터로 교체합니다. 중요한 변경 전에는 먼저 백업 파일을 만들어 둡니다.
 
-## 복원
+백업에는 다음 데이터가 포함됩니다.
 
-복원은 기존 데이터와 병합하지 않고, 현재 데이터를 백업 시점 데이터로 완전히 교체합니다.
+- 계좌, 카테고리, 거래
+- 예산 그룹, 월별 수입
+- 투자, 태그, 반복 거래
+- 노트, 체크리스트, 캘린더 일정
 
-1. 앱에서 `설정`으로 이동합니다.
-2. `데이터 백업/복원`을 엽니다.
-3. `Choose backup file` 버튼을 누릅니다.
-4. 백업 JSON 파일을 선택합니다.
-5. 확인 문구를 읽고 복원을 승인합니다.
+## Supabase
 
-복원 확인 문구:
+앱은 두 종류의 Supabase 관련 기능을 가집니다.
 
-```text
-현재 데이터를 모두 덮어쓰고 백업 데이터를 복원합니다. 되돌릴 수 없습니다.
-```
+- Supabase Storage JSON 백업/복원
+- Supabase table sync v2 연결 준비와 테이블 접근 테스트
 
-복원 실패 시 기존 데이터는 유지되어야 합니다. 복원 성공 후에는 앱을 재시작하지 않아도 주요 화면 데이터가 갱신됩니다.
+Storage 백업/복원은 앱 설정에서 Supabase URL, anon/publishable key, bucket, path prefix를 입력해서 사용합니다.
 
-## 알려진 제한
+Table sync v2 준비:
 
-- 현재 MVP는 Windows 데스크톱 사용 흐름을 우선합니다.
-- 백업 복원은 전체 교체 방식이며 부분 병합을 지원하지 않습니다.
-- 투자 기능은 수동 입력 기준입니다. 환율, 실시간 시세, 외부 증권사 API 연동은 없습니다.
-- 투자 수량은 소수점 4자리까지 지원하고, 금액/단가/수수료는 원화 정수 기준입니다.
-- 통계 화면은 표와 목록 중심입니다. 차트 시각화는 후속 작업입니다.
-- 설정의 reset UI는 MVP 필수가 아닌 post-MVP polish로 남아 있습니다.
-- 백업/복원 파일 선택 흐름은 플랫폼 파일 선택기에 의존합니다.
+1. Supabase 프로젝트를 생성합니다.
+2. SQL Editor에서 [supabase/table_sync_v2_schema.sql](supabase/table_sync_v2_schema.sql)을 실행합니다.
+3. 앱의 설정 > 데이터 관리에서 Supabase URL과 anon/publishable key를 입력합니다.
+4. DB 테이블 테스트를 실행합니다.
 
-## 향후 계획
+현재 table sync v2 스키마는 다음 테이블을 준비합니다.
 
-- 릴리즈 패키징과 설치 경험 정리
-- 백업/복원 플랫폼 통합 테스트 보강
-- 예산, 투자, 계좌 edge case 테스트 확대
-- 통계 차트 시각화 검토
-- 모바일 대응 가능성 검토
-- 설정 reset UX 검토
+- `mlb_accounts`
+- `mlb_categories`
+- `mlb_transactions`
+- `mlb_budget_groups`
+- `mlb_monthly_income`
+- `mlb_investments`
+- `mlb_recurring_transactions`
+- `mlb_tags`
+- `mlb_calendar_events`
+
+## 주요 디렉터리
+
+- `lib/app.dart`: 앱 초기화, 테마, 라우터, 알림 동기화
+- `lib/router/app_router.dart`: GoRouter 라우팅과 화면 분기
+- `lib/data/**`: Drift 테이블, DAO, 백업, Supabase 연동
+- `lib/features/**`: 도메인 로직과 검증
+- `lib/ui/desktop/**`: 데스크톱/태블릿 UI
+- `lib/ui/mobile/**`: 모바일 UI
+- `lib/ui/shared/**`: 공용 provider와 widget
+- `test/**`: 데이터, 기능, UI 테스트
+- `docs/agents/**`: 로컬 이슈/도메인 문서 운영 규칙
+- `.scratch/<feature-slug>/`: 로컬 이슈와 PRD 작성 위치
 
 ## 프로젝트 문서
 
 - [SPEC.md](SPEC.md): 제품/데이터/동작 기준
-- [MVP_CHECKLIST.md](MVP_CHECKLIST.md): MVP 상태판
+- [MVP_CHECKLIST.md](MVP_CHECKLIST.md): MVP 상태 체크리스트
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): 구현 계획과 현재 구조
-- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md): 릴리즈 준비 체크리스트
+- [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md): 릴리스 준비 체크리스트
+
+도메인 컨텍스트 문서는 루트 `CONTEXT.md`, 아키텍처 결정 기록은 `docs/adr/` 아래에 둡니다.
+
+## 알려진 제약
+
+- 투자 기능은 수동 입력 기준입니다. 실시간 시세나 외부 증권사 API 연동은 없습니다.
+- 백업/복원은 전체 교체 방식입니다. 부분 병합 복원은 지원하지 않습니다.
+- Android Play release 빌드는 로컬 release keystore 설정이 있어야 합니다.
+- 모바일과 데스크톱 화면은 별도 구현으로 유지합니다.

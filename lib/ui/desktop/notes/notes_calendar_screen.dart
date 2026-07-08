@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/date.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../shared/notes_calendar.dart';
-import '../../shared/notes_providers.dart';
+import 'package:my_little_budget/features/notes/providers.dart';
 
 class NotesCalendarScreen extends ConsumerStatefulWidget {
   const NotesCalendarScreen({super.key});

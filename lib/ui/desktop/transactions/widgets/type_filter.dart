@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 
 class TypeFilter extends ConsumerWidget {
   const TypeFilter({super.key});

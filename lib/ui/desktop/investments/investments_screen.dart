@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/date.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/daos/investments_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/investments/cost_basis.dart';
 import '../../../features/investments/quantity_precision.dart';
 import '../../../features/investments/validation.dart';
-import 'providers.dart';
+import 'package:my_little_budget/features/investments/providers.dart';
+import 'widgets/investment_summary_card.dart';
 
 class InvestmentsScreen extends ConsumerStatefulWidget {
   const InvestmentsScreen({super.key});
@@ -81,7 +81,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> {
             ),
             SizedBox(height: 12),
             summary.when(
-              data: (value) => _InvestmentSummaryCard(summary: value),
+              data: (value) => InvestmentSummaryCard(summary: value),
               loading: () => const _InvestmentCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
@@ -382,101 +382,6 @@ class _InvestmentAccountBanner extends StatelessWidget {
                       ? '${account!.name} 계좌에 투자 거래가 연결됩니다.'
                       : '활성 투자 자산이 없으면 투자 거래는 계좌 없이 저장됩니다.',
                   style: TextStyle(color: context.desktopMuted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InvestmentSummaryCard extends StatelessWidget {
-  const _InvestmentSummaryCard({required this.summary});
-
-  final InvestmentSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _SummaryTile(
-            label: '매수',
-            amount: summary.buy,
-            icon: Icons.south_west,
-            color: context.desktopExpense,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: _SummaryTile(
-            label: '매도',
-            amount: summary.sell,
-            icon: Icons.north_east,
-            color: context.desktopIncome,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: _SummaryTile(
-            label: '배당',
-            amount: summary.dividend,
-            icon: Icons.payments_outlined,
-            color: context.desktopWarning,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: _SummaryTile(
-            label: '실현손익',
-            amount: summary.realizedPnl,
-            icon: Icons.swap_vert,
-            color: summary.realizedPnl < 0
-                ? context.desktopExpense
-                : context.desktopAccent,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SummaryTile extends StatelessWidget {
-  const _SummaryTile({
-    required this.label,
-    required this.amount,
-    required this.icon,
-    required this.color,
-  });
-
-  final String label;
-  final int amount;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return _InvestmentCard(
-      child: Row(
-        children: [
-          Icon(icon, color: color),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(color: context.desktopMuted)),
-                SizedBox(height: 4),
-                Text(
-                  formatKRW(amount),
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
                 ),
               ],
             ),

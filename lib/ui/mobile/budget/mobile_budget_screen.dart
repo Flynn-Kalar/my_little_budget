@@ -8,7 +8,7 @@ import '../../../data/daos/budget_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/budget/validation.dart';
-import '../../shared/budget_providers.dart';
+import 'package:my_little_budget/features/budget/providers.dart';
 import '../mobile_widgets.dart';
 
 class MobileBudgetScreen extends ConsumerWidget {

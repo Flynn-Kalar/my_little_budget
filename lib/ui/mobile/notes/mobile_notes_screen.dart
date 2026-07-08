@@ -15,7 +15,7 @@ import '../../../features/notes/note_alarm.dart';
 import '../../../features/notes/note_format.dart';
 import '../../../features/notes/rich_note.dart';
 import '../../../features/notes/note_schedule.dart';
-import '../../shared/notes_providers.dart';
+import 'package:my_little_budget/features/notes/providers.dart';
 import '../../shared/rich_note_editor.dart';
 import '../mobile_widgets.dart';
 

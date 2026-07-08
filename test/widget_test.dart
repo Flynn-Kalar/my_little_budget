@@ -56,10 +56,11 @@ void main() {
       '/settings',
       '/settings/theme',
       '/settings/backup',
+      '/settings/about',
     ];
 
     for (final route in routes) {
-      final context = tester.element(find.text('my_little_budget'));
+      final context = tester.element(find.text('my_little_budget').first);
       GoRouter.of(context).go(route);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: route);
@@ -92,6 +93,7 @@ void main() {
       '/settings',
       '/settings/theme',
       '/settings/backup',
+      '/settings/about',
     ];
 
     for (final route in routes) {
@@ -138,7 +140,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final context = tester.element(find.text('my_little_budget'));
+    final context = tester.element(find.text('my_little_budget').first);
     GoRouter.of(context).go('/budget');
     await tester.pumpAndSettle();
 

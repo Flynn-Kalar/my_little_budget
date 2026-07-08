@@ -1,19 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/budget/budget_page.dart';
-import '../features/investments/investments_page.dart';
 import '../features/settings/settings_page.dart';
-import '../features/stats/stats_page.dart';
 import '../ui/desktop/accounts/account_detail_screen.dart';
 import '../ui/desktop/accounts/accounts_screen.dart';
+import '../ui/desktop/budget/budget_screen.dart';
 import '../ui/desktop/calendar/calendar_screen.dart';
+import '../ui/desktop/investments/investments_screen.dart';
 import '../ui/desktop/notes/notes_screen.dart';
+import '../ui/desktop/settings/about_screen.dart';
 import '../ui/desktop/settings/categories_screen.dart';
 import '../ui/desktop/settings/data_management_screen.dart';
 import '../ui/desktop/settings/recurring_screen.dart';
 import '../ui/desktop/settings/tags_screen.dart';
 import '../ui/desktop/settings/theme_screen.dart';
+import '../ui/desktop/stats/stats_screen.dart';
 import '../ui/desktop/stats/yearly_stats_screen.dart';
 import '../ui/desktop/transactions/transactions_screen.dart';
 import '../ui/mobile/accounts/mobile_accounts_screen.dart';
@@ -23,6 +24,7 @@ import '../ui/mobile/calendar/mobile_calendar_screen.dart';
 import '../ui/mobile/investments/mobile_investments_screen.dart';
 import '../ui/mobile/notes/mobile_notes_screen.dart';
 import '../ui/mobile/responsive_page.dart';
+import '../ui/mobile/settings/mobile_about_screen.dart';
 import '../ui/mobile/settings/mobile_categories_screen.dart';
 import '../ui/mobile/settings/mobile_settings_screen.dart';
 import '../ui/mobile/settings/mobile_data_management_screen.dart';
@@ -51,14 +53,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/budget',
             builder: (context, state) => const ResponsivePage(
-              desktop: BudgetPage(),
+              desktop: BudgetScreen(),
               mobile: MobileBudgetScreen(),
             ),
           ),
           GoRoute(
             path: '/stats',
             builder: (context, state) => const ResponsivePage(
-              desktop: StatsPage(),
+              desktop: StatsScreen(),
               mobile: MobileStatsScreen(),
             ),
             routes: [
@@ -93,7 +95,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/investments',
             builder: (context, state) => const ResponsivePage(
-              desktop: InvestmentsPage(),
+              desktop: InvestmentsScreen(),
               mobile: MobileInvestmentsScreen(),
             ),
           ),
@@ -175,6 +177,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const ResponsivePage(
                   desktop: ThemeScreen(),
                   mobile: MobileThemeScreen(),
+                ),
+              ),
+              GoRoute(
+                path: 'about',
+                builder: (context, state) => const ResponsivePage(
+                  desktop: AboutScreen(),
+                  mobile: MobileAboutScreen(),
                 ),
               ),
             ],

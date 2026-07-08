@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/date.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import '../../../data/database.dart';
+import '../../../data/providers.dart';
 import '../../../features/investments/quantity_precision.dart';
-import '../../shared/accounts_providers.dart';
+import 'package:my_little_budget/features/accounts/providers.dart';
+import '../../../features/transactions/validation.dart';
+import '../transactions/sheets/mobile_transaction_sheet.dart';
 import '../mobile_widgets.dart';
 
 class MobileAccountDetailScreen extends ConsumerWidget {
@@ -76,7 +80,8 @@ class MobileAccountDetailScreen extends ConsumerWidget {
             if (value.isEmpty) return const EmptyMobileCard('거래내역이 없습니다.');
             return Column(
               children: [
-                for (final row in value) _AccountTransactionCard(row: row),
+                for (final row in value)
+                  _AccountTransactionCard(row: row, accountId: accountId),
               ],
             );
           },
@@ -349,74 +354,99 @@ class _FilterChips<T> extends StatelessWidget {
   }
 }
 
-class _AccountTransactionCard extends StatelessWidget {
-  const _AccountTransactionCard({required this.row});
+class _AccountTransactionCard extends ConsumerWidget {
+  const _AccountTransactionCard({required this.row, required this.accountId});
 
   final TransactionRow row;
+  final int accountId;
+
+  Future<void> _openEditor(BuildContext context, WidgetRef ref) async {
+    if (row.source == 'investment') {
+      context.go('/investments');
+      return;
+    }
+    if (row.type == 'adjustment') {
+      await _MobileAdjustmentSheet.show(
+        context,
+        row: row,
+        accountId: accountId,
+      );
+    } else {
+      await MobileTransactionSheet.show(context, row: row);
+    }
+    refreshAccountDetail(ref, accountId);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final color = row.type == 'income' ? context.appIncome : context.appExpense;
     return MobileCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _title,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
+      child: InkWell(
+        onTap: () => _openEditor(context, ref),
+        borderRadius: BorderRadius.circular(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _title,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    formatKRW(row.amount),
-                    style: TextStyle(color: color, fontWeight: FontWeight.w800),
-                  ),
-                  if (row.balanceAfter != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
                     Text(
-                      formatKRW(row.balanceAfter!),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      formatKRW(row.amount),
                       style: TextStyle(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.75,
-                        ),
+                        color: color,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                    if (row.balanceAfter != null)
+                      Text(
+                        formatKRW(row.balanceAfter!),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.75,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          if (row.memo?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
-              row.memo!.trim(),
+              _subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
               ),
             ),
+            if (row.memo?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: 4),
+              Text(
+                row.memo!.trim(),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -441,6 +471,192 @@ class _AccountTransactionCard extends StatelessWidget {
       return '$date · $from → $to';
     }
     return '$date · ${row.accountName ?? ''}';
+  }
+}
+
+class _MobileAdjustmentSheet extends ConsumerStatefulWidget {
+  const _MobileAdjustmentSheet({required this.row, required this.accountId});
+
+  final TransactionRow row;
+  final int accountId;
+
+  static Future<void> show(
+    BuildContext context, {
+    required TransactionRow row,
+    required int accountId,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _MobileAdjustmentSheet(row: row, accountId: accountId),
+    );
+  }
+
+  @override
+  ConsumerState<_MobileAdjustmentSheet> createState() =>
+      _MobileAdjustmentSheetState();
+}
+
+class _MobileAdjustmentSheetState
+    extends ConsumerState<_MobileAdjustmentSheet> {
+  late DateTime _date = parseDateKey(widget.row.occurredOn);
+  late final String _time = widget.row.occurredTime;
+  late final _amount = TextEditingController(text: '${widget.row.amount}');
+  late final _memo = TextEditingController(text: widget.row.memo ?? '');
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    _memo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _date = picked);
+  }
+
+  Future<void> _save() async {
+    final result = validateTransaction(
+      type: 'adjustment',
+      amount: parseKRW(_amount.text),
+      occurredOn: toDateKey(_date),
+      occurredTime: _time,
+      memo: _memo.text,
+      accountId: widget.accountId,
+    );
+    if (result.isFail) {
+      _showSnack(result.errors.values.first);
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(transactionsDaoProvider)
+          .saveTransaction(id: widget.row.id, draft: result.value!);
+      if (!mounted) return;
+      Navigator.pop(context);
+      _showSnack('잔액 조정을 수정했습니다.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('잔액 조정 삭제'),
+        content: const Text('이 잔액 조정 내역을 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      await ref.read(transactionsDaoProvider).deleteTransaction(widget.row.id);
+      if (!mounted) return;
+      Navigator.pop(context);
+      _showSnack('잔액 조정을 삭제했습니다.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '잔액 조정',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _pickDate,
+              icon: const Icon(Icons.calendar_today, size: 16),
+              label: Text(toDateKey(_date)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _amount,
+              enabled: !_busy,
+              keyboardType: const TextInputType.numberWithOptions(signed: true),
+              decoration: const InputDecoration(
+                labelText: '금액',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _memo,
+              enabled: !_busy,
+              decoration: const InputDecoration(
+                labelText: '메모',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _busy ? null : _delete,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('삭제'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.appExpense,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  child: const Text('취소'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _busy ? null : _save,
+                  child: const Text('저장'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -10,7 +10,7 @@ import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
 import 'package:my_little_budget/ui/desktop/transactions/widgets/month_nav.dart';
-import 'package:my_little_budget/ui/shared/transactions_providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 
 void main() {
   testWidgets('내역 화면: 거래 표시 + 행 클릭 시 편집 다이얼로그 + 필터 패널', (tester) async {
@@ -640,6 +640,15 @@ void main() {
 
     expect(find.text('예정 거래 1건'), findsOneWidget);
     expect(find.text('지출 ${formatKRW(1234)}'), findsWidgets);
+    expect(find.text('예정'), findsNothing);
+    expect(find.text('future-planned-row'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey('desktop-transactions-planned-toggle')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('예정 거래 1건'), findsOneWidget);
     expect(find.text('예정'), findsWidgets);
     expect(find.text('future-planned-row'), findsOneWidget);
 
@@ -648,15 +657,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('예정 거래 1건'), findsOneWidget);
     expect(find.text('future-planned-row'), findsNothing);
-
-    await tester.tap(
-      find.byKey(const ValueKey('desktop-transactions-planned-toggle')),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('future-planned-row'), findsOneWidget);
 
     final amount = find.byKey(
       const ValueKey('desktop-transactions-inline-amount'),

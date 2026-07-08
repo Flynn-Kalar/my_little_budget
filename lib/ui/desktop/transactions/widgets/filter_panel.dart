@@ -8,7 +8,7 @@ import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/database.dart';
-import '../providers.dart';
+import 'package:my_little_budget/features/transactions/providers.dart';
 import 'form_fields.dart';
 import 'type_filter.dart';
 

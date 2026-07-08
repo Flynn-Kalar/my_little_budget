@@ -54,6 +54,12 @@ class SettingsPage extends StatelessWidget {
               subtitle: 'JSON 백업 파일 내보내기와 전체 교체 방식 복원',
               path: '/settings/backup',
             ),
+            _SettingsCard(
+              icon: Icons.info_outline,
+              title: '앱 정보',
+              subtitle: '버전, 저장소, 라이선스와 개인정보처리방침',
+              path: '/settings/about',
+            ),
             SizedBox(height: 40),
           ],
         ),
