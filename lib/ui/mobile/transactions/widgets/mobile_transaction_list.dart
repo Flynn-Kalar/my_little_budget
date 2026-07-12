@@ -27,7 +27,7 @@ class MobileGroupedTransactions extends StatefulWidget {
 }
 
 class _MobileGroupedTransactionsState extends State<MobileGroupedTransactions> {
-  bool _plannedExpanded = true;
+  bool _plannedExpanded = false;
 
   @override
   Widget build(BuildContext context) {

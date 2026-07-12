@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/backup.dart';
@@ -46,7 +48,6 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   late final _supabaseUrlCtrl = TextEditingController();
   late final _supabaseAnonKeyCtrl = TextEditingController();
   late final _supabaseBucketCtrl = TextEditingController();
-  late final _supabasePathPrefixCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -59,7 +60,6 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     _supabaseUrlCtrl.dispose();
     _supabaseAnonKeyCtrl.dispose();
     _supabaseBucketCtrl.dispose();
-    _supabasePathPrefixCtrl.dispose();
     super.dispose();
   }
 
@@ -78,7 +78,6 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     _supabaseUrlCtrl.text = settings.url;
     _supabaseAnonKeyCtrl.text = settings.anonKey;
     _supabaseBucketCtrl.text = settings.bucket;
-    _supabasePathPrefixCtrl.text = settings.pathPrefix;
   }
 
   Future<void> _refreshSupabaseRemoteStatus() async {
@@ -185,7 +184,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       url: _supabaseUrlCtrl.text,
       anonKey: _supabaseAnonKeyCtrl.text,
       bucket: _supabaseBucketCtrl.text,
-      pathPrefix: _supabasePathPrefixCtrl.text,
+      pathPrefix: SupabaseBackupSettings.defaultPathPrefix,
     );
   }
 
@@ -396,7 +395,6 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                   urlController: _supabaseUrlCtrl,
                   anonKeyController: _supabaseAnonKeyCtrl,
                   bucketController: _supabaseBucketCtrl,
-                  pathPrefixController: _supabasePathPrefixCtrl,
                   configured: supabaseSettings.isConfigured,
                   settings: supabaseSettings,
                   remoteStatus: _remoteStatus,
@@ -670,7 +668,6 @@ class _SupabaseSettingsCard extends StatelessWidget {
     required this.urlController,
     required this.anonKeyController,
     required this.bucketController,
-    required this.pathPrefixController,
     required this.configured,
     required this.settings,
     required this.remoteStatus,
@@ -688,7 +685,6 @@ class _SupabaseSettingsCard extends StatelessWidget {
   final TextEditingController urlController;
   final TextEditingController anonKeyController;
   final TextEditingController bucketController;
-  final TextEditingController pathPrefixController;
   final bool configured;
   final SupabaseBackupSettings settings;
   final SupabaseBackupRemoteStatus? remoteStatus;
@@ -760,34 +756,15 @@ class _SupabaseSettingsCard extends StatelessWidget {
               ),
             ),
             SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    key: const ValueKey('settings-supabase-bucket-field'),
-                    controller: bucketController,
-                    enabled: !busy,
-                    decoration: const InputDecoration(
-                      labelText: 'Storage bucket',
-                      hintText: 'my-little-budget',
-                      prefixIcon: Icon(Icons.inventory_2_outlined),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    key: const ValueKey('settings-supabase-path-prefix-field'),
-                    controller: pathPrefixController,
-                    enabled: !busy,
-                    decoration: const InputDecoration(
-                      labelText: 'Path prefix',
-                      hintText: 'my_little_budget',
-                      prefixIcon: Icon(Icons.folder_outlined),
-                    ),
-                  ),
-                ),
-              ],
+            TextField(
+              key: const ValueKey('settings-supabase-bucket-field'),
+              controller: bucketController,
+              enabled: !busy,
+              decoration: const InputDecoration(
+                labelText: 'Storage bucket',
+                hintText: 'my-little-budget',
+                prefixIcon: Icon(Icons.inventory_2_outlined),
+              ),
             ),
             SizedBox(height: 16),
             Wrap(
@@ -873,21 +850,317 @@ class _AutoSyncSetupGuideState extends State<_AutoSyncSetupGuide> {
           '자동동기화 설정방법',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
-        children: [
-          Text(
-            [
-              '1. Supabase 프로젝트를 만들고 Storage bucket을 생성합니다.',
-              '2. Project URL과 anon/publishable key를 복사해 입력합니다.',
-              '3. Storage bucket 이름과 백업 경로 prefix를 입력합니다.',
-              '4. 설정 저장 후 연결 테스트와 DB 테이블 테스트를 실행합니다.',
-              '5. Supabase 백업으로 현재 데이터를 올리고, 필요하면 Supabase 복원으로 내려받습니다.',
-            ].join('\n'),
-            style: TextStyle(
-              color: context.desktopMuted,
-              height: 1.45,
-              fontSize: 13,
+        children: const [_AutoSyncSetupSteps()],
+      ),
+    );
+  }
+}
+
+class _AutoSyncSetupSteps extends StatelessWidget {
+  const _AutoSyncSetupSteps();
+
+  static const _supabaseUrl = 'https://supabase.com/';
+  static const _tableSyncSql = '''
+-- My Little Budget table-sync v2 preparation.
+-- This stage grants SELECT only. Row upload/update/delete is intentionally not enabled.
+-- The anon key is a public client credential, so do not add write policies without auth.
+
+do \$\$
+declare
+  table_name text;
+begin
+  foreach table_name in array array[
+    'mlb_accounts',
+    'mlb_categories',
+    'mlb_transactions',
+    'mlb_budget_groups',
+    'mlb_monthly_income',
+    'mlb_investments',
+    'mlb_recurring_transactions',
+    'mlb_tags',
+    'mlb_calendar_events'
+  ]
+  loop
+    execute format(
+      'create table if not exists public.%I (
+        uuid text primary key,
+        payload jsonb not null default ''{}''::jsonb,
+        updated_at timestamptz not null default now(),
+        deleted_at timestamptz,
+        sync_status text not null default ''pending''
+      )',
+      table_name
+    );
+    execute format('alter table public.%I enable row level security', table_name);
+    execute format(
+      'drop policy if exists mlb_sync_read_anon on public.%I',
+      table_name
+    );
+    execute format(
+      'create policy mlb_sync_read_anon on public.%I for select to anon using (true)',
+      table_name
+    );
+    execute format('grant select on table public.%I to anon', table_name);
+  end loop;
+end
+\$\$;
+''';
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      color: Theme.of(context).colorScheme.onSurface,
+      height: 1.45,
+      fontSize: 18,
+      fontWeight: FontWeight.w800,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text('1. ', style: style),
+            InkWell(
+              onTap: () => _openSupabase(context),
+              child: Text(
+                _supabaseUrl,
+                style: style.copyWith(
+                  color: context.desktopAccent,
+                  fontWeight: FontWeight.w800,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            Text(
+              '에서 GitHub 아이디가 있으면 GitHub 연동으로 로그인합니다. GitHub 아이디가 없으면 계정을 생성합니다.',
+              style: style,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(assetName: 'assets/help/supabase-sign-up.png'),
+        const SizedBox(height: 10),
+        Text(
+          '2. 조직 생성 화면에서 Type은 Personal, Plan은 Free 플랜으로 시작하면 됩니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(
+          assetName: 'assets/help/supabase-create-organization.png',
+        ),
+        const SizedBox(height: 10),
+        Text('3. Supabase 프로젝트를 만듭니다.', style: style),
+        const SizedBox(height: 10),
+        const _GuideImage(assetName: 'assets/help/supabase-create-project.png'),
+        const SizedBox(height: 10),
+        Text(
+          '지역은 Asia-Pacific처럼 아시아 지역으로 지정하는 것이 좋습니다. 비밀번호를 설정해야 Storage bucket 생성이 가능합니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        Text('4. Storage bucket을 생성합니다.', style: style),
+        const SizedBox(height: 10),
+        const _GuideImage(
+          assetName: 'assets/help/supabase-create-storage-bucket.png',
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '5. 왼쪽 메뉴에서 SQL Editor를 클릭합니다. 화면 중앙의 SQL 입력창에 아래 SQL 명령어를 그대로 붙여넣은 뒤, Run 버튼을 눌러 실행합니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(assetName: 'assets/help/supabase-sql-editor.png'),
+        const SizedBox(height: 10),
+        _SqlCommandBlock(sql: _tableSyncSql),
+        const SizedBox(height: 10),
+        Text('6. 프로젝트 메인페이지에서 프로젝트 URL을 복사 후 동기화 설정창에 입력합니다.', style: style),
+        const SizedBox(height: 10),
+        const _GuideImage(
+          assetName: 'assets/help/supabase-project-url-copy.png',
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '7. Settings - API Keys - Legacy anon, service_role API keys에서 anon public을 복사 후 동기화 설정창에 입력합니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(assetName: 'assets/help/supabase-anon-key-copy.png'),
+        const SizedBox(height: 10),
+        Text(
+          '8. 좌측 메뉴 Storage로 이동해서 bucket 생성 후 bucket name을 동기화 설정창에 입력합니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(
+          assetName: 'assets/help/supabase-storage-bucket-create.png',
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(
+          assetName: 'assets/help/supabase-storage-bucket-name.png',
+        ),
+        const SizedBox(height: 10),
+        Text('9. 설정 저장 후 연결 테스트와 DB 테이블 테스트를 실행합니다.', style: style),
+        Text(
+          '10. Supabase 백업으로 현재 데이터를 올리고, 필요하면 Supabase 복원으로 내려받습니다.',
+          style: style,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openSupabase(BuildContext context) async {
+    final opened = await launchUrl(
+      Uri.parse(_supabaseUrl),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Supabase 링크를 열 수 없습니다.')));
+    }
+  }
+}
+
+class _GuideImage extends StatelessWidget {
+  const _GuideImage({required this.assetName});
+
+  final String assetName;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showImagePreview(context),
+          child: Image.asset(assetName, fit: BoxFit.contain),
+        ),
+      ),
+    );
+  }
+
+  void _showImagePreview(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: InteractiveViewer(
+                    boundaryMargin: const EdgeInsets.all(1000),
+                    minScale: 0.8,
+                    maxScale: 8,
+                    child: Center(
+                      child: Image.asset(assetName, fit: BoxFit.contain),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: IconButton.filled(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+              ],
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _SqlCommandBlock extends StatefulWidget {
+  const _SqlCommandBlock({required this.sql});
+
+  final String sql;
+
+  @override
+  State<_SqlCommandBlock> createState() => _SqlCommandBlockState();
+}
+
+class _SqlCommandBlockState extends State<_SqlCommandBlock> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final codeStyle = TextStyle(
+      color: theme.colorScheme.onSurface,
+      fontFamily: 'monospace',
+      fontSize: 12,
+      height: 1.35,
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.45,
+        ),
+        border: Border.all(color: context.desktopBorder),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: _expanded ? '접기' : '펼치기',
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  icon: Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 20,
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => _expanded = !_expanded),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        _expanded ? 'SQL 명령어 접기' : 'SQL 명령어 펼쳐보기',
+                        style: TextStyle(
+                          color: context.desktopMuted,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: widget.sql));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('SQL 명령어를 복사했습니다.')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('복사'),
+                ),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const Divider(height: 1),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.all(12),
+              child: SelectableText(widget.sql, style: codeStyle),
+            ),
+          ],
         ],
       ),
     );

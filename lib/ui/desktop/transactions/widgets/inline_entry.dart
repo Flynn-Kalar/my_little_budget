@@ -359,7 +359,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                       controller: _amountCtrl,
                       focusNode: _amountFocus,
                       keyboardType: TextInputType.text,
-                      textAlign: TextAlign.right,
+                      textAlign: TextAlign.left,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         hintText: '₩ 금액',
@@ -465,7 +465,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
             Row(
               children: [
                 SizedBox(
-                  width: 150,
+                  width: 168,
                   child: FocusTraversalOrder(
                     order: const NumericFocusOrder(4),
                     child: TextField(
@@ -478,10 +478,23 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                         hintText: '\uB0A0\uC9DC',
                         isDense: true,
                         prefixIcon: const Icon(Icons.calendar_today, size: 16),
+                        prefixIconConstraints: const BoxConstraints.tightFor(
+                          width: 34,
+                          height: 36,
+                        ),
                         suffixIcon: IconButton(
                           tooltip: '\uB0A0\uC9DC \uC120\uD0DD',
+                          constraints: const BoxConstraints.tightFor(
+                            width: 34,
+                            height: 36,
+                          ),
+                          padding: EdgeInsets.zero,
                           onPressed: _pickDate,
                           icon: const Icon(Icons.expand_more, size: 18),
+                        ),
+                        suffixIconConstraints: const BoxConstraints.tightFor(
+                          width: 34,
+                          height: 36,
                         ),
                         border: const OutlineInputBorder(),
                       ),
@@ -511,7 +524,8 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                 ),
                 const SizedBox(width: 8),
                 if (_type != 'transfer') ...[
-                  Expanded(
+                  Flexible(
+                    flex: 2,
                     child: FocusTraversalOrder(
                       order: const NumericFocusOrder(6),
                       child: TagAutocompleteField(
@@ -530,7 +544,8 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                   ),
                   const SizedBox(width: 8),
                 ],
-                Expanded(
+                Flexible(
+                  flex: _type == 'transfer' ? 1 : 3,
                   child: FocusTraversalOrder(
                     order: NumericFocusOrder(_type == 'transfer' ? 6 : 7),
                     child: MemoAutocompleteField(

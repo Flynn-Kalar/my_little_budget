@@ -137,6 +137,62 @@ void main() {
     expect(_dailyIncome(secondDate, 0), findsOneWidget);
     expect(_dailyExpense(secondDate, 4000), findsOneWidget);
   });
+
+  testWidgets('mobile planned transactions are collapsed by default', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    final accountId = (await db.accountsDao.getActiveAccounts()).first.id;
+    final categoryId = (await db.categoriesDao.getActiveCategories(
+      'expense',
+    )).first.id;
+    final now = DateTime.now();
+    final future = DateTime(now.year, now.month, now.day + 1);
+
+    await db.transactionsDao.saveTransaction(
+      draft: TransactionDraft(
+        type: 'expense',
+        amount: 1234,
+        occurredOn: toDateKey(future),
+        occurredTime: '12:00',
+        accountId: accountId,
+        categoryId: categoryId,
+        memo: 'mobile-future-planned-row',
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MyLittleBudgetApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(NavigationBar)),
+    );
+    container.read(selectedMonthProvider.notifier).state = toMonthKey(future);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('mobile-transactions-planned-toggle')),
+      findsOneWidget,
+    );
+    expect(find.text('mobile-future-planned-row'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey('mobile-transactions-planned-toggle')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('mobile-future-planned-row'), findsOneWidget);
+  });
 }
 
 Finder _dailyIncome(String date, int amount) {

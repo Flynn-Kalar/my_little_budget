@@ -13,6 +13,9 @@ void main() {
   testWidgets('mobile transaction amount field saves arithmetic expressions', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
 
@@ -47,12 +50,66 @@ void main() {
     const amountKey = ValueKey('mobile-transaction-amount-field');
     final amountField = find.byKey(amountKey);
     expect(amountField, findsOneWidget);
+    final textField = tester.widget<TextField>(amountField);
+    expect(textField.readOnly, isTrue);
+    expect(textField.keyboardType, TextInputType.none);
     expect(
-      tester.widget<TextField>(amountField).keyboardType,
-      TextInputType.text,
+      find.byKey(const ValueKey('mobile-transaction-amount-keypad')),
+      findsNothing,
     );
 
-    await tester.enterText(amountField, '1000+2000*3');
+    await tester.tap(amountField);
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey('mobile-transaction-amount-keypad')),
+      findsOneWidget,
+    );
+
+    for (final label in [
+      'C',
+      'backspace',
+      '()',
+      '÷',
+      '×',
+      '-',
+      '+',
+      '00',
+      '=',
+    ]) {
+      expect(
+        find.byKey(ValueKey('mobile-transaction-keypad-$label')),
+        findsOneWidget,
+      );
+    }
+
+    for (final label in ['C', '1', '0', '00', '+', '2', '0', '00', '×', '3']) {
+      await tester.tap(
+        find.byKey(ValueKey('mobile-transaction-keypad-$label')),
+      );
+      await tester.pump();
+    }
+    expect(
+      tester.widget<TextField>(amountField).controller?.text,
+      '1000+2000×3',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('mobile-transaction-keypad-=')));
+    await tester.pump();
+    expect(tester.widget<TextField>(amountField).controller?.text, '7000');
+    expect(
+      find.byKey(const ValueKey('mobile-transaction-amount-keypad')),
+      findsNothing,
+    );
+    expect(
+      tester
+          .widget<TextField>(
+            find.byKey(const ValueKey('mobile-transaction-memo-field')),
+          )
+          .focusNode
+          ?.hasFocus,
+      isTrue,
+    );
+
     await tester.tap(find.byType(FilledButton).last);
     await tester.pumpAndSettle();
 

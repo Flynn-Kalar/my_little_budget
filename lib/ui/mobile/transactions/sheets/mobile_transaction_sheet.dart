@@ -25,6 +25,7 @@ class MobileTransactionSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       builder: (_) => MobileTransactionSheet(row: row),
     );
   }
@@ -34,6 +35,7 @@ class MobileTransactionSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       builder: (_) => MobileTransactionSheet(row: row, duplicate: true),
     );
   }
@@ -60,9 +62,12 @@ class _MobileTransactionSheetState
     text: widget.row?.amount.toString() ?? '',
   );
   late final _memo = TextEditingController(text: widget.row?.memo ?? '');
+  final _amountFocus = FocusNode();
+  final _memoFocus = FocusNode();
   late final Set<String> _tagNames =
       widget.row?.tags.map((tag) => tag.name).toSet() ?? <String>{};
   bool _busy = false;
+  bool _showAmountKeypad = false;
 
   bool get _isEdit => widget.row != null && !widget.duplicate;
   bool get _isDuplicate => widget.row != null && widget.duplicate;
@@ -71,7 +76,19 @@ class _MobileTransactionSheetState
   void dispose() {
     _amount.dispose();
     _memo.dispose();
+    _amountFocus.dispose();
+    _memoFocus.dispose();
     super.dispose();
+  }
+
+  void _focusAmount() {
+    if (_showAmountKeypad) return;
+    setState(() => _showAmountKeypad = true);
+  }
+
+  void _focusMemo() {
+    if (_showAmountKeypad) setState(() => _showAmountKeypad = false);
+    _memoFocus.requestFocus();
   }
 
   Future<void> _pickDate() async {
@@ -273,16 +290,30 @@ class _MobileTransactionSheetState
             TextField(
               key: const ValueKey('mobile-transaction-amount-field'),
               controller: _amount,
+              focusNode: _amountFocus,
               enabled: !_busy,
-              keyboardType: TextInputType.text,
+              readOnly: true,
+              showCursor: true,
+              keyboardType: TextInputType.none,
+              onTap: _focusAmount,
               decoration: const InputDecoration(
                 labelText: '금액',
                 border: OutlineInputBorder(),
               ),
             ),
+            if (_showAmountKeypad) ...[
+              const SizedBox(height: 10),
+              _AmountKeypad(
+                controller: _amount,
+                enabled: !_busy,
+                onDone: _focusMemo,
+              ),
+            ],
             const SizedBox(height: 12),
             TextField(
+              key: const ValueKey('mobile-transaction-memo-field'),
               controller: _memo,
+              focusNode: _memoFocus,
               enabled: !_busy,
               decoration: const InputDecoration(
                 labelText: '메모',
@@ -339,6 +370,231 @@ void _showCardLimitWarning(BuildContext context, CardLimitWarning? warning) {
       backgroundColor: Theme.of(context).colorScheme.error,
     ),
   );
+}
+
+class _AmountKeypad extends StatelessWidget {
+  const _AmountKeypad({
+    required this.controller,
+    required this.enabled,
+    required this.onDone,
+  });
+
+  final TextEditingController controller;
+  final bool enabled;
+  final VoidCallback onDone;
+
+  static const _rows = [
+    [
+      _AmountKey('C', _AmountKeyAction.clear),
+      _AmountKey('backspace', _AmountKeyAction.backspace),
+      _AmountKey('()', _AmountKeyAction.parentheses),
+      _AmountKey('÷', _AmountKeyAction.input),
+    ],
+    [
+      _AmountKey('7', _AmountKeyAction.input),
+      _AmountKey('8', _AmountKeyAction.input),
+      _AmountKey('9', _AmountKeyAction.input),
+      _AmountKey('×', _AmountKeyAction.input),
+    ],
+    [
+      _AmountKey('4', _AmountKeyAction.input),
+      _AmountKey('5', _AmountKeyAction.input),
+      _AmountKey('6', _AmountKeyAction.input),
+      _AmountKey('-', _AmountKeyAction.input),
+    ],
+    [
+      _AmountKey('1', _AmountKeyAction.input),
+      _AmountKey('2', _AmountKeyAction.input),
+      _AmountKey('3', _AmountKeyAction.input),
+      _AmountKey('+', _AmountKeyAction.input),
+    ],
+    [
+      _AmountKey('00', _AmountKeyAction.input),
+      _AmountKey('0', _AmountKeyAction.input),
+      _AmountKey('.', _AmountKeyAction.input),
+      _AmountKey('=', _AmountKeyAction.done),
+    ],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      key: const ValueKey('mobile-transaction-amount-keypad'),
+      color: Colors.transparent,
+      child: Column(
+        children: [
+          for (final row in _rows) ...[
+            Row(
+              children: [
+                for (final key in row) ...[
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: _AmountKeyButton(
+                        item: key,
+                        enabled: enabled,
+                        onPressed: () => _handle(key),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _handle(_AmountKey key) {
+    if (!enabled) return;
+    switch (key.action) {
+      case _AmountKeyAction.input:
+        _insert(key.label);
+      case _AmountKeyAction.parentheses:
+        _insert(_nextParenthesis());
+      case _AmountKeyAction.clear:
+        controller.clear();
+      case _AmountKeyAction.backspace:
+        _backspace();
+      case _AmountKeyAction.done:
+        final text = controller.text.trim();
+        if (text.isNotEmpty) {
+          _replaceAll(parseKRW(text).toString());
+        }
+        onDone();
+    }
+  }
+
+  void _insert(String value) {
+    final current = controller.value;
+    final selection = current.selection;
+    final text = current.text;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+    final normalizedStart = start.clamp(0, text.length).toInt();
+    final normalizedEnd = end.clamp(0, text.length).toInt();
+    final nextText = text.replaceRange(normalizedStart, normalizedEnd, value);
+    final offset = normalizedStart + value.length;
+    controller.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: offset),
+    );
+  }
+
+  void _backspace() {
+    final current = controller.value;
+    final selection = current.selection;
+    final text = current.text;
+    if (text.isEmpty) return;
+    if (selection.isValid && !selection.isCollapsed) {
+      final start = selection.start.clamp(0, text.length).toInt();
+      final end = selection.end.clamp(0, text.length).toInt();
+      controller.value = TextEditingValue(
+        text: text.replaceRange(start, end, ''),
+        selection: TextSelection.collapsed(offset: start),
+      );
+      return;
+    }
+
+    final cursor = selection.isValid ? selection.start : text.length;
+    final offset = cursor.clamp(0, text.length).toInt();
+    if (offset == 0) return;
+    controller.value = TextEditingValue(
+      text: text.replaceRange(offset - 1, offset, ''),
+      selection: TextSelection.collapsed(offset: offset - 1),
+    );
+  }
+
+  String _nextParenthesis() {
+    final selection = controller.selection;
+    final text = controller.text;
+    final cursor = selection.isValid
+        ? selection.start.clamp(0, text.length).toInt()
+        : text.length;
+    final beforeCursor = text.substring(0, cursor);
+    final openCount = '('.allMatches(beforeCursor).length;
+    final closeCount = ')'.allMatches(beforeCursor).length;
+    return openCount > closeCount ? ')' : '(';
+  }
+
+  void _replaceAll(String text) {
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _AmountKeyButton extends StatelessWidget {
+  const _AmountKeyButton({
+    required this.item,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final _AmountKey item;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isAction = item.action != _AmountKeyAction.input;
+    final isDone = item.action == _AmountKeyAction.done;
+    final foreground = isDone
+        ? theme.colorScheme.onPrimary
+        : item.action == _AmountKeyAction.clear ||
+              item.action == _AmountKeyAction.backspace
+        ? context.appExpense
+        : theme.colorScheme.onSurface;
+    final background = isDone
+        ? theme.colorScheme.primary
+        : isAction ||
+              item.label == '+' ||
+              item.label == '-' ||
+              item.label == '×' ||
+              item.label == '÷'
+        ? theme.colorScheme.surfaceContainerHighest
+        : theme.colorScheme.surface;
+
+    return SizedBox(
+      height: 54,
+      child: FilledButton(
+        key: ValueKey('mobile-transaction-keypad-${item.label}'),
+        onPressed: enabled ? onPressed : null,
+        style: FilledButton.styleFrom(
+          elevation: 0,
+          backgroundColor: background,
+          disabledBackgroundColor: background.withValues(alpha: 0.38),
+          foregroundColor: foreground,
+          disabledForegroundColor: foreground.withValues(alpha: 0.38),
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        child: item.action == _AmountKeyAction.backspace
+            ? const Icon(Icons.backspace_outlined, size: 24)
+            : Text(
+                item.label,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+enum _AmountKeyAction { input, parentheses, clear, backspace, done }
+
+class _AmountKey {
+  const _AmountKey(this.label, this.action);
+
+  final String label;
+  final _AmountKeyAction action;
 }
 
 class _TagNameSelector extends StatefulWidget {

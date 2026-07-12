@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SupabaseBackupSettings {
+  static const defaultPathPrefix = 'my_little_budget';
+
   const SupabaseBackupSettings({
     required this.url,
     required this.anonKey,
     required this.bucket,
-    this.pathPrefix = 'my_little_budget',
+    this.pathPrefix = defaultPathPrefix,
     this.lastBackupAt,
     this.lastRestoreAt,
   });
@@ -58,7 +60,7 @@ class SupabaseBackupSettings {
 
   static String _normalizePrefix(String value) {
     final trimmed = value.trim();
-    if (trimmed.isEmpty) return 'my_little_budget';
+    if (trimmed.isEmpty) return defaultPathPrefix;
     return trimmed.split('/').where((part) => part.trim().isNotEmpty).join('/');
   }
 }
@@ -88,7 +90,7 @@ class SupabaseBackupSettingsNotifier extends Notifier<SupabaseBackupSettings> {
         url: prefs.getString(_urlKey) ?? '',
         anonKey: prefs.getString(_anonKeyKey) ?? '',
         bucket: prefs.getString(_bucketKey) ?? '',
-        pathPrefix: prefs.getString(_pathPrefixKey) ?? 'my_little_budget',
+        pathPrefix: SupabaseBackupSettings.defaultPathPrefix,
         lastBackupAt: prefs.getString(_lastBackupAtKey),
         lastRestoreAt: prefs.getString(_lastRestoreAtKey),
       ).normalized();
@@ -104,7 +106,10 @@ class SupabaseBackupSettingsNotifier extends Notifier<SupabaseBackupSettings> {
     await prefs.setString(_urlKey, normalized.url);
     await prefs.setString(_anonKeyKey, normalized.anonKey);
     await prefs.setString(_bucketKey, normalized.bucket);
-    await prefs.setString(_pathPrefixKey, normalized.pathPrefix);
+    await prefs.setString(
+      _pathPrefixKey,
+      SupabaseBackupSettings.defaultPathPrefix,
+    );
     if (normalized.lastBackupAt == null) {
       await prefs.remove(_lastBackupAtKey);
     } else {
