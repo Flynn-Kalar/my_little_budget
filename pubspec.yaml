@@ -88,6 +88,7 @@ flutter:
     - assets/help/supabase-create-organization.png
     - assets/help/supabase-create-project.png
     - assets/help/supabase-create-storage-bucket.png
+    - assets/help/supabase-auth-user-create.png
     - assets/help/supabase-sql-editor.png
     - assets/help/supabase-project-url-copy.png
     - assets/help/supabase-anon-key-copy.png

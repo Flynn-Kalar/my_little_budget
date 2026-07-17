@@ -198,6 +198,19 @@ void main() {
       find.byKey(const ValueKey('settings-supabase-password-field')),
       findsOneWidget,
     );
+
+    final setupGuide = find.text('자동동기화 설정방법');
+    await tester.ensureVisible(setupGuide);
+    await tester.tap(setupGuide);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('앱 접근용 이메일 사용자 생성'), findsOneWidget);
+    expect(find.textContaining('Supabase 대시보드에 로그인하는 계정'), findsOneWidget);
+    expect(find.textContaining('SQL 스키마 설치'), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/help/supabase-auth-user-create.png')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(

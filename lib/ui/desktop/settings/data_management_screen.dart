@@ -1014,7 +1014,16 @@ class _AutoSyncSetupSteps extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '5. Authentication - Sign In / Providers에서 Email 공급자가 활성화되어 있는지 확인하고, Authentication - Users에서 사용할 이메일/비밀번호 사용자를 하나 만듭니다.',
+          '5. 앱 접근용 이메일 사용자 생성: Authentication - Sign In / Providers에서 Email 공급자가 활성화되어 있는지 확인합니다. 이어서 Authentication - Users에서 Add user - Create new user를 눌러 이메일/비밀번호 사용자를 하나 만듭니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(
+          assetName: 'assets/help/supabase-auth-user-create.png',
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '중요: 여기서 만드는 이메일과 비밀번호는 my_little_budget 앱이 데이터에 접근할 때 사용하는 Supabase Auth 사용자 로그인 정보입니다. Supabase 대시보드에 로그인하는 계정의 이메일/비밀번호와는 별개이므로, 대시보드 계정 정보를 입력하지 마세요.',
           style: style,
         ),
         const SizedBox(height: 10),
@@ -1045,12 +1054,12 @@ class _AutoSyncSetupSteps extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '9. URL, anon/publishable key, 이메일, 비밀번호, bucket을 입력하고 설정 저장을 누릅니다. 로그인 성공 후 비밀번호는 저장하지 않고 세션만 보안 저장소에 보관합니다.',
+          '9. URL, anon/publishable key, 5단계에서 만든 앱 접근용 Auth 이메일/비밀번호, bucket을 입력하고 설정 저장을 누릅니다. 로그인 성공 후 비밀번호는 저장하지 않고 세션만 보안 저장소에 보관합니다.',
           style: style,
         ),
         const SizedBox(height: 10),
         Text(
-          '10. 이메일 사용자를 만들고 앱 로그인을 완료한 뒤 SQL Editor를 엽니다. 아래 SQL 명령어를 그대로 붙여넣고 Run 버튼을 누릅니다.',
+          '10. SQL 스키마 설치: 앱에서 설정 저장을 눌러 Auth 로그인을 완료한 뒤 Supabase 대시보드의 SQL Editor를 엽니다. 아래 SQL 명령어를 그대로 붙여넣고 Run 버튼을 누릅니다.',
           style: style,
         ),
         const SizedBox(height: 10),
