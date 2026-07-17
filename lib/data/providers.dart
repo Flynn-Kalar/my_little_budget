@@ -12,12 +12,40 @@ import 'daos/recurring_dao.dart';
 import 'daos/tags_dao.dart';
 import 'daos/transactions_dao.dart';
 import 'database.dart';
+import 'local_sync_store.dart';
+import 'supabase_incremental_sync_service.dart';
+import 'supabase_backup_settings.dart';
+import 'supabase_sync_coordinator.dart';
 
 /// 앱 전역 단일 DB 인스턴스. 첫 쿼리 시 lazy open → 시드(beforeOpen).
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
   ref.onDispose(db.close);
   return db;
+});
+
+final supabaseIncrementalSyncServiceProvider =
+    Provider<SupabaseIncrementalSyncService>((ref) {
+      return SupabaseIncrementalSyncService(
+        local: LocalSyncStore(ref.watch(appDatabaseProvider)),
+        remote: ref.watch(supabaseSyncGatewayProvider),
+      );
+    });
+
+final supabaseSyncCoordinatorProvider = Provider<SupabaseSyncCoordinator>((
+  ref,
+) {
+  final coordinator = SupabaseSyncCoordinator(
+    database: ref.watch(appDatabaseProvider),
+    service: ref.watch(supabaseIncrementalSyncServiceProvider),
+    loadSettings: () async {
+      final notifier = ref.read(supabaseBackupSettingsProvider.notifier);
+      await notifier.whenReady;
+      return ref.read(supabaseBackupSettingsProvider);
+    },
+  );
+  ref.onDispose(coordinator.dispose);
+  return coordinator;
 });
 
 final accountsDaoProvider = Provider<AccountsDao>(

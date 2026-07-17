@@ -8959,6 +8959,17 @@ class $CalendarEventsTable extends CalendarEvents
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+    clientDefault: newSyncUuid,
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -9111,9 +9122,33 @@ class $CalendarEventsTable extends CalendarEvents
     requiredDuringInsert: false,
     defaultValue: const CustomExpression("datetime('now')"),
   );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<String> deletedAt = GeneratedColumn<String>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(syncStatusPending),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    uuid,
     title,
     description,
     startAt,
@@ -9127,6 +9162,8 @@ class $CalendarEventsTable extends CalendarEvents
     notificationEnabled,
     createdAt,
     updatedAt,
+    deletedAt,
+    syncStatus,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9142,6 +9179,12 @@ class $CalendarEventsTable extends CalendarEvents
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -9237,6 +9280,18 @@ class $CalendarEventsTable extends CalendarEvents
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
     return context;
   }
 
@@ -9249,6 +9304,10 @@ class $CalendarEventsTable extends CalendarEvents
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
       )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -9302,6 +9361,14 @@ class $CalendarEventsTable extends CalendarEvents
         DriftSqlType.string,
         data['${effectivePrefix}updated_at'],
       )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      )!,
     );
   }
 
@@ -9313,6 +9380,7 @@ class $CalendarEventsTable extends CalendarEvents
 
 class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
   final int id;
+  final String uuid;
   final String title;
   final String description;
   final String startAt;
@@ -9326,8 +9394,11 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
   final bool notificationEnabled;
   final String createdAt;
   final String updatedAt;
+  final String? deletedAt;
+  final String syncStatus;
   const CalendarEvent({
     required this.id,
+    required this.uuid,
     required this.title,
     required this.description,
     required this.startAt,
@@ -9341,11 +9412,14 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     required this.notificationEnabled,
     required this.createdAt,
     required this.updatedAt,
+    this.deletedAt,
+    required this.syncStatus,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
     map['title'] = Variable<String>(title);
     map['description'] = Variable<String>(description);
     map['start_at'] = Variable<String>(startAt);
@@ -9367,12 +9441,17 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     map['notification_enabled'] = Variable<bool>(notificationEnabled);
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<String>(deletedAt);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
     return map;
   }
 
   CalendarEventsCompanion toCompanion(bool nullToAbsent) {
     return CalendarEventsCompanion(
       id: Value(id),
+      uuid: Value(uuid),
       title: Value(title),
       description: Value(description),
       startAt: Value(startAt),
@@ -9392,6 +9471,10 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
       notificationEnabled: Value(notificationEnabled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      syncStatus: Value(syncStatus),
     );
   }
 
@@ -9402,6 +9485,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CalendarEvent(
       id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String>(json['description']),
       startAt: serializer.fromJson<String>(json['startAt']),
@@ -9419,6 +9503,8 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
       ),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
+      deletedAt: serializer.fromJson<String?>(json['deletedAt']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
     );
   }
   @override
@@ -9426,6 +9512,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String>(description),
       'startAt': serializer.toJson<String>(startAt),
@@ -9441,11 +9528,14 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
       'notificationEnabled': serializer.toJson<bool>(notificationEnabled),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
+      'deletedAt': serializer.toJson<String?>(deletedAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
     };
   }
 
   CalendarEvent copyWith({
     int? id,
+    String? uuid,
     String? title,
     String? description,
     String? startAt,
@@ -9459,8 +9549,11 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     bool? notificationEnabled,
     String? createdAt,
     String? updatedAt,
+    Value<String?> deletedAt = const Value.absent(),
+    String? syncStatus,
   }) => CalendarEvent(
     id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
     title: title ?? this.title,
     description: description ?? this.description,
     startAt: startAt ?? this.startAt,
@@ -9475,10 +9568,13 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     notificationEnabled: notificationEnabled ?? this.notificationEnabled,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    syncStatus: syncStatus ?? this.syncStatus,
   );
   CalendarEvent copyWithCompanion(CalendarEventsCompanion data) {
     return CalendarEvent(
       id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -9500,6 +9596,10 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
           : this.notificationEnabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
     );
   }
 
@@ -9507,6 +9607,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
   String toString() {
     return (StringBuffer('CalendarEvent(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('startAt: $startAt, ')
@@ -9519,7 +9620,9 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
           ..write('notificationLeadMinutes: $notificationLeadMinutes, ')
           ..write('notificationEnabled: $notificationEnabled, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
   }
@@ -9527,6 +9630,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
   @override
   int get hashCode => Object.hash(
     id,
+    uuid,
     title,
     description,
     startAt,
@@ -9540,12 +9644,15 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     notificationEnabled,
     createdAt,
     updatedAt,
+    deletedAt,
+    syncStatus,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CalendarEvent &&
           other.id == this.id &&
+          other.uuid == this.uuid &&
           other.title == this.title &&
           other.description == this.description &&
           other.startAt == this.startAt &&
@@ -9558,11 +9665,14 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
           other.notificationLeadMinutes == this.notificationLeadMinutes &&
           other.notificationEnabled == this.notificationEnabled &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.syncStatus == this.syncStatus);
 }
 
 class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
   final Value<int> id;
+  final Value<String> uuid;
   final Value<String> title;
   final Value<String> description;
   final Value<String> startAt;
@@ -9576,8 +9686,11 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
   final Value<bool> notificationEnabled;
   final Value<String> createdAt;
   final Value<String> updatedAt;
+  final Value<String?> deletedAt;
+  final Value<String> syncStatus;
   const CalendarEventsCompanion({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.startAt = const Value.absent(),
@@ -9591,9 +9704,12 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     this.notificationEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
   });
   CalendarEventsCompanion.insert({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
     required String title,
     this.description = const Value.absent(),
     required String startAt,
@@ -9607,10 +9723,13 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     this.notificationEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
   }) : title = Value(title),
        startAt = Value(startAt);
   static Insertable<CalendarEvent> custom({
     Expression<int>? id,
+    Expression<String>? uuid,
     Expression<String>? title,
     Expression<String>? description,
     Expression<String>? startAt,
@@ -9624,9 +9743,12 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     Expression<bool>? notificationEnabled,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
+    Expression<String>? deletedAt,
+    Expression<String>? syncStatus,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (startAt != null) 'start_at': startAt,
@@ -9642,11 +9764,14 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
         'notification_enabled': notificationEnabled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
     });
   }
 
   CalendarEventsCompanion copyWith({
     Value<int>? id,
+    Value<String>? uuid,
     Value<String>? title,
     Value<String>? description,
     Value<String>? startAt,
@@ -9660,9 +9785,12 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     Value<bool>? notificationEnabled,
     Value<String>? createdAt,
     Value<String>? updatedAt,
+    Value<String?>? deletedAt,
+    Value<String>? syncStatus,
   }) {
     return CalendarEventsCompanion(
       id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
       title: title ?? this.title,
       description: description ?? this.description,
       startAt: startAt ?? this.startAt,
@@ -9677,6 +9805,8 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
       notificationEnabled: notificationEnabled ?? this.notificationEnabled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
     );
   }
 
@@ -9685,6 +9815,9 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -9727,6 +9860,12 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<String>(updatedAt.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<String>(deletedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
     return map;
   }
 
@@ -9734,6 +9873,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
   String toString() {
     return (StringBuffer('CalendarEventsCompanion(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('startAt: $startAt, ')
@@ -9746,7 +9886,9 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
           ..write('notificationLeadMinutes: $notificationLeadMinutes, ')
           ..write('notificationEnabled: $notificationEnabled, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
   }
@@ -17385,6 +17527,7 @@ typedef $$NoteChecklistItemsTableProcessedTableManager =
 typedef $$CalendarEventsTableCreateCompanionBuilder =
     CalendarEventsCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       required String title,
       Value<String> description,
       required String startAt,
@@ -17398,10 +17541,13 @@ typedef $$CalendarEventsTableCreateCompanionBuilder =
       Value<bool> notificationEnabled,
       Value<String> createdAt,
       Value<String> updatedAt,
+      Value<String?> deletedAt,
+      Value<String> syncStatus,
     });
 typedef $$CalendarEventsTableUpdateCompanionBuilder =
     CalendarEventsCompanion Function({
       Value<int> id,
+      Value<String> uuid,
       Value<String> title,
       Value<String> description,
       Value<String> startAt,
@@ -17415,6 +17561,8 @@ typedef $$CalendarEventsTableUpdateCompanionBuilder =
       Value<bool> notificationEnabled,
       Value<String> createdAt,
       Value<String> updatedAt,
+      Value<String?> deletedAt,
+      Value<String> syncStatus,
     });
 
 class $$CalendarEventsTableFilterComposer
@@ -17428,6 +17576,11 @@ class $$CalendarEventsTableFilterComposer
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17495,6 +17648,16 @@ class $$CalendarEventsTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
 }
 
 class $$CalendarEventsTableOrderingComposer
@@ -17508,6 +17671,11 @@ class $$CalendarEventsTableOrderingComposer
   });
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -17575,6 +17743,16 @@ class $$CalendarEventsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CalendarEventsTableAnnotationComposer
@@ -17588,6 +17766,9 @@ class $$CalendarEventsTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -17635,6 +17816,14 @@ class $$CalendarEventsTableAnnotationComposer
 
   GeneratedColumn<String> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
 }
 
 class $$CalendarEventsTableTableManager
@@ -17671,6 +17860,7 @@ class $$CalendarEventsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String> description = const Value.absent(),
                 Value<String> startAt = const Value.absent(),
@@ -17684,8 +17874,11 @@ class $$CalendarEventsTableTableManager
                 Value<bool> notificationEnabled = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
+                Value<String?> deletedAt = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
               }) => CalendarEventsCompanion(
                 id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 startAt: startAt,
@@ -17699,10 +17892,13 @@ class $$CalendarEventsTableTableManager
                 notificationEnabled: notificationEnabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                syncStatus: syncStatus,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
                 required String title,
                 Value<String> description = const Value.absent(),
                 required String startAt,
@@ -17716,8 +17912,11 @@ class $$CalendarEventsTableTableManager
                 Value<bool> notificationEnabled = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
+                Value<String?> deletedAt = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
               }) => CalendarEventsCompanion.insert(
                 id: id,
+                uuid: uuid,
                 title: title,
                 description: description,
                 startAt: startAt,
@@ -17731,6 +17930,8 @@ class $$CalendarEventsTableTableManager
                 notificationEnabled: notificationEnabled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                syncStatus: syncStatus,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

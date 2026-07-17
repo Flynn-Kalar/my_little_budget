@@ -6,6 +6,7 @@ import '../../../core/date.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
+import '../../../features/calendar/korean_holidays.dart';
 import '../../../features/notes/note_schedule.dart';
 import '../../shared/calendar_entries.dart';
 import 'package:my_little_budget/features/calendar/providers.dart';
@@ -64,6 +65,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             error: (error, _) => Center(child: Text('캘린더를 불러오지 못했습니다. $error')),
             data: (value) {
               final eventEntries = calendarOccurrencesByDate(value, _month);
+              final holidays = koreanHolidaysForMonth(_month);
               return notes.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) =>
@@ -76,6 +78,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   final entries = _combineCalendarEntries(
                     eventEntries,
                     noteEntries,
+                    holidays,
                   );
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,14 +157,26 @@ class _CalendarGrid extends StatelessWidget {
       children: [
         Row(
           children: [
-            for (final label in ['일', '월', '화', '수', '목', '금', '토'])
+            for (final (index, label) in [
+              '일',
+              '월',
+              '화',
+              '수',
+              '목',
+              '금',
+              '토',
+            ].indexed)
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
                     label,
+                    key: ValueKey('desktop-calendar-weekday-$index'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: _weekdayColor(index, theme: Theme.of(context)),
+                    ),
                   ),
                 ),
               ),
@@ -213,6 +228,7 @@ class _DayCell extends StatelessWidget {
         .where((entry) => entry.event == null || !_isRepeating(entry.event!))
         .toList();
     final visibleOneTimeCount = repeating.isEmpty ? 3 : 2;
+    final isHoliday = entries.any((entry) => entry.holiday != null);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -227,11 +243,15 @@ class _DayCell extends StatelessWidget {
         children: [
           Text(
             '${day.day}',
+            key: ValueKey('desktop-calendar-day-${toDateKey(day)}'),
             style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: inMonth
-                  ? theme.colorScheme.onSurface
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.45),
+              color: _calendarDayColor(
+                day,
+                theme: theme,
+                inMonth: inMonth,
+                isHoliday: isHoliday,
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -389,16 +409,46 @@ bool _isRepeating(CalendarEvent event) {
   return NoteScheduleTypeStorage.parse(event.scheduleType).isRepeating;
 }
 
+const _holidayRed = Color(0xFFDC2626);
+const _saturdayBlue = Color(0xFF2563EB);
+
+Color _weekdayColor(int index, {required ThemeData theme}) {
+  if (index == 0) return _holidayRed;
+  if (index == 6) return _saturdayBlue;
+  return theme.colorScheme.onSurface;
+}
+
+Color _calendarDayColor(
+  DateTime day, {
+  required ThemeData theme,
+  required bool inMonth,
+  required bool isHoliday,
+}) {
+  final color = isHoliday || day.weekday == DateTime.sunday
+      ? _holidayRed
+      : day.weekday == DateTime.saturday
+      ? _saturdayBlue
+      : theme.colorScheme.onSurface;
+  return inMonth ? color : color.withValues(alpha: 0.45);
+}
+
 class _CalendarEntry {
-  const _CalendarEntry.event(this.eventEntry) : noteEntry = null;
-  const _CalendarEntry.note(this.noteEntry) : eventEntry = null;
+  const _CalendarEntry.event(this.eventEntry)
+    : noteEntry = null,
+      holiday = null;
+  const _CalendarEntry.note(this.noteEntry) : eventEntry = null, holiday = null;
+  const _CalendarEntry.holiday(this.holiday)
+    : eventEntry = null,
+      noteEntry = null;
 
   final CalendarOccurrence? eventEntry;
   final note_calendar.NoteCalendarEntry? noteEntry;
+  final KoreanHoliday? holiday;
 
   CalendarEvent? get event => eventEntry?.event;
-  DateTime get start => eventEntry?.start ?? noteEntry!.date;
-  String get title => eventEntry?.event.title ?? noteEntry!.note.title;
+  DateTime get start => eventEntry?.start ?? noteEntry?.date ?? holiday!.date;
+  String get title =>
+      eventEntry?.event.title ?? noteEntry?.note.title ?? holiday!.name;
 
   String get shortLabel {
     final event = eventEntry?.event;
@@ -407,6 +457,7 @@ class _CalendarEntry {
           ? event.title
           : '${calendarTimeLabel(start)} ${event.title}';
     }
+    if (holiday != null) return holiday!.name;
     return '메모 ${noteEntry!.note.title}';
   }
 
@@ -418,6 +469,7 @@ class _CalendarEntry {
       }
       return event.allDay ? '종일' : calendarTimeLabel(start);
     }
+    if (holiday != null) return '대한민국 공휴일';
     return noteEntry!.label;
   }
 
@@ -426,6 +478,7 @@ class _CalendarEntry {
     if (event != null) {
       return _isRepeating(event) ? Icons.repeat : Icons.event_outlined;
     }
+    if (holiday != null) return Icons.flag_outlined;
     return noteEntry!.overdue
         ? Icons.notification_important_outlined
         : Icons.note_alt_outlined;
@@ -434,6 +487,7 @@ class _CalendarEntry {
   Color color(BuildContext context) {
     final event = eventEntry?.event;
     if (event != null) return _eventColor(event);
+    if (holiday != null) return _holidayRed;
     return noteEntry!.overdue ? context.appExpense : context.appIncome;
   }
 
@@ -443,6 +497,7 @@ class _CalendarEntry {
       _CalendarEventDialog.show(context, event: event);
       return;
     }
+    if (holiday != null) return;
     final id = noteEntry!.note.id;
     context.go('/notes?open=$id&tap=${DateTime.now().microsecondsSinceEpoch}');
   }
@@ -451,6 +506,7 @@ class _CalendarEntry {
 Map<String, List<_CalendarEntry>> _combineCalendarEntries(
   Map<String, List<CalendarOccurrence>> events,
   Map<String, List<note_calendar.NoteCalendarEntry>> notes,
+  Map<String, KoreanHoliday> holidays,
 ) {
   final result = <String, List<_CalendarEntry>>{};
   for (final entry in events.entries) {
@@ -463,6 +519,12 @@ Map<String, List<_CalendarEntry>> _combineCalendarEntries(
     result[entry.key] = [
       ...?result[entry.key],
       for (final item in entry.value) _CalendarEntry.note(item),
+    ];
+  }
+  for (final entry in holidays.entries) {
+    result[entry.key] = [
+      _CalendarEntry.holiday(entry.value),
+      ...?result[entry.key],
     ];
   }
   for (final value in result.values) {

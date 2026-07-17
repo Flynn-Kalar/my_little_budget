@@ -41,6 +41,7 @@ android {
 
     defaultConfig {
         applicationId = "com.my_little_budget"
+        // flutter_secure_storage 10.x uses the modern Android keystore APIs.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

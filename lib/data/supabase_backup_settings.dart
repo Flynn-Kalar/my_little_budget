@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ class SupabaseBackupSettings {
     required this.url,
     required this.anonKey,
     required this.bucket,
+    this.authEmail = '',
     this.pathPrefix = defaultPathPrefix,
     this.lastBackupAt,
     this.lastRestoreAt,
@@ -18,6 +20,7 @@ class SupabaseBackupSettings {
   final String url;
   final String anonKey;
   final String bucket;
+  final String authEmail;
   final String pathPrefix;
   final String? lastBackupAt;
   final String? lastRestoreAt;
@@ -27,11 +30,17 @@ class SupabaseBackupSettings {
       anonKey.trim().isNotEmpty &&
       bucket.trim().isNotEmpty;
 
+  bool get isTableSyncConfigured =>
+      url.trim().isNotEmpty &&
+      anonKey.trim().isNotEmpty &&
+      authEmail.trim().isNotEmpty;
+
   SupabaseBackupSettings normalized() {
     return SupabaseBackupSettings(
       url: url.trim(),
       anonKey: anonKey.trim(),
       bucket: bucket.trim(),
+      authEmail: authEmail.trim(),
       pathPrefix: _normalizePrefix(pathPrefix),
       lastBackupAt: lastBackupAt,
       lastRestoreAt: lastRestoreAt,
@@ -44,6 +53,7 @@ class SupabaseBackupSettings {
     String? url,
     String? anonKey,
     String? bucket,
+    String? authEmail,
     String? pathPrefix,
     String? lastBackupAt,
     String? lastRestoreAt,
@@ -52,6 +62,7 @@ class SupabaseBackupSettings {
       url: url ?? this.url,
       anonKey: anonKey ?? this.anonKey,
       bucket: bucket ?? this.bucket,
+      authEmail: authEmail ?? this.authEmail,
       pathPrefix: pathPrefix ?? this.pathPrefix,
       lastBackupAt: lastBackupAt ?? this.lastBackupAt,
       lastRestoreAt: lastRestoreAt ?? this.lastRestoreAt,
@@ -69,6 +80,7 @@ class SupabaseBackupSettingsNotifier extends Notifier<SupabaseBackupSettings> {
   static const _urlKey = 'mlb-supabase-backup-url-v1';
   static const _anonKeyKey = 'mlb-supabase-backup-anon-key-v1';
   static const _bucketKey = 'mlb-supabase-backup-bucket-v1';
+  static const _authEmailKey = 'mlb-supabase-auth-email-v1';
   static const _pathPrefixKey = 'mlb-supabase-backup-path-prefix-v1';
   static const _lastBackupAtKey = 'mlb-supabase-backup-last-backup-at-v1';
   static const _lastRestoreAtKey = 'mlb-supabase-backup-last-restore-at-v1';
@@ -90,6 +102,7 @@ class SupabaseBackupSettingsNotifier extends Notifier<SupabaseBackupSettings> {
         url: prefs.getString(_urlKey) ?? '',
         anonKey: prefs.getString(_anonKeyKey) ?? '',
         bucket: prefs.getString(_bucketKey) ?? '',
+        authEmail: prefs.getString(_authEmailKey) ?? '',
         pathPrefix: SupabaseBackupSettings.defaultPathPrefix,
         lastBackupAt: prefs.getString(_lastBackupAtKey),
         lastRestoreAt: prefs.getString(_lastRestoreAtKey),
@@ -106,6 +119,7 @@ class SupabaseBackupSettingsNotifier extends Notifier<SupabaseBackupSettings> {
     await prefs.setString(_urlKey, normalized.url);
     await prefs.setString(_anonKeyKey, normalized.anonKey);
     await prefs.setString(_bucketKey, normalized.bucket);
+    await prefs.setString(_authEmailKey, normalized.authEmail);
     await prefs.setString(
       _pathPrefixKey,
       SupabaseBackupSettings.defaultPathPrefix,
@@ -142,6 +156,7 @@ class SupabaseBackupSettingsNotifier extends Notifier<SupabaseBackupSettings> {
     await prefs.remove(_urlKey);
     await prefs.remove(_anonKeyKey);
     await prefs.remove(_bucketKey);
+    await prefs.remove(_authEmailKey);
     await prefs.remove(_pathPrefixKey);
     await prefs.remove(_lastBackupAtKey);
     await prefs.remove(_lastRestoreAtKey);
@@ -176,8 +191,52 @@ String? validateSupabaseProjectSettings(SupabaseBackupSettings settings) {
   if (normalized.anonKey.isEmpty) {
     return 'anon key를 입력해주세요.';
   }
-  if (normalized.anonKey.toLowerCase().contains('service_role')) {
+  if (_isPrivilegedSupabaseKey(normalized.anonKey)) {
     return 'service_role key는 앱에 저장하지 마세요. anon/publishable key만 입력하세요.';
   }
   return null;
+}
+
+String? validateSupabaseSyncSettings(SupabaseBackupSettings settings) {
+  final normalized = settings.normalized();
+  final projectError = validateSupabaseProjectSettings(normalized);
+  if (projectError != null) return projectError;
+  if (normalized.authEmail.isEmpty || !normalized.authEmail.contains('@')) {
+    return 'Supabase Auth 이메일을 확인해주세요.';
+  }
+  return null;
+}
+
+/// The database sync and the JSON backup share the same Supabase project, but
+/// either feature can be configured independently.
+String? validateSupabaseConnectionSettings(SupabaseBackupSettings settings) {
+  final normalized = settings.normalized();
+  final projectError = validateSupabaseProjectSettings(normalized);
+  if (projectError != null) return projectError;
+
+  if (normalized.bucket.isNotEmpty) {
+    final backupError = validateSupabaseBackupSettings(normalized);
+    if (backupError != null) return backupError;
+  }
+  return validateSupabaseSyncSettings(normalized);
+}
+
+bool _isPrivilegedSupabaseKey(String key) {
+  final normalized = key.trim();
+  if (normalized.toLowerCase().contains('service_role') ||
+      normalized.startsWith('sb_secret_')) {
+    return true;
+  }
+
+  final parts = normalized.split('.');
+  if (parts.length != 3) return false;
+  try {
+    final payload = utf8.decode(
+      base64Url.decode(base64Url.normalize(parts[1])),
+    );
+    final json = jsonDecode(payload);
+    return json is Map && json['role'] == 'service_role';
+  } catch (_) {
+    return false;
+  }
 }

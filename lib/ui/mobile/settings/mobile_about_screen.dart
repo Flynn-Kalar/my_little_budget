@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/settings/app_info.dart';
+import '../../../features/settings/update_check.dart';
 import '../mobile_widgets.dart';
 
-class MobileAboutScreen extends StatelessWidget {
+class MobileAboutScreen extends ConsumerWidget {
   const MobileAboutScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurface.withValues(alpha: 0.75);
+    final packageInfo = ref.watch(appPackageInfoProvider);
+    final versionLabel = packageInfo.when(
+      data: packageVersionLabel,
+      loading: () => '확인 중...',
+      error: (_, _) => appVersionLabel,
+    );
 
     return MobilePage(
       title: '앱 정보',
@@ -27,7 +35,7 @@ class MobileAboutScreen extends StatelessWidget {
         _InfoTile(
           icon: Icons.info_outline,
           title: '버전',
-          subtitle: appVersionLabel,
+          subtitle: versionLabel,
           muted: muted,
         ),
         _InfoTile(
@@ -50,7 +58,7 @@ class MobileAboutScreen extends StatelessWidget {
             onTap: () => showLicensePage(
               context: context,
               applicationName: appDisplayName,
-              applicationVersion: appVersionLabel,
+              applicationVersion: versionLabel,
             ),
           ),
         ),

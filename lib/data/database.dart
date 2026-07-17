@@ -61,7 +61,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -131,10 +131,17 @@ WHERE reminder_at IS NOT NULL
       if (from >= 4 && from < 14 && await _tableExists('notes')) {
         await m.addColumn(notes, notes.showOnCalendar);
       }
+      if (from >= 12 && from < 15 && await _tableExists('calendar_events')) {
+        await _addSyncMetadataColumns(
+          tableName: 'calendar_events',
+          idColumn: 'id',
+        );
+      }
     },
     beforeOpen: (details) async {
       // SPEC §3 의 외래키 제약을 실제 SQLite 에서 강제하려면 PRAGMA 필요.
       await customStatement('PRAGMA foreign_keys = ON');
+      await _ensureSyncInfrastructure();
       await _repairRequiredTagFields();
       // SPEC §5.3 — 첫 생성 시 기본 자산·카테고리 시드.
       if (details.wasCreated) {
@@ -142,6 +149,133 @@ WHERE reminder_at IS NOT NULL
       }
     },
   );
+
+  /// Hard deletes stay invisible to all existing queries, while this durable
+  /// outbox preserves the information needed to create a server tombstone.
+  Future<void> _ensureSyncInfrastructure() async {
+    await customStatement('''
+CREATE TABLE IF NOT EXISTS sync_outbox (
+  entity TEXT NOT NULL,
+  uuid TEXT NOT NULL,
+  operation TEXT NOT NULL CHECK (operation IN ('upsert', 'delete')),
+  generation INTEGER NOT NULL DEFAULT 1,
+  changed_at TEXT NOT NULL,
+  tombstone_payload TEXT,
+  PRIMARY KEY (entity, uuid)
+)
+''');
+    if (!await _columnExists('sync_outbox', 'tombstone_payload')) {
+      await customStatement(
+        'ALTER TABLE sync_outbox ADD COLUMN tombstone_payload TEXT',
+      );
+    }
+    await customStatement('''
+CREATE TABLE IF NOT EXISTS sync_state (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+)
+''');
+
+    for (final tableName in localSyncTableNames) {
+      if (!await _tableExists(tableName) ||
+          !await _columnExists(tableName, 'uuid') ||
+          !await _columnExists(tableName, 'sync_status')) {
+        continue;
+      }
+      final tombstonePayload = switch (tableName) {
+        'accounts' => "json_object('name', OLD.name)",
+        'categories' => "json_object('name', OLD.name, 'type', OLD.type)",
+        'budget_groups' => "json_object('name', OLD.name, 'month', OLD.month)",
+        'monthly_income' => "json_object('month', OLD.month)",
+        'tags' => "json_object('name', OLD.name)",
+        _ => "'{}'",
+      };
+      await customStatement('DROP TRIGGER IF EXISTS sync_${tableName}_insert');
+      await customStatement('DROP TRIGGER IF EXISTS sync_${tableName}_update');
+      await customStatement('DROP TRIGGER IF EXISTS sync_${tableName}_delete');
+      await customStatement('''
+CREATE TRIGGER sync_${tableName}_insert
+AFTER INSERT ON $tableName
+WHEN NEW.uuid IS NOT NULL AND NEW.sync_status = '$syncStatusPending'
+BEGIN
+  INSERT INTO sync_outbox(
+    entity, uuid, operation, generation, changed_at, tombstone_payload
+  )
+  VALUES(
+    '$tableName', NEW.uuid, 'upsert', 1,
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), null
+  )
+  ON CONFLICT(entity, uuid) DO UPDATE SET
+    operation = 'upsert',
+    generation = sync_outbox.generation + 1,
+    changed_at = excluded.changed_at,
+    tombstone_payload = null;
+END
+''');
+      await customStatement('''
+CREATE TRIGGER sync_${tableName}_update
+AFTER UPDATE ON $tableName
+WHEN NEW.uuid IS NOT NULL AND NEW.sync_status = '$syncStatusPending'
+BEGIN
+  INSERT INTO sync_outbox(
+    entity, uuid, operation, generation, changed_at, tombstone_payload
+  )
+  VALUES(
+    '$tableName', NEW.uuid, 'upsert', 1,
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), null
+  )
+  ON CONFLICT(entity, uuid) DO UPDATE SET
+    operation = 'upsert',
+    generation = sync_outbox.generation + 1,
+    changed_at = excluded.changed_at,
+    tombstone_payload = null;
+END
+''');
+      await customStatement('''
+CREATE TRIGGER sync_${tableName}_delete
+AFTER DELETE ON $tableName
+WHEN OLD.uuid IS NOT NULL AND OLD.sync_status <> '$syncStatusRemoteDelete'
+BEGIN
+  INSERT INTO sync_outbox(
+    entity, uuid, operation, generation, changed_at, tombstone_payload
+  )
+  VALUES(
+    '$tableName', OLD.uuid, 'delete', 1,
+    strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), $tombstonePayload
+  )
+  ON CONFLICT(entity, uuid) DO UPDATE SET
+    operation = 'delete',
+    generation = sync_outbox.generation + 1,
+    changed_at = excluded.changed_at,
+    tombstone_payload = excluded.tombstone_payload;
+END
+''');
+      await customStatement('''
+INSERT OR IGNORE INTO sync_outbox(
+  entity, uuid, operation, generation, changed_at, tombstone_payload
+)
+SELECT
+  '$tableName', uuid, 'upsert', 1,
+  strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), null
+FROM $tableName
+WHERE uuid IS NOT NULL AND sync_status = '$syncStatusPending'
+''');
+    }
+  }
+
+  /// Re-enqueues every live row after a destructive restore/reset or when the
+  /// configured Supabase project changes.
+  Future<void> enqueueAllRowsForSync() async {
+    for (final tableName in localSyncTableNames) {
+      if (!await _tableExists(tableName) ||
+          !await _columnExists(tableName, 'sync_status')) {
+        continue;
+      }
+      await customStatement(
+        "UPDATE $tableName SET sync_status = '$syncStatusPending'",
+      );
+    }
+  }
 
   Future<void> _repairRequiredTagFields() async {
     if (!await _tableExists('tags')) return;
@@ -188,6 +322,11 @@ WHERE reminder_at IS NOT NULL
       variables: [Variable<String>(tableName)],
     ).getSingleOrNull();
     return row != null;
+  }
+
+  Future<bool> _columnExists(String tableName, String columnName) async {
+    final rows = await customSelect('PRAGMA table_info($tableName)').get();
+    return rows.any((row) => row.read<String>('name') == columnName);
   }
 
   Future<void> _initializeTagSortOrder() async {

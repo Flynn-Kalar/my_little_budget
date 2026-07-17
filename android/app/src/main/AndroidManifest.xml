@@ -12,6 +12,7 @@
     <application
         android:label="나만의 작은 가계부"
         android:name="${applicationName}"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round">
         <activity

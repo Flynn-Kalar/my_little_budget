@@ -13,7 +13,9 @@ import '../../../data/backup.dart';
 import '../../../data/providers.dart';
 import '../../../data/supabase_backup_service.dart';
 import '../../../data/supabase_backup_settings.dart';
+import '../../../data/supabase_sync_auth.dart';
 import '../../../data/supabase_table_sync_service.dart';
+import '../../../data/sync_models.dart';
 import 'package:my_little_budget/features/notes/providers.dart';
 import 'package:my_little_budget/features/accounts/providers.dart'
     as accounts_providers;
@@ -42,11 +44,14 @@ class DataManagementScreen extends ConsumerStatefulWidget {
 
 class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   bool _busy = false;
+  SyncProgress? _syncProgress;
   _SyncMode _selectedMode = _SyncMode.local;
   SupabaseBackupRemoteStatus? _remoteStatus;
   String? _remoteStatusError;
   late final _supabaseUrlCtrl = TextEditingController();
   late final _supabaseAnonKeyCtrl = TextEditingController();
+  late final _supabaseEmailCtrl = TextEditingController();
+  late final _supabasePasswordCtrl = TextEditingController();
   late final _supabaseBucketCtrl = TextEditingController();
 
   @override
@@ -59,6 +64,8 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   void dispose() {
     _supabaseUrlCtrl.dispose();
     _supabaseAnonKeyCtrl.dispose();
+    _supabaseEmailCtrl.dispose();
+    _supabasePasswordCtrl.dispose();
     _supabaseBucketCtrl.dispose();
     super.dispose();
   }
@@ -70,13 +77,17 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
     final settings = ref.read(supabaseBackupSettingsProvider);
     _fillSupabaseControllers(settings);
     setState(() {
-      _selectedMode = settings.isConfigured ? _SyncMode.auto : _SyncMode.local;
+      _selectedMode = settings.isConfigured || settings.isTableSyncConfigured
+          ? _SyncMode.auto
+          : _SyncMode.local;
     });
   }
 
   void _fillSupabaseControllers(SupabaseBackupSettings settings) {
     _supabaseUrlCtrl.text = settings.url;
     _supabaseAnonKeyCtrl.text = settings.anonKey;
+    _supabaseEmailCtrl.text = settings.authEmail;
+    _supabasePasswordCtrl.clear();
     _supabaseBucketCtrl.text = settings.bucket;
   }
 
@@ -184,30 +195,61 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       url: _supabaseUrlCtrl.text,
       anonKey: _supabaseAnonKeyCtrl.text,
       bucket: _supabaseBucketCtrl.text,
+      authEmail: _supabaseEmailCtrl.text,
       pathPrefix: SupabaseBackupSettings.defaultPathPrefix,
     );
   }
 
   Future<void> _saveSupabaseSettings() async {
     final draft = _supabaseDraft();
-    final error = validateSupabaseBackupSettings(draft);
+    final error = validateSupabaseConnectionSettings(draft);
     if (error != null) {
       _showSnack(error);
       return;
     }
 
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _syncProgress = const SyncProgress(
+        percent: 0,
+        label: 'Supabase에 로그인하고 있습니다.',
+      );
+    });
     try {
+      await ref
+          .read(supabaseSyncAuthServiceProvider)
+          .signInWithPassword(
+            draft,
+            email: _supabaseEmailCtrl.text,
+            password: _supabasePasswordCtrl.text,
+          );
       await ref.read(supabaseBackupSettingsProvider.notifier).save(draft);
+      _supabasePasswordCtrl.clear();
+      final syncResult = await ref
+          .read(supabaseSyncCoordinatorProvider)
+          .synchronizeNowWithProgress(_updateSyncProgress);
       if (!mounted) return;
       _fillSupabaseControllers(ref.read(supabaseBackupSettingsProvider));
       setState(() => _selectedMode = _SyncMode.auto);
-      _showSnack('Supabase 연결 설정을 저장했습니다.');
+      _showSnack(
+        syncResult.isOk
+            ? 'Supabase 연결 설정을 저장하고 동기화했습니다.'
+            : '설정은 저장했지만 동기화하지 못했습니다: ${syncResult.error}',
+      );
     } catch (e) {
       if (mounted) _showSnack('Supabase 설정 저장에 실패했습니다: $e');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _syncProgress = null;
+        });
+      }
     }
+  }
+
+  void _updateSyncProgress(SyncProgress progress) {
+    if (mounted) setState(() => _syncProgress = progress);
   }
 
   Future<void> _testSupabaseSettings() async {
@@ -233,7 +275,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 
   Future<void> _testSupabaseTables() async {
     final draft = _supabaseDraft();
-    final error = validateSupabaseProjectSettings(draft);
+    final error = validateSupabaseSyncSettings(draft);
     if (error != null) {
       _showSnack(error);
       return;
@@ -256,6 +298,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
   Future<void> _clearSupabaseSettings() async {
     setState(() => _busy = true);
     try {
+      await ref.read(supabaseSyncAuthServiceProvider).disconnect();
       await ref.read(supabaseBackupSettingsProvider.notifier).clear();
       if (!mounted) return;
       _fillSupabaseControllers(SupabaseBackupSettings.empty);
@@ -394,8 +437,12 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                   key: const ValueKey('settings-auto-sync-panel'),
                   urlController: _supabaseUrlCtrl,
                   anonKeyController: _supabaseAnonKeyCtrl,
+                  emailController: _supabaseEmailCtrl,
+                  passwordController: _supabasePasswordCtrl,
                   bucketController: _supabaseBucketCtrl,
-                  configured: supabaseSettings.isConfigured,
+                  configured:
+                      supabaseSettings.isConfigured ||
+                      supabaseSettings.isTableSyncConfigured,
                   settings: supabaseSettings,
                   remoteStatus: _remoteStatus,
                   remoteStatusError: _remoteStatusError,
@@ -415,7 +462,18 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             ),
             if (_busy) ...[
               SizedBox(height: 16),
-              const LinearProgressIndicator(minHeight: 3),
+              if (_syncProgress != null) ...[
+                Text(
+                  '${_syncProgress!.label} ${_syncProgress!.percent}%',
+                  key: const ValueKey('settings-supabase-sync-progress-label'),
+                ),
+                const SizedBox(height: 8),
+              ],
+              LinearProgressIndicator(
+                key: const ValueKey('settings-supabase-sync-progress'),
+                minHeight: 3,
+                value: _syncProgress?.fraction,
+              ),
             ],
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.5),
             _ResetDeviceButton(
@@ -667,6 +725,8 @@ class _SupabaseSettingsCard extends StatelessWidget {
     super.key,
     required this.urlController,
     required this.anonKeyController,
+    required this.emailController,
+    required this.passwordController,
     required this.bucketController,
     required this.configured,
     required this.settings,
@@ -684,6 +744,8 @@ class _SupabaseSettingsCard extends StatelessWidget {
 
   final TextEditingController urlController;
   final TextEditingController anonKeyController;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
   final TextEditingController bucketController;
   final bool configured;
   final SupabaseBackupSettings settings;
@@ -713,7 +775,7 @@ class _SupabaseSettingsCard extends StatelessWidget {
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Supabase 백업 연결',
+                    'Supabase 자동 동기화 및 백업',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -724,7 +786,7 @@ class _SupabaseSettingsCard extends StatelessWidget {
             const _AutoSyncSetupGuide(),
             const SizedBox(height: 12),
             Text(
-              '본인 Supabase 프로젝트의 URL, anon/publishable key, Storage bucket을 저장합니다. service_role key는 입력하지 마세요.',
+              'DB 동기화는 사용자가 입력한 Supabase Auth 이메일 계정으로 보호됩니다. 비밀번호는 저장하지 않고 로그인 세션만 보안 저장소에 보관합니다. service_role/secret key는 입력하지 마세요.',
               style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
             SizedBox(height: 16),
@@ -757,12 +819,39 @@ class _SupabaseSettingsCard extends StatelessWidget {
             ),
             SizedBox(height: 12),
             TextField(
+              key: const ValueKey('settings-supabase-email-field'),
+              controller: emailController,
+              enabled: !busy,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Supabase Auth 이메일',
+                prefixIcon: Icon(Icons.email_outlined),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('settings-supabase-password-field'),
+              controller: passwordController,
+              enabled: !busy,
+              obscureText: true,
+              enableSuggestions: false,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Supabase Auth 비밀번호',
+                helperText: '비밀번호는 기기에 저장하지 않습니다.',
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
+            ),
+            SizedBox(height: 12),
+            TextField(
               key: const ValueKey('settings-supabase-bucket-field'),
               controller: bucketController,
               enabled: !busy,
               decoration: const InputDecoration(
                 labelText: 'Storage bucket',
                 hintText: 'my-little-budget',
+                helperText: 'JSON 백업/복원을 사용할 때만 입력합니다.',
                 prefixIcon: Icon(Icons.inventory_2_outlined),
               ),
             ),
@@ -860,51 +949,9 @@ class _AutoSyncSetupSteps extends StatelessWidget {
   const _AutoSyncSetupSteps();
 
   static const _supabaseUrl = 'https://supabase.com/';
-  static const _tableSyncSql = '''
--- My Little Budget table-sync v2 preparation.
--- This stage grants SELECT only. Row upload/update/delete is intentionally not enabled.
--- The anon key is a public client credential, so do not add write policies without auth.
-
-do \$\$
-declare
-  table_name text;
-begin
-  foreach table_name in array array[
-    'mlb_accounts',
-    'mlb_categories',
-    'mlb_transactions',
-    'mlb_budget_groups',
-    'mlb_monthly_income',
-    'mlb_investments',
-    'mlb_recurring_transactions',
-    'mlb_tags',
-    'mlb_calendar_events'
-  ]
-  loop
-    execute format(
-      'create table if not exists public.%I (
-        uuid text primary key,
-        payload jsonb not null default ''{}''::jsonb,
-        updated_at timestamptz not null default now(),
-        deleted_at timestamptz,
-        sync_status text not null default ''pending''
-      )',
-      table_name
-    );
-    execute format('alter table public.%I enable row level security', table_name);
-    execute format(
-      'drop policy if exists mlb_sync_read_anon on public.%I',
-      table_name
-    );
-    execute format(
-      'create policy mlb_sync_read_anon on public.%I for select to anon using (true)',
-      table_name
-    );
-    execute format('grant select on table public.%I to anon', table_name);
-  end loop;
-end
-\$\$;
-''';
+  static final _tableSyncSql = rootBundle.loadString(
+    'supabase/table_sync_v2_schema.sql',
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -960,20 +1007,16 @@ end
           style: style,
         ),
         const SizedBox(height: 10),
-        Text('4. Storage bucket을 생성합니다.', style: style),
+        Text('4. JSON 백업/복원도 사용할 경우에만 Storage bucket을 생성합니다.', style: style),
         const SizedBox(height: 10),
         const _GuideImage(
           assetName: 'assets/help/supabase-create-storage-bucket.png',
         ),
         const SizedBox(height: 10),
         Text(
-          '5. 왼쪽 메뉴에서 SQL Editor를 클릭합니다. 화면 중앙의 SQL 입력창에 아래 SQL 명령어를 그대로 붙여넣은 뒤, Run 버튼을 눌러 실행합니다.',
+          '5. Authentication - Sign In / Providers에서 Email 공급자가 활성화되어 있는지 확인하고, Authentication - Users에서 사용할 이메일/비밀번호 사용자를 하나 만듭니다.',
           style: style,
         ),
-        const SizedBox(height: 10),
-        const _GuideImage(assetName: 'assets/help/supabase-sql-editor.png'),
-        const SizedBox(height: 10),
-        _SqlCommandBlock(sql: _tableSyncSql),
         const SizedBox(height: 10),
         Text('6. 프로젝트 메인페이지에서 프로젝트 URL을 복사 후 동기화 설정창에 입력합니다.', style: style),
         const SizedBox(height: 10),
@@ -982,14 +1025,14 @@ end
         ),
         const SizedBox(height: 10),
         Text(
-          '7. Settings - API Keys - Legacy anon, service_role API keys에서 anon public을 복사 후 동기화 설정창에 입력합니다.',
+          '7. Settings - API Keys에서 publishable key(또는 legacy anon public)를 복사해 입력합니다. secret/service_role key는 사용하지 않습니다.',
           style: style,
         ),
         const SizedBox(height: 10),
         const _GuideImage(assetName: 'assets/help/supabase-anon-key-copy.png'),
         const SizedBox(height: 10),
         Text(
-          '8. 좌측 메뉴 Storage로 이동해서 bucket 생성 후 bucket name을 동기화 설정창에 입력합니다.',
+          '8. JSON 백업/복원을 사용할 경우에만 앞서 만든 bucket name을 입력합니다. DB 증분 동기화만 쓸 때는 비워둬도 됩니다.',
           style: style,
         ),
         const SizedBox(height: 10),
@@ -1001,9 +1044,26 @@ end
           assetName: 'assets/help/supabase-storage-bucket-name.png',
         ),
         const SizedBox(height: 10),
-        Text('9. 설정 저장 후 연결 테스트와 DB 테이블 테스트를 실행합니다.', style: style),
         Text(
-          '10. Supabase 백업으로 현재 데이터를 올리고, 필요하면 Supabase 복원으로 내려받습니다.',
+          '9. URL, anon/publishable key, 이메일, 비밀번호, bucket을 입력하고 설정 저장을 누릅니다. 로그인 성공 후 비밀번호는 저장하지 않고 세션만 보안 저장소에 보관합니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '10. 이메일 사용자를 만들고 앱 로그인을 완료한 뒤 SQL Editor를 엽니다. 아래 SQL 명령어를 그대로 붙여넣고 Run 버튼을 누릅니다.',
+          style: style,
+        ),
+        const SizedBox(height: 10),
+        const _GuideImage(assetName: 'assets/help/supabase-sql-editor.png'),
+        const SizedBox(height: 10),
+        FutureBuilder<String>(
+          future: _tableSyncSql,
+          builder: (context, snapshot) =>
+              _SqlCommandBlock(sql: snapshot.data ?? '-- SQL 명령어를 불러오는 중입니다.'),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '11. DB 테이블 테스트를 실행합니다. 이후 변경사항은 즉시 업로드되고 앱 시작 시 변경분만 내려옵니다.',
           style: style,
         ),
       ],
@@ -1181,6 +1241,7 @@ class _SupabaseStatusPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lines = <String>[
+      'DB 동기화: ${settings.isTableSyncConfigured ? '설정됨' : '미설정'}',
       'latest 경로: ${settings.normalized().pathPrefix}/latest.json',
       '마지막 앱 백업: ${_formatIso(settings.lastBackupAt)}',
       '마지막 앱 복원: ${_formatIso(settings.lastRestoreAt)}',

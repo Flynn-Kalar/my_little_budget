@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:my_little_budget/app.dart';
 import 'package:my_little_budget/core/date.dart';
@@ -107,6 +108,7 @@ void main() {
   testWidgets('Recurring backfill runs before visiting transactions', (
     tester,
   ) async {
+    SharedPreferences.setMockInitialValues({});
     await tester.binding.setSurfaceSize(const Size(1200, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -140,13 +142,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    var rows = await db.transactionsDao.listTransactionsByMonth(
+      currentMonthKey(),
+    );
+    for (var attempt = 0; attempt < 50 && rows.isEmpty; attempt++) {
+      // Startup synchronization continues after the first settled frame. Pump
+      // the event loop without starting the backfill directly from the test.
+      await tester.pump(const Duration(milliseconds: 10));
+      rows = await db.transactionsDao.listTransactionsByMonth(
+        currentMonthKey(),
+      );
+    }
+
     final context = tester.element(find.text('my_little_budget').first);
     GoRouter.of(context).go('/budget');
     await tester.pumpAndSettle();
 
-    final rows = await db.transactionsDao.listTransactionsByMonth(
-      currentMonthKey(),
-    );
     expect(rows.map((row) => row.memo), contains('앱 시작 반복'));
   });
 }

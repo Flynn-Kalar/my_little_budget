@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../features/notes/note_schedule.dart';
 import '../database.dart';
+import '../sync_metadata.dart';
 import '../tables/calendar_events.dart';
 
 part 'calendar_events_dao.g.dart';
@@ -69,6 +70,7 @@ class CalendarEventsDao extends DatabaseAccessor<AppDatabase>
             : '',
       ),
       updatedAt: Value(now),
+      syncStatus: const Value(syncStatusPending),
     );
 
     if (id == null) {

@@ -1,6 +1,23 @@
 import 'dart:math';
 
 const syncStatusPending = 'pending';
+const syncStatusSynced = 'synced';
+const syncStatusRemote = 'remote';
+const syncStatusRemoteDelete = 'remote_delete';
+
+/// Local entity tables mirrored to Supabase. Relation tables are embedded in
+/// their parent payload (`transactions` and `budget_groups`).
+const localSyncTableNames = <String>[
+  'accounts',
+  'categories',
+  'transactions',
+  'budget_groups',
+  'monthly_income',
+  'investments',
+  'recurring_transactions',
+  'tags',
+  'calendar_events',
+];
 
 final Random _secureRandom = Random.secure();
 

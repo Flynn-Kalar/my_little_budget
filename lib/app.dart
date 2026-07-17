@@ -8,8 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_notifier.dart';
 import 'data/providers.dart';
+import 'data/sync_models.dart';
 import 'router/app_router.dart';
 import 'features/notes/providers.dart';
+import 'features/sync/invalidate_synced_data.dart';
 
 class MyLittleBudgetApp extends ConsumerStatefulWidget {
   const MyLittleBudgetApp({super.key});
@@ -21,13 +23,14 @@ class MyLittleBudgetApp extends ConsumerStatefulWidget {
 class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
     with WidgetsBindingObserver {
   Timer? _resetTimer;
-  bool _syncing = false;
+  bool _notesSyncing = false;
+  bool _initializing = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncNotes());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeApp());
   }
 
   @override
@@ -39,12 +42,53 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _syncNotes();
+    if (state == AppLifecycleState.resumed) unawaited(_resumeApp());
+  }
+
+  Future<void> _initializeApp() async {
+    if (_initializing || !mounted) return;
+    _initializing = true;
+    try {
+      final coordinator = ref.read(supabaseSyncCoordinatorProvider);
+      coordinator.start(onResult: _handleSyncResult);
+      final syncResult = await coordinator.synchronizeNow();
+      if (syncResult.isOk) {
+        await _runRecurringBackfillAfterPull();
+        await coordinator.pushNow();
+      }
+      await _syncNotes();
+    } finally {
+      _initializing = false;
+    }
+  }
+
+  Future<void> _resumeApp() async {
+    if (!mounted) return;
+    final coordinator = ref.read(supabaseSyncCoordinatorProvider);
+    final syncResult = await coordinator.synchronizeNow();
+    if (syncResult.isOk) {
+      await _runRecurringBackfillAfterPull();
+      await coordinator.pushNow();
+    }
+    await _syncNotes();
+  }
+
+  void _handleSyncResult(SyncRunResult result) {
+    if (!mounted || !result.changedLocalData) return;
+    invalidateSyncedData(ref);
+  }
+
+  Future<void> _runRecurringBackfillAfterPull() async {
+    // Run a fresh pass after every successful pull. Keeping this out of screen
+    // providers prevents the initial /transactions route from racing startup.
+    ref.invalidate(recurringBackfillProvider);
+    final generated = await ref.read(recurringBackfillProvider.future);
+    if (generated > 0 && mounted) invalidateSyncedData(ref);
   }
 
   Future<void> _syncNotes() async {
-    if (_syncing || !mounted) return;
-    _syncing = true;
+    if (_notesSyncing || !mounted) return;
+    _notesSyncing = true;
     try {
       final service = ref.read(noteNotificationServiceProvider);
       await service.initialize(
@@ -62,7 +106,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
       }
       _scheduleNextReset(await dao.earliestNextReset());
     } finally {
-      _syncing = false;
+      _notesSyncing = false;
     }
   }
 
@@ -82,7 +126,6 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
     final router = ref.watch(appRouterProvider);
     final palettes = ref.watch(themeProvider);
     final mode = ref.watch(themeModeProvider);
-    ref.watch(recurringBackfillProvider);
     return MaterialApp.router(
       title: 'my_little_budget',
       debugShowCheckedModeBanner: false,

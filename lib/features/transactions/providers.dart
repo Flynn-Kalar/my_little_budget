@@ -40,7 +40,6 @@ bool hasActiveTransactionFilter(TransactionFilter filter) {
 /// ??+ ????꾪꽣 湲곗? 嫄곕옒 紐⑸줉. backfill ?꾨즺 ??議고쉶.
 final transactionsListProvider =
     FutureProvider.autoDispose<List<TransactionRow>>((ref) async {
-      await ref.watch(recurringBackfillProvider.future);
       final month = ref.watch(selectedMonthProvider);
       final type = ref.watch(typeFilterProvider);
       final sf = ref.watch(searchFilterProvider);
@@ -73,7 +72,6 @@ final monthlySummaryProvider = FutureProvider.autoDispose<MonthlySummary>((
 
 final transactionsMonthRowsProvider =
     FutureProvider.autoDispose<List<TransactionRow>>((ref) async {
-      await ref.watch(recurringBackfillProvider.future);
       final month = ref.watch(selectedMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
       return dao.listTransactionsByMonth(month);

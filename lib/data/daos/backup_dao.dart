@@ -96,6 +96,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
           batch.insertAll(calendarEvents, b.calendarEvents);
         }
       });
+      await db.enqueueAllRowsForSync();
     });
   }
 
@@ -161,6 +162,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
           ),
         );
       }
+      await db.enqueueAllRowsForSync();
     });
   }
 

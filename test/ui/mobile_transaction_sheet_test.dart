@@ -10,7 +10,7 @@ import 'package:my_little_budget/features/transactions/validation.dart';
 import 'package:my_little_budget/ui/mobile/transactions/sheets/mobile_transaction_sheet.dart';
 
 void main() {
-  testWidgets('mobile transaction amount field saves arithmetic expressions', (
+  testWidgets('mobile amount field opens calculator page and returns result', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 1000));
@@ -59,7 +59,11 @@ void main() {
     );
 
     await tester.tap(amountField);
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-transaction-amount-calculator-page')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('mobile-transaction-amount-keypad')),
       findsOneWidget,
@@ -89,16 +93,28 @@ void main() {
       await tester.pump();
     }
     expect(
-      tester.widget<TextField>(amountField).controller?.text,
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey('mobile-transaction-calculator-display')),
+          )
+          .data,
       '1000+2000×3',
     );
 
     await tester.tap(find.byKey(const ValueKey('mobile-transaction-keypad-=')));
-    await tester.pump();
-    expect(tester.widget<TextField>(amountField).controller?.text, '7000');
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('mobile-transaction-amount-calculator-page')),
+      findsNothing,
+    );
     expect(
       find.byKey(const ValueKey('mobile-transaction-amount-keypad')),
       findsNothing,
+    );
+    final returnedAmountField = find.byKey(amountKey);
+    expect(
+      tester.widget<TextField>(returnedAmountField).controller?.text,
+      '7000',
     );
     expect(
       tester

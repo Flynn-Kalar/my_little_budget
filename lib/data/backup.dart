@@ -155,9 +155,13 @@ BackupParseResult parseBackup(String jsonString) {
               (j) => NoteChecklistItem.fromJson(_bools(j, const ['isChecked'])),
             )
             .toList(),
-        calendarEvents: _list(
-          data['calendarEvents'],
-        ).map((j) => CalendarEvent.fromJson(_calendarEventJson(j))).toList(),
+        calendarEvents: _list(data['calendarEvents'])
+            .map(
+              (j) => CalendarEvent.fromJson(
+                _withSyncFields(_calendarEventJson(j)),
+              ),
+            )
+            .toList(),
       ),
     );
   } catch (e) {

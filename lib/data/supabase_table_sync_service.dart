@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase/supabase.dart';
 
 import 'supabase_backup_settings.dart';
+import 'supabase_sync_auth.dart';
 
 const supabaseSyncTableNames = <String>[
   'mlb_accounts',
@@ -18,7 +19,9 @@ const supabaseSyncTableNames = <String>[
 final supabaseTableSyncServiceProvider = Provider<SupabaseTableSyncService>((
   ref,
 ) {
-  return SupabasePostgrestTableSyncService();
+  return SupabasePostgrestTableSyncService(
+    authService: ref.watch(supabaseSyncAuthServiceProvider),
+  );
 });
 
 class SupabaseTableConnectionStatus {
@@ -51,8 +54,17 @@ abstract class SupabaseTableProbe {
 }
 
 class SupabasePostgrestTableSyncService implements SupabaseTableSyncService {
-  SupabasePostgrestTableSyncService({SupabaseTableProbe? probe})
-    : _probe = probe ?? const _SupabaseClientTableProbe();
+  SupabasePostgrestTableSyncService({
+    SupabaseTableProbe? probe,
+    SupabaseSyncAuthService? authService,
+  }) : _probe =
+           probe ??
+           _SupabaseClientTableProbe(
+             authService ??
+                 (throw ArgumentError(
+                   'authService is required without a probe',
+                 )),
+           );
 
   final SupabaseTableProbe _probe;
 
@@ -60,7 +72,7 @@ class SupabasePostgrestTableSyncService implements SupabaseTableSyncService {
   Future<SupabaseTableSyncResult<SupabaseTableConnectionStatus>> testConnection(
     SupabaseBackupSettings settings,
   ) async {
-    final error = validateSupabaseProjectSettings(settings);
+    final error = validateSupabaseSyncSettings(settings);
     if (error != null) return SupabaseTableSyncResult.fail(error);
 
     for (final table in supabaseSyncTableNames) {
@@ -88,14 +100,16 @@ class SupabasePostgrestTableSyncService implements SupabaseTableSyncService {
 }
 
 class _SupabaseClientTableProbe implements SupabaseTableProbe {
-  const _SupabaseClientTableProbe();
+  const _SupabaseClientTableProbe(this._authService);
+
+  final SupabaseSyncAuthService _authService;
 
   @override
   Future<void> selectOne({
     required SupabaseBackupSettings settings,
     required String table,
   }) async {
-    final client = SupabaseClient(settings.url, settings.anonKey);
+    final client = await _authService.restoreClient(settings);
     await client.from(table).select('uuid').limit(1);
   }
 }

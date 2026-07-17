@@ -89,7 +89,25 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   }
 
   Future<void> deleteTag(int id) async {
-    await (delete(tags)..where((t) => t.id.equals(id))).go();
+    await transaction(() async {
+      final linkedTransactions =
+          await (selectOnly(transactionTags)
+                ..addColumns([transactionTags.transactionId])
+                ..where(transactionTags.tagId.equals(id)))
+              .map((row) => row.read(transactionTags.transactionId)!)
+              .get();
+      for (final transactionId in linkedTransactions) {
+        await (update(
+          transactions,
+        )..where((t) => t.id.equals(transactionId))).write(
+          TransactionsCompanion(
+            updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
+          ),
+        );
+      }
+      await (delete(tags)..where((t) => t.id.equals(id))).go();
+    });
   }
 
   /// 거래의 태그를 id 목록으로 재설정. SPEC §4.1 (updateTransactionTags).

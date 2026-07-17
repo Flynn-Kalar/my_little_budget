@@ -7,6 +7,7 @@ void main() {
     url: 'https://example.supabase.co',
     anonKey: 'anon-key',
     bucket: '',
+    authEmail: 'user@example.com',
   );
 
   test('checks every entity table in order', () async {
@@ -40,7 +41,7 @@ void main() {
     ]);
   });
 
-  test('requires only project URL and anon key', () async {
+  test('allows table sync without a Storage bucket', () async {
     final result = await SupabasePostgrestTableSyncService(
       probe: _FakeTableProbe(),
     ).testConnection(settings);

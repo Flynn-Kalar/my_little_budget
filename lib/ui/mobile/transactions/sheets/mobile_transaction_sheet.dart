@@ -62,12 +62,10 @@ class _MobileTransactionSheetState
     text: widget.row?.amount.toString() ?? '',
   );
   late final _memo = TextEditingController(text: widget.row?.memo ?? '');
-  final _amountFocus = FocusNode();
   final _memoFocus = FocusNode();
   late final Set<String> _tagNames =
       widget.row?.tags.map((tag) => tag.name).toSet() ?? <String>{};
   bool _busy = false;
-  bool _showAmountKeypad = false;
 
   bool get _isEdit => widget.row != null && !widget.duplicate;
   bool get _isDuplicate => widget.row != null && widget.duplicate;
@@ -76,19 +74,28 @@ class _MobileTransactionSheetState
   void dispose() {
     _amount.dispose();
     _memo.dispose();
-    _amountFocus.dispose();
     _memoFocus.dispose();
     super.dispose();
   }
 
-  void _focusAmount() {
-    if (_showAmountKeypad) return;
-    setState(() => _showAmountKeypad = true);
+  void _focusMemo() {
+    _memoFocus.requestFocus();
   }
 
-  void _focusMemo() {
-    if (_showAmountKeypad) setState(() => _showAmountKeypad = false);
-    _memoFocus.requestFocus();
+  Future<void> _openAmountCalculator() async {
+    FocusScope.of(context).unfocus();
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _AmountCalculatorPage(initialValue: _amount.text),
+      ),
+    );
+    if (!mounted || result == null) return;
+    _amount.value = TextEditingValue(
+      text: result,
+      selection: TextSelection.collapsed(offset: result.length),
+    );
+    _focusMemo();
   }
 
   Future<void> _pickDate() async {
@@ -290,25 +297,16 @@ class _MobileTransactionSheetState
             TextField(
               key: const ValueKey('mobile-transaction-amount-field'),
               controller: _amount,
-              focusNode: _amountFocus,
               enabled: !_busy,
               readOnly: true,
-              showCursor: true,
+              showCursor: false,
               keyboardType: TextInputType.none,
-              onTap: _focusAmount,
+              onTap: _busy ? null : _openAmountCalculator,
               decoration: const InputDecoration(
                 labelText: '금액',
                 border: OutlineInputBorder(),
               ),
             ),
-            if (_showAmountKeypad) ...[
-              const SizedBox(height: 10),
-              _AmountKeypad(
-                controller: _amount,
-                enabled: !_busy,
-                onDone: _focusMemo,
-              ),
-            ],
             const SizedBox(height: 12),
             TextField(
               key: const ValueKey('mobile-transaction-memo-field'),
@@ -370,6 +368,91 @@ void _showCardLimitWarning(BuildContext context, CardLimitWarning? warning) {
       backgroundColor: Theme.of(context).colorScheme.error,
     ),
   );
+}
+
+class _AmountCalculatorPage extends StatefulWidget {
+  const _AmountCalculatorPage({required this.initialValue});
+
+  final String initialValue;
+
+  @override
+  State<_AmountCalculatorPage> createState() => _AmountCalculatorPageState();
+}
+
+class _AmountCalculatorPageState extends State<_AmountCalculatorPage> {
+  late final _controller = TextEditingController(text: widget.initialValue);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _complete() {
+    final text = _controller.text.trim();
+    if (text.isNotEmpty) {
+      final result = parseKRW(text).toString();
+      _controller.value = TextEditingValue(
+        text: result,
+        selection: TextSelection.collapsed(offset: result.length),
+      );
+    }
+    Navigator.pop(context, _controller.text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      key: const ValueKey('mobile-transaction-amount-calculator-page'),
+      appBar: AppBar(
+        title: const Text('금액'),
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close),
+          tooltip: '닫기',
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, value, _) {
+                      final display = value.text.isEmpty ? '0' : value.text;
+                      return Text(
+                        display,
+                        key: const ValueKey(
+                          'mobile-transaction-calculator-display',
+                        ),
+                        textAlign: TextAlign.right,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.displayMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              _AmountKeypad(
+                controller: _controller,
+                enabled: true,
+                onDone: _complete,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _AmountKeypad extends StatelessWidget {

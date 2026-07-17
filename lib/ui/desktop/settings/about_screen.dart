@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../features/settings/app_info.dart';
+import '../../../features/settings/update_check.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends ConsumerWidget {
   const AboutScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final packageInfo = ref.watch(appPackageInfoProvider);
+    final versionLabel = packageInfo.when(
+      data: packageVersionLabel,
+      loading: () => '확인 중...',
+      error: (_, _) => appVersionLabel,
+    );
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 900),
       child: SingleChildScrollView(
@@ -35,7 +43,7 @@ class AboutScreen extends StatelessWidget {
             _InfoCard(
               icon: Icons.info_outline,
               title: '버전',
-              value: appVersionLabel,
+              value: versionLabel,
             ),
             _InfoCard(
               icon: Icons.code_outlined,
@@ -50,7 +58,7 @@ class AboutScreen extends StatelessWidget {
               onTap: () => showLicensePage(
                 context: context,
                 applicationName: appDisplayName,
-                applicationVersion: appVersionLabel,
+                applicationVersion: versionLabel,
               ),
             ),
             _InfoCard(
@@ -111,7 +119,7 @@ class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

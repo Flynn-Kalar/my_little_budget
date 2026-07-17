@@ -8,12 +8,14 @@ void main() {
         url: ' https://example.supabase.co ',
         anonKey: ' key ',
         bucket: ' backups ',
+        authEmail: ' user@example.com ',
         pathPrefix: '/my_little_budget//device/',
       ).normalized();
 
       expect(settings.url, 'https://example.supabase.co');
       expect(settings.anonKey, 'key');
       expect(settings.bucket, 'backups');
+      expect(settings.authEmail, 'user@example.com');
       expect(settings.pathPrefix, 'my_little_budget/device');
     });
 
@@ -28,6 +30,7 @@ void main() {
             url: 'http://example.supabase.co',
             anonKey: 'anon',
             bucket: 'backups',
+            authEmail: 'user@example.com',
           ),
         ),
         contains('https'),
@@ -38,6 +41,7 @@ void main() {
             url: 'https://example.supabase.co',
             anonKey: 'anon',
             bucket: 'backups',
+            authEmail: 'user@example.com',
           ),
         ),
         isNull,
@@ -53,6 +57,39 @@ void main() {
             bucket: 'backups',
           ),
         ),
+        contains('service_role'),
+      );
+    });
+
+    test('allows database sync without a Storage bucket', () {
+      const settings = SupabaseBackupSettings(
+        url: 'https://example.supabase.co',
+        anonKey: 'sb_publishable_example',
+        bucket: '',
+        authEmail: 'user@example.com',
+      );
+
+      expect(validateSupabaseConnectionSettings(settings), isNull);
+      expect(validateSupabaseSyncSettings(settings), isNull);
+      expect(settings.isTableSyncConfigured, isTrue);
+      expect(settings.isConfigured, isFalse);
+    });
+
+    test('rejects privileged secret and JWT service role keys', () {
+      const secret = SupabaseBackupSettings(
+        url: 'https://example.supabase.co',
+        anonKey: 'sb_secret_example',
+        bucket: '',
+      );
+      const serviceRoleJwt = SupabaseBackupSettings(
+        url: 'https://example.supabase.co',
+        anonKey: 'e30.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.signature',
+        bucket: '',
+      );
+
+      expect(validateSupabaseSyncSettings(secret), contains('service_role'));
+      expect(
+        validateSupabaseSyncSettings(serviceRoleJwt),
         contains('service_role'),
       );
     });
