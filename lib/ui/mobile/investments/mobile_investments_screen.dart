@@ -265,7 +265,12 @@ class _YearPickerSheetState extends State<_YearPickerSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        mobileBottomPadding(context, spacing: 20),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -493,7 +498,12 @@ class _InvestmentSideFilterSheetState
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        mobileBottomPadding(context, spacing: 20),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -770,7 +780,12 @@ class _HoldingActionsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        mobileBottomPadding(context, spacing: 16),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1118,7 +1133,7 @@ class _InvestmentSheetState extends ConsumerState<_InvestmentSheet> {
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: SingleChildScrollView(
         child: Column(

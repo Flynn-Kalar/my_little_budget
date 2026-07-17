@@ -7,6 +7,40 @@ import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/ui/mobile/settings/mobile_tags_screen.dart';
 
 void main() {
+  testWidgets('모바일 태그 저장 버튼은 시스템 내비게이션 영역 위에 있다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            const systemNavigation = EdgeInsets.only(bottom: 48);
+            return MediaQuery(
+              data: mediaQuery.copyWith(
+                padding: systemNavigation,
+                viewPadding: systemNavigation,
+              ),
+              child: child!,
+            );
+          },
+          home: const MobileTagsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('태그 추가'));
+    await tester.pumpAndSettle();
+
+    final saveButton = find.widgetWithText(FilledButton, '저장');
+    expect(saveButton, findsOneWidget);
+    expect(tester.getRect(saveButton).bottom, lessThanOrEqualTo(844 - 48));
+  });
+
   testWidgets('모바일 태그 추가 후 목록 갱신 및 중복 오류를 처리한다', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));

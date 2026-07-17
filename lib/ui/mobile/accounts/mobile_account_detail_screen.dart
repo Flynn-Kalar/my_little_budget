@@ -232,7 +232,7 @@ class _AccountDetailFilterSheetState
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -594,7 +594,7 @@ class _MobileAdjustmentSheetState
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: SingleChildScrollView(
         child: Column(

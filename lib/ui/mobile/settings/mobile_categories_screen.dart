@@ -310,7 +310,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

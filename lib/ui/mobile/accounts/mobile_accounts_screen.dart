@@ -502,7 +502,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: SingleChildScrollView(
         child: Column(

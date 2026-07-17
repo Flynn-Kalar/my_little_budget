@@ -504,7 +504,7 @@ class _MobileCalendarEventSheetState
         left: 16,
         right: 16,
         top: 12,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+        bottom: mobileBottomPadding(context, spacing: 20),
       ),
       child: SingleChildScrollView(
         child: Column(

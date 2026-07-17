@@ -175,7 +175,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsNWidgets(2));
-      await tester.enterText(find.byType(TextField).first, '1500');
+      await tester.tap(
+        find.byKey(const ValueKey('mobile-transaction-amount-field')),
+      );
+      await tester.pumpAndSettle();
+      for (final label in ['C', '1', '5', '00']) {
+        await tester.tap(
+          find.byKey(ValueKey('mobile-transaction-keypad-$label')),
+        );
+        await tester.pump();
+      }
+      await tester.tap(
+        find.byKey(const ValueKey('mobile-transaction-keypad-=')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(FilledButton).last);
       await tester.pumpAndSettle();
 

@@ -198,7 +198,7 @@ class _ColorEditSheetState extends ConsumerState<_ColorEditSheet> {
         left: 8,
         right: 8,
         top: 8,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: PrismColorPicker(
         title: '${_tokenLabel(widget.token)} 색상 변경',
@@ -214,9 +214,7 @@ class _ColorEditSheetState extends ConsumerState<_ColorEditSheet> {
               .setColor(widget.token, picked, brightness: brightness);
           if (!mounted) return;
           navigator.pop();
-          messenger.showSnackBar(
-            SnackBar(content: Text('$label 색상을 적용했습니다.')),
-          );
+          messenger.showSnackBar(SnackBar(content: Text('$label 색상을 적용했습니다.')));
         },
       ),
     );

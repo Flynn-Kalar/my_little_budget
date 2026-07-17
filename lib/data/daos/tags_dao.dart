@@ -44,11 +44,14 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
 
   Future<int> createTag(String name, String color) async {
     final nextOrder = await _nextSortOrder();
+    final now = sqlNow();
     return into(tags).insert(
       TagsCompanion.insert(
         name: name,
         color: Value(color),
         sortOrder: Value(nextOrder),
+        createdAt: Value(now),
+        updatedAt: Value(now),
       ),
     );
   }

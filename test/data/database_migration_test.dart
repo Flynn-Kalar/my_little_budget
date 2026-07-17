@@ -5,7 +5,7 @@ import 'package:my_little_budget/data/sync_metadata.dart';
 
 void main() {
   test(
-    'repairs nullable tag fields before reading latest schema rows',
+    'repairs nullable tag fields and creates readable tags after upgrade',
     () async {
       final executor = NativeDatabase.memory(
         setup: (raw) {
@@ -14,14 +14,14 @@ CREATE TABLE tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   uuid TEXT UNIQUE,
   name TEXT,
-  color TEXT,
-  usage_count INTEGER,
+  color TEXT DEFAULT '#64748b',
+  usage_count INTEGER DEFAULT 0,
   last_used_at TEXT,
-  is_pinned INTEGER,
-  created_at TEXT,
+  is_pinned INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT,
   deleted_at TEXT,
-  sync_status TEXT
+  sync_status TEXT DEFAULT 'pending'
 )
 ''');
           raw.execute('''
@@ -48,6 +48,12 @@ INSERT INTO tags (
       expect(tags.single.createdAt, isNotEmpty);
       expect(tags.single.updatedAt, isNotEmpty);
       expect(tags.single.syncStatus, syncStatusPending);
+
+      await db.tagsDao.createTag('new-tag', '#123456');
+      final created = (await db.tagsDao.getTags()).singleWhere(
+        (tag) => tag.name == 'new-tag',
+      );
+      expect(created.updatedAt, isNotEmpty);
     },
   );
 

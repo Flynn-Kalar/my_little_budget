@@ -9,6 +9,7 @@ import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/providers.dart';
 import '../../../../features/transactions/validation.dart';
+import '../../mobile_widgets.dart';
 
 final _quickInputTagsProvider = FutureProvider.autoDispose<List<Tag>>(
   (ref) => ref.watch(tagsDaoProvider).getRecommendedTags(limit: 8),
@@ -211,13 +212,12 @@ class _MobileTransactionSheetState
               category.type == (_type == 'income' ? 'income' : 'expense'),
         )
         .toList();
-
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: SingleChildScrollView(
         child: Column(

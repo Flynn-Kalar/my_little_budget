@@ -4,6 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/date.dart';
 import '../../core/theme/app_theme.dart';
 
+double mobileBottomPadding(BuildContext context, {double spacing = 0}) {
+  final mediaQuery = MediaQuery.of(context);
+  final obstruction =
+      mediaQuery.viewInsets.bottom > mediaQuery.viewPadding.bottom
+      ? mediaQuery.viewInsets.bottom
+      : mediaQuery.viewPadding.bottom;
+  return obstruction + spacing;
+}
+
 class MobilePage extends StatelessWidget {
   const MobilePage({
     super.key,
@@ -203,7 +212,12 @@ class _MobileMonthPickerState extends State<_MobileMonthPicker> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        mobileBottomPadding(context, spacing: 20),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

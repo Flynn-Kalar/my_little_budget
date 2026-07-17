@@ -10,6 +10,49 @@ import 'package:my_little_budget/features/transactions/validation.dart';
 import 'package:my_little_budget/ui/mobile/transactions/sheets/mobile_transaction_sheet.dart';
 
 void main() {
+  testWidgets('시스템 내비게이션 영역 위에 저장 버튼을 배치한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            const systemNavigation = EdgeInsets.only(bottom: 48);
+            return MediaQuery(
+              data: mediaQuery.copyWith(
+                padding: systemNavigation,
+                viewPadding: systemNavigation,
+              ),
+              child: child!,
+            );
+          },
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () => MobileTransactionSheet.show(context),
+                  child: const Text('거래 추가 열기'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('거래 추가 열기'));
+    await tester.pumpAndSettle();
+
+    final saveButton = find.widgetWithText(FilledButton, '저장');
+    expect(saveButton, findsOneWidget);
+    expect(tester.getRect(saveButton).bottom, lessThanOrEqualTo(844 - 48));
+  });
+
   testWidgets('mobile amount field opens calculator page and returns result', (
     tester,
   ) async {

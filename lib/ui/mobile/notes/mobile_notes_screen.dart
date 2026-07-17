@@ -662,7 +662,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
         left: 20,
         right: 20,
         top: 12,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+        bottom: mobileBottomPadding(context, spacing: 20),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1073,7 +1073,12 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
     final note = entry.note;
     final ddayDate = noteDdayDate(note);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        12,
+        20,
+        mobileBottomPadding(context, spacing: 24),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

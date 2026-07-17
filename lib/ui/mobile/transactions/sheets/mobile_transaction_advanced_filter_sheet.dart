@@ -5,6 +5,7 @@ import '../../../../core/date.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/database.dart';
 import '../../../../features/transactions/providers.dart';
+import '../../mobile_widgets.dart';
 
 class MobileTransactionAdvancedFilterSheet extends ConsumerStatefulWidget {
   const MobileTransactionAdvancedFilterSheet({super.key});
@@ -107,7 +108,7 @@ class _MobileTransactionAdvancedFilterSheetState
         left: 16,
         right: 16,
         top: 16,
-        bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
+        bottom: mobileBottomPadding(context, spacing: 16),
       ),
       child: SingleChildScrollView(
         child: Column(
