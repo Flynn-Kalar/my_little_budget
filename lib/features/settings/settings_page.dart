@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import 'app_info.dart';
 import 'update_check.dart';
+import 'windows_update_installer.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -16,6 +16,8 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _checkingForUpdate = false;
+  bool _installingUpdate = false;
+  double _updateProgress = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +91,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _UpdateCheckCard(
             versionLabel: versionLabel,
             checking: _checkingForUpdate,
-            onTap: _checkingForUpdate ? null : _checkForUpdate,
+            installing: _installingUpdate,
+            updateProgress: _updateProgress,
+            onTap: _checkingForUpdate || _installingUpdate
+                ? null
+                : _checkForUpdate,
           ),
         ],
       ),
@@ -98,13 +104,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _checkForUpdate() async {
     setState(() => _checkingForUpdate = true);
+    UpdateCheckResult? result;
     try {
       final packageInfo = await ref.read(appPackageInfoProvider.future);
-      final result = await ref
+      result = await ref
           .read(updateCheckServiceProvider)
           .check(currentVersion: packageVersionLabel(packageInfo));
-      if (!mounted) return;
-      await _showUpdateResult(context, result);
     } on UpdateCheckException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -112,6 +117,42 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
       if (mounted) setState(() => _checkingForUpdate = false);
+    }
+    if (!mounted || result == null) return;
+    final approved = await _showUpdateResult(context, result);
+    if (approved != true || !mounted) return;
+    final installer = result.latestRelease?.windowsInstaller;
+    if (installer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이 릴리스에는 Windows Setup 파일이 없습니다.')),
+      );
+      return;
+    }
+    await _installUpdate(installer);
+  }
+
+  Future<void> _installUpdate(GitHubReleaseAsset installer) async {
+    setState(() {
+      _installingUpdate = true;
+      _updateProgress = 0;
+    });
+    try {
+      await ref
+          .read(windowsUpdateInstallerProvider)
+          .install(
+            installer,
+            onProgress: (progress) {
+              if (!mounted) return;
+              setState(() => _updateProgress = progress);
+            },
+          );
+    } on WindowsUpdateException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => _installingUpdate = false);
     }
   }
 }
@@ -193,11 +234,15 @@ class _UpdateCheckCard extends StatelessWidget {
   const _UpdateCheckCard({
     required this.versionLabel,
     required this.checking,
+    required this.installing,
+    required this.updateProgress,
     required this.onTap,
   });
 
   final String versionLabel;
   final bool checking;
+  final bool installing;
+  final double updateProgress;
   final VoidCallback? onTap;
 
   @override
@@ -217,7 +262,7 @@ class _UpdateCheckCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              checking
+              checking || installing
                   ? const SizedBox.square(
                       dimension: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
@@ -243,6 +288,8 @@ class _UpdateCheckCard extends StatelessWidget {
                     Text(
                       checking
                           ? 'GitHub Releases를 확인하고 있습니다.'
+                          : installing
+                          ? '업데이트를 다운로드하고 있습니다. ${(updateProgress * 100).round()}%'
                           : '$versionLabel · 누르면 GitHub Releases에서 새 버전을 확인합니다.',
                       style: TextStyle(
                         fontSize: 12,
@@ -260,7 +307,7 @@ class _UpdateCheckCard extends StatelessWidget {
   }
 }
 
-Future<void> _showUpdateResult(
+Future<bool?> _showUpdateResult(
   BuildContext context,
   UpdateCheckResult result,
 ) async {
@@ -272,39 +319,42 @@ Future<void> _showUpdateResult(
   };
   final message = switch (result.status) {
     UpdateCheckStatus.updateAvailable =>
-      '현재 ${result.currentVersion}\n최신 ${release!.tagName}${release.prerelease ? ' (시험판)' : ''}',
+      '현재 ${result.currentVersion}\n'
+          '최신 ${release!.tagName}${release.prerelease ? ' (시험판)' : ''}\n'
+          '${_installerSizeLabel(release.windowsInstaller)}\n\n'
+          '허용하면 Setup을 다운로드하고 검증한 뒤 앱을 종료하여 업데이트합니다.',
     UpdateCheckStatus.upToDate =>
       '현재 ${result.currentVersion}\nGitHub 최신 ${release!.tagName}',
     UpdateCheckStatus.noRelease => 'GitHub Releases에 아직 배포된 버전이 없습니다.',
   };
-  await showDialog<void>(
+  return showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: Text(title),
       content: Text(message),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('확인'),
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: Text(
+            result.status == UpdateCheckStatus.updateAvailable ? '취소' : '확인',
+          ),
         ),
-        if (release != null)
+        if (result.status == UpdateCheckStatus.updateAvailable)
           FilledButton.icon(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              final opened = await launchUrl(
-                release.pageUrl,
-                mode: LaunchMode.externalApplication,
-              );
-              if (!opened && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('GitHub 페이지를 열 수 없습니다.')),
-                );
-              }
-            },
-            icon: const Icon(Icons.open_in_new, size: 18),
-            label: const Text('GitHub에서 보기'),
+            onPressed: release?.windowsInstaller == null
+                ? null
+                : () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.download_outlined, size: 18),
+            label: const Text('다운로드 후 업데이트'),
           ),
       ],
     ),
   );
+}
+
+String _installerSizeLabel(GitHubReleaseAsset? installer) {
+  if (installer == null) return 'Windows Setup 파일이 없습니다.';
+  if (installer.size <= 0) return '다운로드 용량을 확인할 수 없습니다.';
+  final megabytes = installer.size / (1024 * 1024);
+  return '다운로드 ${megabytes.toStringAsFixed(1)}MB';
 }

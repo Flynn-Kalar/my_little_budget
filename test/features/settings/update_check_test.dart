@@ -19,6 +19,16 @@ void main() {
                   'https://github.com/Flynn-Kalar/my_little_budget/releases/tag/v1.0.0-rc.2',
               'draft': false,
               'prerelease': true,
+              'assets': [
+                {
+                  'name': 'MyLittleBudget-Setup-1.0.0-rc.2.exe',
+                  'browser_download_url':
+                      'https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.2/MyLittleBudget-Setup-1.0.0-rc.2.exe',
+                  'size': 1234,
+                  'digest':
+                      'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                },
+              ],
             },
           ]),
           200,
@@ -31,6 +41,15 @@ void main() {
     expect(result.status, UpdateCheckStatus.updateAvailable);
     expect(result.latestRelease?.tagName, 'v1.0.0-rc.2');
     expect(result.latestRelease?.prerelease, isTrue);
+    expect(
+      result.latestRelease?.windowsInstaller?.name,
+      'MyLittleBudget-Setup-1.0.0-rc.2.exe',
+    );
+    expect(result.latestRelease?.windowsInstaller?.size, 1234);
+    expect(
+      result.latestRelease?.windowsInstaller?.sha256,
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    );
   });
 
   test('버전 순서가 아닌 응답에서도 가장 높은 공개 릴리스를 선택한다', () async {

@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -17,6 +18,42 @@ const _settings = SupabaseBackupSettings(
 );
 
 void main() {
+  test(
+    'secure token fields survive storage implementations that serialize a whole file',
+    () async {
+      final storage = _WholeFileSecureStorage();
+      final tokenStore = SecureSupabaseSyncTokenStore(storage: storage);
+      const session = SupabaseStoredSession(
+        projectUrl: 'https://example.supabase.co',
+        userId: 'email-user',
+        refreshToken: 'refresh-token',
+      );
+
+      await tokenStore.write(session);
+
+      final restored = await tokenStore.read();
+      expect(restored?.projectUrl, session.projectUrl);
+      expect(restored?.userId, session.userId);
+      expect(restored?.refreshToken, session.refreshToken);
+    },
+  );
+
+  test(
+    'secure token store recovers v1 fields missing the raced project URL',
+    () async {
+      final storage = _WholeFileSecureStorage()
+        ..seed('mlb_supabase_sync_user_id_v1', 'email-user')
+        ..seed('mlb_supabase_sync_refresh_token_v1', 'refresh-token');
+      final tokenStore = SecureSupabaseSyncTokenStore(storage: storage);
+
+      final restored = await tokenStore.read();
+
+      expect(restored?.projectUrl, isEmpty);
+      expect(restored?.userId, 'email-user');
+      expect(restored?.refreshToken, 'refresh-token');
+    },
+  );
+
   test('signs in with email and stores the session user id', () async {
     var signInCount = 0;
     final tokenStore = _FakeTokenStore();
@@ -108,6 +145,42 @@ void main() {
     expect(tokenStore.session?.userId, 'expected-user');
   });
 
+  test(
+    'restores a v1 session missing its project URL and migrates it',
+    () async {
+      final tokenStore = _FakeTokenStore()
+        ..session = const SupabaseStoredSession(
+          projectUrl: '',
+          userId: 'email-user',
+          refreshToken: 'refresh-token',
+        );
+      final service = SupabaseSyncAuthService(
+        tokenStore: tokenStore,
+        clientFactory: (url, anonKey) => SupabaseClient(
+          url,
+          anonKey,
+          httpClient: MockClient((request) async {
+            expect(request.url.path, '/auth/v1/token');
+            expect(request.url.queryParameters['grant_type'], 'refresh_token');
+            return http.Response(
+              jsonEncode(
+                _sessionJson(userId: 'email-user', email: 'user@example.com'),
+              ),
+              200,
+              headers: const {'content-type': 'application/json'},
+            );
+          }),
+        ),
+      );
+      addTearDown(service.dispose);
+
+      final client = await service.restoreClient(_settings);
+
+      expect(client.auth.currentUser?.id, 'email-user');
+      expect(tokenStore.session?.projectUrl, _settings.url);
+    },
+  );
+
   test('rejects an anonymous response for email sign-in', () async {
     final tokenStore = _FakeTokenStore();
     final service = SupabaseSyncAuthService(
@@ -190,5 +263,36 @@ class _FakeTokenStore implements SupabaseSyncTokenStore {
   @override
   Future<void> write(SupabaseStoredSession session) async {
     this.session = session;
+  }
+}
+
+/// Models the Windows backend where every mutation reads, modifies, and writes
+/// one encrypted file. Concurrent mutations race and can overwrite each other.
+class _WholeFileSecureStorage implements FlutterSecureStorage {
+  Map<String, String> _values = {};
+  var _operation = 0;
+
+  void seed(String key, String value) => _values[key] = value;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    final key = invocation.namedArguments[#key] as String?;
+    if (invocation.memberName == #read) {
+      return Future<String?>.value(_values[key]);
+    }
+    if (invocation.memberName == #write || invocation.memberName == #delete) {
+      final snapshot = Map<String, String>.from(_values);
+      final operation = ++_operation;
+      return Future<void>(() async {
+        await Future<void>.delayed(Duration(milliseconds: operation));
+        if (invocation.memberName == #write) {
+          snapshot[key!] = invocation.namedArguments[#value]! as String;
+        } else {
+          snapshot.remove(key);
+        }
+        _values = snapshot;
+      });
+    }
+    return super.noSuchMethod(invocation);
   }
 }

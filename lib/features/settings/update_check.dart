@@ -26,6 +26,7 @@ class GitHubAppRelease {
     required this.name,
     required this.pageUrl,
     required this.prerelease,
+    this.windowsInstaller,
   });
 
   final Version version;
@@ -33,6 +34,21 @@ class GitHubAppRelease {
   final String name;
   final Uri pageUrl;
   final bool prerelease;
+  final GitHubReleaseAsset? windowsInstaller;
+}
+
+class GitHubReleaseAsset {
+  const GitHubReleaseAsset({
+    required this.name,
+    required this.downloadUrl,
+    required this.size,
+    required this.sha256,
+  });
+
+  final String name;
+  final Uri downloadUrl;
+  final int size;
+  final String? sha256;
 }
 
 class UpdateCheckResult {
@@ -142,7 +158,41 @@ GitHubAppRelease? _releaseFromJson(Map<String, dynamic> json) {
     name: rawName == null || rawName.isEmpty ? tagName : rawName,
     pageUrl: pageUrl,
     prerelease: json['prerelease'] == true,
+    windowsInstaller: _windowsInstallerFromJson(json['assets'], tagName),
   );
+}
+
+GitHubReleaseAsset? _windowsInstallerFromJson(
+  Object? rawAssets,
+  String tagName,
+) {
+  if (rawAssets is! List) return null;
+  final versionLabel = tagName.replaceFirst(RegExp(r'^[vV]'), '');
+  final expectedName = 'MyLittleBudget-Setup-$versionLabel.exe';
+  for (final rawAsset in rawAssets.whereType<Map<String, dynamic>>()) {
+    final name = rawAsset['name'] as String?;
+    final downloadUrl = Uri.tryParse(
+      rawAsset['browser_download_url'] as String? ?? '',
+    );
+    if (name == null ||
+        name.toLowerCase() != expectedName.toLowerCase() ||
+        downloadUrl == null ||
+        downloadUrl.scheme != 'https' ||
+        downloadUrl.host != 'github.com') {
+      continue;
+    }
+    final digest = rawAsset['digest'] as String?;
+    final sha256 = digest?.startsWith('sha256:') == true
+        ? digest!.substring('sha256:'.length).toLowerCase()
+        : null;
+    return GitHubReleaseAsset(
+      name: name,
+      downloadUrl: downloadUrl,
+      size: (rawAsset['size'] as num?)?.toInt() ?? 0,
+      sha256: sha256,
+    );
+  }
+  return null;
 }
 
 Version? _parseVersion(String? raw) {

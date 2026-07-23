@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,45 @@ const _settings = SupabaseBackupSettings(
 );
 
 void main() {
+  test(
+    'a local edit on one device is loaded when another device starts',
+    () async {
+      final mobileDb = await _openDatabase();
+      await _markAllSyncedAndClearOutbox(mobileDb);
+      final remote = _SharedMemoryGateway();
+      final mobile = _coordinator(mobileDb, remote);
+      try {
+        mobile.start();
+        await mobileDb.tagsDao.createTag('mobile-only', '#123456');
+        await remote.firstUpsert.timeout(const Duration(seconds: 1));
+        final uploaded = await mobile.pushNow();
+        expect(uploaded.isOk, isTrue, reason: uploaded.error);
+      } finally {
+        await mobile.dispose();
+        await mobileDb.close();
+      }
+
+      final windowsDb = await _openDatabase();
+      final windows = _coordinator(windowsDb, remote);
+      try {
+        await _markAllSyncedAndClearOutbox(windowsDb);
+        final result = await windows.synchronizeNow();
+        final loaded = await windowsDb
+            .customSelect(
+              'SELECT name, color FROM tags WHERE name = ?',
+              variables: const [Variable<String>('mobile-only')],
+            )
+            .getSingleOrNull();
+
+        expect(result.isOk, isTrue, reason: result.error);
+        expect(loaded?.read<String>('color'), '#123456');
+      } finally {
+        await windows.dispose();
+        await windowsDb.close();
+      }
+    },
+  );
+
   test('a successful push does not cancel a pending full-sync retry', () async {
     final db = await _openDatabase();
     addTearDown(db.close);
@@ -267,5 +307,53 @@ class _FailFirstFetchGateway implements SupabaseSyncGateway {
       deletedAt: deletedAt,
       revision: revision,
     );
+  }
+}
+
+class _SharedMemoryGateway implements SupabaseSyncGateway {
+  final _rows = <String, Map<String, RemoteSyncRow>>{};
+  final _firstUpsert = Completer<void>();
+  var _revision = 1;
+
+  Future<void> get firstUpsert => _firstUpsert.future;
+
+  @override
+  Future<List<RemoteSyncRow>> fetchChanges({
+    required SupabaseBackupSettings settings,
+    required String entity,
+    required int afterRevision,
+    required int limit,
+  }) async {
+    final rows =
+        (_rows[entity]?.values ?? const <RemoteSyncRow>[])
+            .where((row) => row.revision > afterRevision)
+            .toList()
+          ..sort((a, b) => a.revision.compareTo(b.revision));
+    return rows.take(limit).toList(growable: false);
+  }
+
+  @override
+  Future<RemoteSyncRow> upsert({
+    required SupabaseBackupSettings settings,
+    required String entity,
+    required String uuid,
+    required Map<String, Object?> payload,
+    required String? deletedAt,
+  }) async {
+    final revision = _revision++;
+    final row = RemoteSyncRow(
+      uuid: uuid,
+      payload: Map<String, Object?>.from(payload),
+      updatedAt: DateTime.utc(
+        2026,
+        7,
+        20,
+      ).add(Duration(seconds: revision)).toIso8601String(),
+      deletedAt: deletedAt,
+      revision: revision,
+    );
+    (_rows[entity] ??= {})[uuid] = row;
+    if (!_firstUpsert.isCompleted) _firstUpsert.complete();
+    return row;
   }
 }

@@ -176,7 +176,7 @@ keyPassword=<upload-key-password>
 
 업데이트 확인은 앱 시작 시 자동으로 실행하지 않습니다. 사용자가 설정 메인 화면의 `최신 버전 확인`을 눌렀을 때만 GitHub Releases API를 조회합니다.
 
-- Windows: 새 버전이 있으면 해당 GitHub Release 페이지를 엽니다.
+- Windows: 새 버전이 있으면 사용자에게 한 번 확인한 뒤 Setup을 직접 다운로드합니다. GitHub가 제공하는 SHA-256 검증에 성공한 경우에만 자동 설치하고 앱을 다시 실행합니다.
 - Android: 새 버전이 있으면 Google Play 앱 페이지를 열고, Play 스토어 앱을 열 수 없으면 웹 주소를 사용합니다.
 - draft release는 제외하며 prerelease를 포함해 semantic version 기준으로 비교합니다.
 

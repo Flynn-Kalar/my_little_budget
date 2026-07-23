@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -45,6 +46,7 @@ class SecureSupabaseSyncTokenStore implements SupabaseSyncTokenStore {
   SecureSupabaseSyncTokenStore({FlutterSecureStorage? storage})
     : _storage = storage ?? FlutterSecureStorage();
 
+  static const _sessionKey = 'mlb_supabase_sync_session_v2';
   static const _projectKey = 'mlb_supabase_sync_project_v1';
   static const _userIdKey = 'mlb_supabase_sync_user_id_v1';
   static const _refreshTokenKey = 'mlb_supabase_sync_refresh_token_v1';
@@ -54,37 +56,74 @@ class SecureSupabaseSyncTokenStore implements SupabaseSyncTokenStore {
 
   @override
   Future<SupabaseStoredSession?> read() async {
-    final values = await Future.wait([
-      _storage.read(key: _projectKey),
-      _storage.read(key: _userIdKey),
-      _storage.read(key: _refreshTokenKey),
-    ]);
-    if (values.any((value) => value == null || value.isEmpty)) return null;
+    final encoded = await _storage.read(key: _sessionKey);
+    if (encoded != null && encoded.isNotEmpty) {
+      try {
+        final value = jsonDecode(encoded);
+        if (value is Map) {
+          final projectUrl = value['projectUrl'];
+          final userId = value['userId'];
+          final refreshToken = value['refreshToken'];
+          if (projectUrl is String &&
+              projectUrl.isNotEmpty &&
+              userId is String &&
+              userId.isNotEmpty &&
+              refreshToken is String &&
+              refreshToken.isNotEmpty) {
+            return SupabaseStoredSession(
+              projectUrl: projectUrl,
+              userId: userId,
+              refreshToken: refreshToken,
+            );
+          }
+        }
+      } catch (_) {
+        // Fall back to the v1 fields so a damaged upgrade remains recoverable.
+      }
+    }
+
+    // v1 wrote these fields concurrently. Whole-file secure-storage backends
+    // could lose one field, most commonly the project URL. The refresh token
+    // can still be validated against the configured project during restore.
+    final projectUrl = await _storage.read(key: _projectKey) ?? '';
+    final userId = await _storage.read(key: _userIdKey);
+    final refreshToken = await _storage.read(key: _refreshTokenKey);
+    if (userId == null ||
+        userId.isEmpty ||
+        refreshToken == null ||
+        refreshToken.isEmpty) {
+      return null;
+    }
     return SupabaseStoredSession(
-      projectUrl: values[0]!,
-      userId: values[1]!,
-      refreshToken: values[2]!,
+      projectUrl: projectUrl,
+      userId: userId,
+      refreshToken: refreshToken,
     );
   }
 
   @override
   Future<void> write(SupabaseStoredSession session) async {
-    await Future.wait([
-      _storage.write(key: _projectKey, value: session.projectUrl),
-      _storage.write(key: _userIdKey, value: session.userId),
-      _storage.write(key: _refreshTokenKey, value: session.refreshToken),
-      _storage.delete(key: _legacyEmailKey),
-    ]);
+    await _storage.write(
+      key: _sessionKey,
+      value: jsonEncode({
+        'projectUrl': session.projectUrl,
+        'userId': session.userId,
+        'refreshToken': session.refreshToken,
+      }),
+    );
+    await _storage.delete(key: _projectKey);
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _legacyEmailKey);
   }
 
   @override
   Future<void> clear() async {
-    await Future.wait([
-      _storage.delete(key: _projectKey),
-      _storage.delete(key: _userIdKey),
-      _storage.delete(key: _refreshTokenKey),
-      _storage.delete(key: _legacyEmailKey),
-    ]);
+    await _storage.delete(key: _sessionKey);
+    await _storage.delete(key: _projectKey);
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _refreshTokenKey);
+    await _storage.delete(key: _legacyEmailKey);
   }
 }
 
@@ -144,7 +183,8 @@ class SupabaseSyncAuthService {
     if (current != null) return current;
 
     final stored = await _tokenStore.read();
-    if (stored == null || stored.projectUrl != normalized.url) {
+    if (stored == null ||
+        (stored.projectUrl.isNotEmpty && stored.projectUrl != normalized.url)) {
       throw const AuthException(
         'Supabase 이메일 로그인 세션이 없습니다. 이메일과 비밀번호를 입력한 뒤 설정 저장을 눌러주세요.',
       );
