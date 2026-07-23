@@ -8,6 +8,7 @@ import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/providers.dart';
 import '../../mobile_widgets.dart';
+import '../../settings/sheets/mobile_transaction_preset_sheet.dart';
 
 class MobileGroupedTransactions extends StatefulWidget {
   const MobileGroupedTransactions({
@@ -534,6 +535,11 @@ class _TransactionCard extends ConsumerWidget {
                     onEdit(row);
                   } else if (value == 'copy') {
                     onDuplicate(row);
+                  } else if (value == 'preset') {
+                    await MobileTransactionPresetSheet.show(
+                      context,
+                      source: row,
+                    );
                   } else if (value == 'delete') {
                     await _confirmAndDelete(context, ref);
                   }
@@ -551,6 +557,13 @@ class _TransactionCard extends ConsumerWidget {
                     child: ListTile(
                       leading: Icon(Icons.copy_outlined),
                       title: Text('복사'),
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'preset',
+                    child: ListTile(
+                      leading: Icon(Icons.bookmark_add_outlined),
+                      title: Text('프리셋으로 저장'),
                     ),
                   ),
                   const PopupMenuDivider(),

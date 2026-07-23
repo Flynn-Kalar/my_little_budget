@@ -1466,4 +1466,5 @@ void _invalidateAfterImport(WidgetRef ref) {
   ref.invalidate(settings_providers.settingsAccountsProvider);
   ref.invalidate(settings_providers.settingsTagsProvider);
   ref.invalidate(settings_providers.recurringItemsProvider);
+  ref.invalidate(settings_providers.transactionPresetItemsProvider);
 }

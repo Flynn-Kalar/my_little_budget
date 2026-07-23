@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../data/providers.dart';
 import '../../data/daos/recurring_dao.dart';
+import '../../data/daos/transaction_presets_dao.dart';
 import 'package:my_little_budget/features/budget/providers.dart'
     as budget_providers;
 import 'package:my_little_budget/features/stats/providers.dart'
@@ -32,6 +33,11 @@ final recurringItemsProvider =
       (ref) => ref.watch(recurringDaoProvider).listRecurringTransactions(),
     );
 
+final transactionPresetItemsProvider =
+    FutureProvider.autoDispose<List<TransactionPresetListItem>>(
+      (ref) => ref.watch(transactionPresetsDaoProvider).listPresets(),
+    );
+
 void refreshCategories(WidgetRef ref) {
   ref.invalidate(allCategoriesProvider);
   ref.invalidate(settingsActiveCategoriesProvider);
@@ -54,4 +60,8 @@ void refreshRecurring(WidgetRef ref) {
   ref.invalidate(recurringItemsProvider);
   ref.invalidate(transactions_providers.transactionsListProvider);
   ref.invalidate(transactions_providers.monthlySummaryProvider);
+}
+
+void refreshTransactionPresets(WidgetRef ref) {
+  ref.invalidate(transactionPresetItemsProvider);
 }

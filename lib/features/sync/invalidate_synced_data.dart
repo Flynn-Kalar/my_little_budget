@@ -51,4 +51,5 @@ void invalidateSyncedData(WidgetRef ref) {
   ref.invalidate(settings.settingsAccountsProvider);
   ref.invalidate(settings.settingsTagsProvider);
   ref.invalidate(settings.recurringItemsProvider);
+  ref.invalidate(settings.transactionPresetItemsProvider);
 }

@@ -21,6 +21,7 @@ class Backup {
     required this.transactionTags,
     required this.monthlyIncome,
     required this.recurringTransactions,
+    this.transactionPresets = const [],
     this.notes = const [],
     this.noteChecklistItems = const [],
     this.calendarEvents = const [],
@@ -37,6 +38,7 @@ class Backup {
   final List<TransactionTagLink> transactionTags;
   final List<MonthlyIncomeRow> monthlyIncome;
   final List<RecurringTransaction> recurringTransactions;
+  final List<TransactionPreset> transactionPresets;
   final List<Note> notes;
   final List<NoteChecklistItem> noteChecklistItems;
   final List<CalendarEvent> calendarEvents;
@@ -60,6 +62,7 @@ class Backup {
       'recurringTransactions': recurringTransactions
           .map((e) => e.toJson())
           .toList(),
+      'transactionPresets': transactionPresets.map((e) => e.toJson()).toList(),
       'notes': notes.map(_noteBackupJson).toList(),
       'noteChecklistItems': noteChecklistItems.map((e) => e.toJson()).toList(),
       'calendarEvents': calendarEvents.map((e) => e.toJson()).toList(),
@@ -147,6 +150,9 @@ BackupParseResult parseBackup(String jsonString) {
               ),
             )
             .toList(),
+        transactionPresets: _list(
+          data['transactionPresets'],
+        ).map((j) => TransactionPreset.fromJson(_withSyncFields(j))).toList(),
         notes: _list(
           data['notes'],
         ).map((j) => Note.fromJson(_noteJson(j))).toList(),

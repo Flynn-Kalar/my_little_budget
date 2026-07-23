@@ -13,6 +13,7 @@ import '../tables/note_checklist_items.dart';
 import '../tables/notes.dart';
 import '../tables/recurring_transactions.dart';
 import '../tables/tags.dart';
+import '../tables/transaction_presets.dart';
 import '../tables/transactions.dart';
 
 part 'backup_dao.g.dart';
@@ -33,6 +34,7 @@ part 'backup_dao.g.dart';
     Notes,
     NoteChecklistItems,
     CalendarEvents,
+    TransactionPresets,
   ],
 )
 class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
@@ -51,6 +53,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
       transactionTags: await select(transactionTags).get(),
       monthlyIncome: await select(monthlyIncome).get(),
       recurringTransactions: await select(recurringTransactions).get(),
+      transactionPresets: await select(transactionPresets).get(),
       notes: await select(notes).get(),
       noteChecklistItems: await select(noteChecklistItems).get(),
       calendarEvents: await select(calendarEvents).get(),
@@ -83,6 +86,9 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
         }
         if (b.recurringTransactions.isNotEmpty) {
           batch.insertAll(recurringTransactions, b.recurringTransactions);
+        }
+        if (b.transactionPresets.isNotEmpty) {
+          batch.insertAll(transactionPresets, b.transactionPresets);
         }
         if (b.tags.isNotEmpty) batch.insertAll(tags, b.tags);
         if (b.transactionTags.isNotEmpty) {
@@ -173,6 +179,7 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
     await delete(investments).go();
     await delete(transactions).go();
     await delete(recurringTransactions).go();
+    await delete(transactionPresets).go();
     await delete(budgetGroups).go();
     await delete(tags).go();
     await delete(monthlyIncome).go();

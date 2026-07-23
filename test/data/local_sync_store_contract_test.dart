@@ -11,6 +11,26 @@ import 'package:my_little_budget/features/transactions/validation.dart';
 
 void main() {
   test(
+    'new local edits are uploaded ahead of an older full-sync backlog',
+    () async {
+      final db = await _openDatabase();
+      addTearDown(db.close);
+      await _markAllSyncedAndClearOutbox(db);
+      final store = LocalSyncStore(db);
+
+      await db.tagsDao.createTag('older-backlog-row', '#123456');
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      final newestId = await db.tagsDao.createTag('new-user-edit', '#654321');
+      final newestUuid =
+          (await _rowById(db, 'tags', newestId))['uuid']! as String;
+
+      final entries = await store.pendingEntries();
+
+      expect(entries.first.uuid, newestUuid);
+    },
+  );
+
+  test(
     'insert, update, and hard delete leave a durable outbox operation',
     () async {
       final db = await _openDatabase();

@@ -24,6 +24,27 @@ const _settings = SupabaseBackupSettings(
 
 void main() {
   test(
+    'a committed local edit starts uploading before immediate app disposal',
+    () async {
+      final db = await _openDatabase();
+      addTearDown(db.close);
+      await _markAllSyncedAndClearOutbox(db);
+      final remote = _SharedMemoryGateway();
+      final coordinator = _coordinator(db, remote);
+
+      coordinator.start();
+      await db.tagsDao.createTag('close-immediately', '#123456');
+      await Future<void>.delayed(Duration.zero);
+      await coordinator.dispose();
+
+      await expectLater(
+        remote.firstUpsert.timeout(const Duration(milliseconds: 100)),
+        completes,
+      );
+    },
+  );
+
+  test(
     'a local edit on one device is loaded when another device starts',
     () async {
       final mobileDb = await _openDatabase();

@@ -9894,6 +9894,863 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
   }
 }
 
+class $TransactionPresetsTable extends TransactionPresets
+    with TableInfo<$TransactionPresetsTable, TransactionPreset> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TransactionPresetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+    clientDefault: newSyncUuid,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL CHECK (type IN (\'income\',\'expense\',\'transfer\'))',
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<int> amount = GeneratedColumn<int>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (amount > 0)',
+  );
+  static const VerificationMeta _memoMeta = const VerificationMeta('memo');
+  @override
+  late final GeneratedColumn<String> memo = GeneratedColumn<String>(
+    'memo',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<int> accountId = GeneratedColumn<int>(
+    'account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES accounts (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<int> categoryId = GeneratedColumn<int>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _fromAccountIdMeta = const VerificationMeta(
+    'fromAccountId',
+  );
+  @override
+  late final GeneratedColumn<int> fromAccountId = GeneratedColumn<int>(
+    'from_account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES accounts (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _toAccountIdMeta = const VerificationMeta(
+    'toAccountId',
+  );
+  @override
+  late final GeneratedColumn<int> toAccountId = GeneratedColumn<int>(
+    'to_account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES accounts (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _tagNamesMeta = const VerificationMeta(
+    'tagNames',
+  );
+  @override
+  late final GeneratedColumn<String> tagNames = GeneratedColumn<String>(
+    'tag_names',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const CustomExpression("datetime('now')"),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const CustomExpression("datetime('now')"),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<String> deletedAt = GeneratedColumn<String>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(syncStatusPending),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uuid,
+    name,
+    type,
+    amount,
+    memo,
+    accountId,
+    categoryId,
+    fromAccountId,
+    toAccountId,
+    tagNames,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'transaction_presets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TransactionPreset> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('memo')) {
+      context.handle(
+        _memoMeta,
+        memo.isAcceptableOrUnknown(data['memo']!, _memoMeta),
+      );
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('from_account_id')) {
+      context.handle(
+        _fromAccountIdMeta,
+        fromAccountId.isAcceptableOrUnknown(
+          data['from_account_id']!,
+          _fromAccountIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('to_account_id')) {
+      context.handle(
+        _toAccountIdMeta,
+        toAccountId.isAcceptableOrUnknown(
+          data['to_account_id']!,
+          _toAccountIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tag_names')) {
+      context.handle(
+        _tagNamesMeta,
+        tagNames.isAcceptableOrUnknown(data['tag_names']!, _tagNamesMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TransactionPreset map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TransactionPreset(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount'],
+      )!,
+      memo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}memo'],
+      ),
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}account_id'],
+      ),
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}category_id'],
+      ),
+      fromAccountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}from_account_id'],
+      ),
+      toAccountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}to_account_id'],
+      ),
+      tagNames: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag_names'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      )!,
+    );
+  }
+
+  @override
+  $TransactionPresetsTable createAlias(String alias) {
+    return $TransactionPresetsTable(attachedDatabase, alias);
+  }
+}
+
+class TransactionPreset extends DataClass
+    implements Insertable<TransactionPreset> {
+  final int id;
+  final String uuid;
+  final String? name;
+  final String type;
+  final int amount;
+  final String? memo;
+  final int? accountId;
+  final int? categoryId;
+  final int? fromAccountId;
+  final int? toAccountId;
+  final String? tagNames;
+  final String createdAt;
+  final String updatedAt;
+  final String? deletedAt;
+  final String syncStatus;
+  const TransactionPreset({
+    required this.id,
+    required this.uuid,
+    this.name,
+    required this.type,
+    required this.amount,
+    this.memo,
+    this.accountId,
+    this.categoryId,
+    this.fromAccountId,
+    this.toAccountId,
+    this.tagNames,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || name != null) {
+      map['name'] = Variable<String>(name);
+    }
+    map['type'] = Variable<String>(type);
+    map['amount'] = Variable<int>(amount);
+    if (!nullToAbsent || memo != null) {
+      map['memo'] = Variable<String>(memo);
+    }
+    if (!nullToAbsent || accountId != null) {
+      map['account_id'] = Variable<int>(accountId);
+    }
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<int>(categoryId);
+    }
+    if (!nullToAbsent || fromAccountId != null) {
+      map['from_account_id'] = Variable<int>(fromAccountId);
+    }
+    if (!nullToAbsent || toAccountId != null) {
+      map['to_account_id'] = Variable<int>(toAccountId);
+    }
+    if (!nullToAbsent || tagNames != null) {
+      map['tag_names'] = Variable<String>(tagNames);
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<String>(deletedAt);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
+    return map;
+  }
+
+  TransactionPresetsCompanion toCompanion(bool nullToAbsent) {
+    return TransactionPresetsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      name: name == null && nullToAbsent ? const Value.absent() : Value(name),
+      type: Value(type),
+      amount: Value(amount),
+      memo: memo == null && nullToAbsent ? const Value.absent() : Value(memo),
+      accountId: accountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountId),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      fromAccountId: fromAccountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fromAccountId),
+      toAccountId: toAccountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toAccountId),
+      tagNames: tagNames == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tagNames),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      syncStatus: Value(syncStatus),
+    );
+  }
+
+  factory TransactionPreset.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TransactionPreset(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      name: serializer.fromJson<String?>(json['name']),
+      type: serializer.fromJson<String>(json['type']),
+      amount: serializer.fromJson<int>(json['amount']),
+      memo: serializer.fromJson<String?>(json['memo']),
+      accountId: serializer.fromJson<int?>(json['accountId']),
+      categoryId: serializer.fromJson<int?>(json['categoryId']),
+      fromAccountId: serializer.fromJson<int?>(json['fromAccountId']),
+      toAccountId: serializer.fromJson<int?>(json['toAccountId']),
+      tagNames: serializer.fromJson<String?>(json['tagNames']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+      deletedAt: serializer.fromJson<String?>(json['deletedAt']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'name': serializer.toJson<String?>(name),
+      'type': serializer.toJson<String>(type),
+      'amount': serializer.toJson<int>(amount),
+      'memo': serializer.toJson<String?>(memo),
+      'accountId': serializer.toJson<int?>(accountId),
+      'categoryId': serializer.toJson<int?>(categoryId),
+      'fromAccountId': serializer.toJson<int?>(fromAccountId),
+      'toAccountId': serializer.toJson<int?>(toAccountId),
+      'tagNames': serializer.toJson<String?>(tagNames),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+      'deletedAt': serializer.toJson<String?>(deletedAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+    };
+  }
+
+  TransactionPreset copyWith({
+    int? id,
+    String? uuid,
+    Value<String?> name = const Value.absent(),
+    String? type,
+    int? amount,
+    Value<String?> memo = const Value.absent(),
+    Value<int?> accountId = const Value.absent(),
+    Value<int?> categoryId = const Value.absent(),
+    Value<int?> fromAccountId = const Value.absent(),
+    Value<int?> toAccountId = const Value.absent(),
+    Value<String?> tagNames = const Value.absent(),
+    String? createdAt,
+    String? updatedAt,
+    Value<String?> deletedAt = const Value.absent(),
+    String? syncStatus,
+  }) => TransactionPreset(
+    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
+    name: name.present ? name.value : this.name,
+    type: type ?? this.type,
+    amount: amount ?? this.amount,
+    memo: memo.present ? memo.value : this.memo,
+    accountId: accountId.present ? accountId.value : this.accountId,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    fromAccountId: fromAccountId.present
+        ? fromAccountId.value
+        : this.fromAccountId,
+    toAccountId: toAccountId.present ? toAccountId.value : this.toAccountId,
+    tagNames: tagNames.present ? tagNames.value : this.tagNames,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    syncStatus: syncStatus ?? this.syncStatus,
+  );
+  TransactionPreset copyWithCompanion(TransactionPresetsCompanion data) {
+    return TransactionPreset(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      name: data.name.present ? data.name.value : this.name,
+      type: data.type.present ? data.type.value : this.type,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      memo: data.memo.present ? data.memo.value : this.memo,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      fromAccountId: data.fromAccountId.present
+          ? data.fromAccountId.value
+          : this.fromAccountId,
+      toAccountId: data.toAccountId.present
+          ? data.toAccountId.value
+          : this.toAccountId,
+      tagNames: data.tagNames.present ? data.tagNames.value : this.tagNames,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TransactionPreset(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('amount: $amount, ')
+          ..write('memo: $memo, ')
+          ..write('accountId: $accountId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fromAccountId: $fromAccountId, ')
+          ..write('toAccountId: $toAccountId, ')
+          ..write('tagNames: $tagNames, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uuid,
+    name,
+    type,
+    amount,
+    memo,
+    accountId,
+    categoryId,
+    fromAccountId,
+    toAccountId,
+    tagNames,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TransactionPreset &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.name == this.name &&
+          other.type == this.type &&
+          other.amount == this.amount &&
+          other.memo == this.memo &&
+          other.accountId == this.accountId &&
+          other.categoryId == this.categoryId &&
+          other.fromAccountId == this.fromAccountId &&
+          other.toAccountId == this.toAccountId &&
+          other.tagNames == this.tagNames &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> name;
+  final Value<String> type;
+  final Value<int> amount;
+  final Value<String?> memo;
+  final Value<int?> accountId;
+  final Value<int?> categoryId;
+  final Value<int?> fromAccountId;
+  final Value<int?> toAccountId;
+  final Value<String?> tagNames;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  final Value<String?> deletedAt;
+  final Value<String> syncStatus;
+  const TransactionPresetsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.name = const Value.absent(),
+    this.type = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.memo = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.fromAccountId = const Value.absent(),
+    this.toAccountId = const Value.absent(),
+    this.tagNames = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  TransactionPresetsCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.name = const Value.absent(),
+    required String type,
+    required int amount,
+    this.memo = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.fromAccountId = const Value.absent(),
+    this.toAccountId = const Value.absent(),
+    this.tagNames = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : type = Value(type),
+       amount = Value(amount);
+  static Insertable<TransactionPreset> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? name,
+    Expression<String>? type,
+    Expression<int>? amount,
+    Expression<String>? memo,
+    Expression<int>? accountId,
+    Expression<int>? categoryId,
+    Expression<int>? fromAccountId,
+    Expression<int>? toAccountId,
+    Expression<String>? tagNames,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<String>? deletedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+      if (amount != null) 'amount': amount,
+      if (memo != null) 'memo': memo,
+      if (accountId != null) 'account_id': accountId,
+      if (categoryId != null) 'category_id': categoryId,
+      if (fromAccountId != null) 'from_account_id': fromAccountId,
+      if (toAccountId != null) 'to_account_id': toAccountId,
+      if (tagNames != null) 'tag_names': tagNames,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  TransactionPresetsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uuid,
+    Value<String?>? name,
+    Value<String>? type,
+    Value<int>? amount,
+    Value<String?>? memo,
+    Value<int?>? accountId,
+    Value<int?>? categoryId,
+    Value<int?>? fromAccountId,
+    Value<int?>? toAccountId,
+    Value<String?>? tagNames,
+    Value<String>? createdAt,
+    Value<String>? updatedAt,
+    Value<String?>? deletedAt,
+    Value<String>? syncStatus,
+  }) {
+    return TransactionPresetsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      amount: amount ?? this.amount,
+      memo: memo ?? this.memo,
+      accountId: accountId ?? this.accountId,
+      categoryId: categoryId ?? this.categoryId,
+      fromAccountId: fromAccountId ?? this.fromAccountId,
+      toAccountId: toAccountId ?? this.toAccountId,
+      tagNames: tagNames ?? this.tagNames,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<int>(amount.value);
+    }
+    if (memo.present) {
+      map['memo'] = Variable<String>(memo.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<int>(accountId.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<int>(categoryId.value);
+    }
+    if (fromAccountId.present) {
+      map['from_account_id'] = Variable<int>(fromAccountId.value);
+    }
+    if (toAccountId.present) {
+      map['to_account_id'] = Variable<int>(toAccountId.value);
+    }
+    if (tagNames.present) {
+      map['tag_names'] = Variable<String>(tagNames.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<String>(deletedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TransactionPresetsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('amount: $amount, ')
+          ..write('memo: $memo, ')
+          ..write('accountId: $accountId, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fromAccountId: $fromAccountId, ')
+          ..write('toAccountId: $toAccountId, ')
+          ..write('tagNames: $tagNames, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9915,6 +10772,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $NoteChecklistItemsTable noteChecklistItems =
       $NoteChecklistItemsTable(this);
   late final $CalendarEventsTable calendarEvents = $CalendarEventsTable(this);
+  late final $TransactionPresetsTable transactionPresets =
+      $TransactionPresetsTable(this);
   late final Index uqCategoriesNameType = Index(
     'uq_categories_name_type',
     'CREATE UNIQUE INDEX uq_categories_name_type ON categories (name, type)',
@@ -10011,6 +10870,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CalendarEventsDao calendarEventsDao = CalendarEventsDao(
     this as AppDatabase,
   );
+  late final TransactionPresetsDao transactionPresetsDao =
+      TransactionPresetsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10029,6 +10890,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notes,
     noteChecklistItems,
     calendarEvents,
+    transactionPresets,
     uqCategoriesNameType,
     idxTxOccurredOn,
     idxTxType,
@@ -10128,6 +10990,34 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('note_checklist_items', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('transaction_presets', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'categories',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('transaction_presets', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('transaction_presets', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('transaction_presets', kind: UpdateKind.update)],
     ),
   ]);
 }
@@ -10336,6 +11226,69 @@ final class $$AccountsTableReferences
     ).filter((f) => f.toAccountId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_recToAccountTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TransactionPresetsTable, List<TransactionPreset>>
+  _presetAccountTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.transactionPresets,
+    aliasName: $_aliasNameGenerator(
+      db.accounts.id,
+      db.transactionPresets.accountId,
+    ),
+  );
+
+  $$TransactionPresetsTableProcessedTableManager get presetAccount {
+    final manager = $$TransactionPresetsTableTableManager(
+      $_db,
+      $_db.transactionPresets,
+    ).filter((f) => f.accountId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_presetAccountTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TransactionPresetsTable, List<TransactionPreset>>
+  _presetFromAccountTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.transactionPresets,
+    aliasName: $_aliasNameGenerator(
+      db.accounts.id,
+      db.transactionPresets.fromAccountId,
+    ),
+  );
+
+  $$TransactionPresetsTableProcessedTableManager get presetFromAccount {
+    final manager = $$TransactionPresetsTableTableManager(
+      $_db,
+      $_db.transactionPresets,
+    ).filter((f) => f.fromAccountId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_presetFromAccountTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TransactionPresetsTable, List<TransactionPreset>>
+  _presetToAccountTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.transactionPresets,
+    aliasName: $_aliasNameGenerator(
+      db.accounts.id,
+      db.transactionPresets.toAccountId,
+    ),
+  );
+
+  $$TransactionPresetsTableProcessedTableManager get presetToAccount {
+    final manager = $$TransactionPresetsTableTableManager(
+      $_db,
+      $_db.transactionPresets,
+    ).filter((f) => f.toAccountId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_presetToAccountTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -10626,6 +11579,81 @@ class $$AccountsTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> presetAccount(
+    Expression<bool> Function($$TransactionPresetsTableFilterComposer f) f,
+  ) {
+    final $$TransactionPresetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactionPresets,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionPresetsTableFilterComposer(
+            $db: $db,
+            $table: $db.transactionPresets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> presetFromAccount(
+    Expression<bool> Function($$TransactionPresetsTableFilterComposer f) f,
+  ) {
+    final $$TransactionPresetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactionPresets,
+      getReferencedColumn: (t) => t.fromAccountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionPresetsTableFilterComposer(
+            $db: $db,
+            $table: $db.transactionPresets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> presetToAccount(
+    Expression<bool> Function($$TransactionPresetsTableFilterComposer f) f,
+  ) {
+    final $$TransactionPresetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactionPresets,
+      getReferencedColumn: (t) => t.toAccountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionPresetsTableFilterComposer(
+            $db: $db,
+            $table: $db.transactionPresets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -10981,6 +12009,84 @@ class $$AccountsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> presetAccount<T extends Object>(
+    Expression<T> Function($$TransactionPresetsTableAnnotationComposer a) f,
+  ) {
+    final $$TransactionPresetsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.transactionPresets,
+          getReferencedColumn: (t) => t.accountId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$TransactionPresetsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.transactionPresets,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> presetFromAccount<T extends Object>(
+    Expression<T> Function($$TransactionPresetsTableAnnotationComposer a) f,
+  ) {
+    final $$TransactionPresetsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.transactionPresets,
+          getReferencedColumn: (t) => t.fromAccountId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$TransactionPresetsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.transactionPresets,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> presetToAccount<T extends Object>(
+    Expression<T> Function($$TransactionPresetsTableAnnotationComposer a) f,
+  ) {
+    final $$TransactionPresetsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.transactionPresets,
+          getReferencedColumn: (t) => t.toAccountId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$TransactionPresetsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.transactionPresets,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$AccountsTableTableManager
@@ -11005,6 +12111,9 @@ class $$AccountsTableTableManager
             bool recAccount,
             bool recFromAccount,
             bool recToAccount,
+            bool presetAccount,
+            bool presetFromAccount,
+            bool presetToAccount,
           })
         > {
   $$AccountsTableTableManager(_$AppDatabase db, $AccountsTable table)
@@ -11104,6 +12213,9 @@ class $$AccountsTableTableManager
                 recAccount = false,
                 recFromAccount = false,
                 recToAccount = false,
+                presetAccount = false,
+                presetFromAccount = false,
+                presetToAccount = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -11116,6 +12228,9 @@ class $$AccountsTableTableManager
                     if (recAccount) db.recurringTransactions,
                     if (recFromAccount) db.recurringTransactions,
                     if (recToAccount) db.recurringTransactions,
+                    if (presetAccount) db.transactionPresets,
+                    if (presetFromAccount) db.transactionPresets,
+                    if (presetToAccount) db.transactionPresets,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -11288,6 +12403,69 @@ class $$AccountsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (presetAccount)
+                        await $_getPrefetchedData<
+                          Account,
+                          $AccountsTable,
+                          TransactionPreset
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences
+                              ._presetAccountTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AccountsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).presetAccount,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.accountId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (presetFromAccount)
+                        await $_getPrefetchedData<
+                          Account,
+                          $AccountsTable,
+                          TransactionPreset
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences
+                              ._presetFromAccountTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AccountsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).presetFromAccount,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.fromAccountId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (presetToAccount)
+                        await $_getPrefetchedData<
+                          Account,
+                          $AccountsTable,
+                          TransactionPreset
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences
+                              ._presetToAccountTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AccountsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).presetToAccount,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.toAccountId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -11317,6 +12495,9 @@ typedef $$AccountsTableProcessedTableManager =
         bool recAccount,
         bool recFromAccount,
         bool recToAccount,
+        bool presetAccount,
+        bool presetFromAccount,
+        bool presetToAccount,
       })
     >;
 typedef $$CategoriesTableCreateCompanionBuilder =
@@ -11425,6 +12606,30 @@ final class $$CategoriesTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _recurringTransactionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TransactionPresetsTable, List<TransactionPreset>>
+  _transactionPresetsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.transactionPresets,
+        aliasName: $_aliasNameGenerator(
+          db.categories.id,
+          db.transactionPresets.categoryId,
+        ),
+      );
+
+  $$TransactionPresetsTableProcessedTableManager get transactionPresetsRefs {
+    final manager = $$TransactionPresetsTableTableManager(
+      $_db,
+      $_db.transactionPresets,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _transactionPresetsRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -11575,6 +12780,31 @@ class $$CategoriesTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> transactionPresetsRefs(
+    Expression<bool> Function($$TransactionPresetsTableFilterComposer f) f,
+  ) {
+    final $$TransactionPresetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactionPresets,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionPresetsTableFilterComposer(
+            $db: $db,
+            $table: $db.transactionPresets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -11774,6 +13004,32 @@ class $$CategoriesTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> transactionPresetsRefs<T extends Object>(
+    Expression<T> Function($$TransactionPresetsTableAnnotationComposer a) f,
+  ) {
+    final $$TransactionPresetsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.transactionPresets,
+          getReferencedColumn: (t) => t.categoryId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$TransactionPresetsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.transactionPresets,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$CategoriesTableTableManager
@@ -11793,6 +13049,7 @@ class $$CategoriesTableTableManager
             bool transactionsRefs,
             bool budgetGroupCategoriesRefs,
             bool recurringTransactionsRefs,
+            bool transactionPresetsRefs,
           })
         > {
   $$CategoriesTableTableManager(_$AppDatabase db, $CategoriesTable table)
@@ -11875,6 +13132,7 @@ class $$CategoriesTableTableManager
                 transactionsRefs = false,
                 budgetGroupCategoriesRefs = false,
                 recurringTransactionsRefs = false,
+                transactionPresetsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -11882,6 +13140,7 @@ class $$CategoriesTableTableManager
                     if (transactionsRefs) db.transactions,
                     if (budgetGroupCategoriesRefs) db.budgetGroupCategories,
                     if (recurringTransactionsRefs) db.recurringTransactions,
+                    if (transactionPresetsRefs) db.transactionPresets,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -11949,6 +13208,27 @@ class $$CategoriesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (transactionPresetsRefs)
+                        await $_getPrefetchedData<
+                          Category,
+                          $CategoriesTable,
+                          TransactionPreset
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CategoriesTableReferences
+                              ._transactionPresetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).transactionPresetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.categoryId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -11973,6 +13253,7 @@ typedef $$CategoriesTableProcessedTableManager =
         bool transactionsRefs,
         bool budgetGroupCategoriesRefs,
         bool recurringTransactionsRefs,
+        bool transactionPresetsRefs,
       })
     >;
 typedef $$TransactionsTableCreateCompanionBuilder =
@@ -17958,6 +19239,819 @@ typedef $$CalendarEventsTableProcessedTableManager =
       CalendarEvent,
       PrefetchHooks Function()
     >;
+typedef $$TransactionPresetsTableCreateCompanionBuilder =
+    TransactionPresetsCompanion Function({
+      Value<int> id,
+      Value<String> uuid,
+      Value<String?> name,
+      required String type,
+      required int amount,
+      Value<String?> memo,
+      Value<int?> accountId,
+      Value<int?> categoryId,
+      Value<int?> fromAccountId,
+      Value<int?> toAccountId,
+      Value<String?> tagNames,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+      Value<String?> deletedAt,
+      Value<String> syncStatus,
+    });
+typedef $$TransactionPresetsTableUpdateCompanionBuilder =
+    TransactionPresetsCompanion Function({
+      Value<int> id,
+      Value<String> uuid,
+      Value<String?> name,
+      Value<String> type,
+      Value<int> amount,
+      Value<String?> memo,
+      Value<int?> accountId,
+      Value<int?> categoryId,
+      Value<int?> fromAccountId,
+      Value<int?> toAccountId,
+      Value<String?> tagNames,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+      Value<String?> deletedAt,
+      Value<String> syncStatus,
+    });
+
+final class $$TransactionPresetsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $TransactionPresetsTable,
+          TransactionPreset
+        > {
+  $$TransactionPresetsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AccountsTable _accountIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias(
+        $_aliasNameGenerator(db.transactionPresets.accountId, db.accounts.id),
+      );
+
+  $$AccountsTableProcessedTableManager? get accountId {
+    final $_column = $_itemColumn<int>('account_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
+      db.categories.createAlias(
+        $_aliasNameGenerator(
+          db.transactionPresets.categoryId,
+          db.categories.id,
+        ),
+      );
+
+  $$CategoriesTableProcessedTableManager? get categoryId {
+    final $_column = $_itemColumn<int>('category_id');
+    if ($_column == null) return null;
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $AccountsTable _fromAccountIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias(
+        $_aliasNameGenerator(
+          db.transactionPresets.fromAccountId,
+          db.accounts.id,
+        ),
+      );
+
+  $$AccountsTableProcessedTableManager? get fromAccountId {
+    final $_column = $_itemColumn<int>('from_account_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_fromAccountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $AccountsTable _toAccountIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias(
+        $_aliasNameGenerator(db.transactionPresets.toAccountId, db.accounts.id),
+      );
+
+  $$AccountsTableProcessedTableManager? get toAccountId {
+    final $_column = $_itemColumn<int>('to_account_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_toAccountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TransactionPresetsTableFilterComposer
+    extends Composer<_$AppDatabase, $TransactionPresetsTable> {
+  $$TransactionPresetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get memo => $composableBuilder(
+    column: $table.memo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tagNames => $composableBuilder(
+    column: $table.tagNames,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AccountsTableFilterComposer get accountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableFilterComposer get categoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableFilterComposer get fromAccountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fromAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableFilterComposer get toAccountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.toAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TransactionPresetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TransactionPresetsTable> {
+  $$TransactionPresetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get memo => $composableBuilder(
+    column: $table.memo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tagNames => $composableBuilder(
+    column: $table.tagNames,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AccountsTableOrderingComposer get accountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableOrderingComposer get categoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableOrderingComposer get fromAccountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fromAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableOrderingComposer get toAccountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.toAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TransactionPresetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TransactionPresetsTable> {
+  $$TransactionPresetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get memo =>
+      $composableBuilder(column: $table.memo, builder: (column) => column);
+
+  GeneratedColumn<String> get tagNames =>
+      $composableBuilder(column: $table.tagNames, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$AccountsTableAnnotationComposer get accountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableAnnotationComposer get fromAccountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fromAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableAnnotationComposer get toAccountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.toAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TransactionPresetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TransactionPresetsTable,
+          TransactionPreset,
+          $$TransactionPresetsTableFilterComposer,
+          $$TransactionPresetsTableOrderingComposer,
+          $$TransactionPresetsTableAnnotationComposer,
+          $$TransactionPresetsTableCreateCompanionBuilder,
+          $$TransactionPresetsTableUpdateCompanionBuilder,
+          (TransactionPreset, $$TransactionPresetsTableReferences),
+          TransactionPreset,
+          PrefetchHooks Function({
+            bool accountId,
+            bool categoryId,
+            bool fromAccountId,
+            bool toAccountId,
+          })
+        > {
+  $$TransactionPresetsTableTableManager(
+    _$AppDatabase db,
+    $TransactionPresetsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TransactionPresetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TransactionPresetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TransactionPresetsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<int> amount = const Value.absent(),
+                Value<String?> memo = const Value.absent(),
+                Value<int?> accountId = const Value.absent(),
+                Value<int?> categoryId = const Value.absent(),
+                Value<int?> fromAccountId = const Value.absent(),
+                Value<int?> toAccountId = const Value.absent(),
+                Value<String?> tagNames = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<String?> deletedAt = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+              }) => TransactionPresetsCompanion(
+                id: id,
+                uuid: uuid,
+                name: name,
+                type: type,
+                amount: amount,
+                memo: memo,
+                accountId: accountId,
+                categoryId: categoryId,
+                fromAccountId: fromAccountId,
+                toAccountId: toAccountId,
+                tagNames: tagNames,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                Value<String?> name = const Value.absent(),
+                required String type,
+                required int amount,
+                Value<String?> memo = const Value.absent(),
+                Value<int?> accountId = const Value.absent(),
+                Value<int?> categoryId = const Value.absent(),
+                Value<int?> fromAccountId = const Value.absent(),
+                Value<int?> toAccountId = const Value.absent(),
+                Value<String?> tagNames = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<String?> deletedAt = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+              }) => TransactionPresetsCompanion.insert(
+                id: id,
+                uuid: uuid,
+                name: name,
+                type: type,
+                amount: amount,
+                memo: memo,
+                accountId: accountId,
+                categoryId: categoryId,
+                fromAccountId: fromAccountId,
+                toAccountId: toAccountId,
+                tagNames: tagNames,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TransactionPresetsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                accountId = false,
+                categoryId = false,
+                fromAccountId = false,
+                toAccountId = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (accountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.accountId,
+                                    referencedTable:
+                                        $$TransactionPresetsTableReferences
+                                            ._accountIdTable(db),
+                                    referencedColumn:
+                                        $$TransactionPresetsTableReferences
+                                            ._accountIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (categoryId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.categoryId,
+                                    referencedTable:
+                                        $$TransactionPresetsTableReferences
+                                            ._categoryIdTable(db),
+                                    referencedColumn:
+                                        $$TransactionPresetsTableReferences
+                                            ._categoryIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (fromAccountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.fromAccountId,
+                                    referencedTable:
+                                        $$TransactionPresetsTableReferences
+                                            ._fromAccountIdTable(db),
+                                    referencedColumn:
+                                        $$TransactionPresetsTableReferences
+                                            ._fromAccountIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (toAccountId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.toAccountId,
+                                    referencedTable:
+                                        $$TransactionPresetsTableReferences
+                                            ._toAccountIdTable(db),
+                                    referencedColumn:
+                                        $$TransactionPresetsTableReferences
+                                            ._toAccountIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$TransactionPresetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TransactionPresetsTable,
+      TransactionPreset,
+      $$TransactionPresetsTableFilterComposer,
+      $$TransactionPresetsTableOrderingComposer,
+      $$TransactionPresetsTableAnnotationComposer,
+      $$TransactionPresetsTableCreateCompanionBuilder,
+      $$TransactionPresetsTableUpdateCompanionBuilder,
+      (TransactionPreset, $$TransactionPresetsTableReferences),
+      TransactionPreset,
+      PrefetchHooks Function({
+        bool accountId,
+        bool categoryId,
+        bool fromAccountId,
+        bool toAccountId,
+      })
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -17987,4 +20081,6 @@ class $AppDatabaseManager {
       $$NoteChecklistItemsTableTableManager(_db, _db.noteChecklistItems);
   $$CalendarEventsTableTableManager get calendarEvents =>
       $$CalendarEventsTableTableManager(_db, _db.calendarEvents);
+  $$TransactionPresetsTableTableManager get transactionPresets =>
+      $$TransactionPresetsTableTableManager(_db, _db.transactionPresets);
 }

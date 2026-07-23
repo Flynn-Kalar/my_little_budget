@@ -5,7 +5,7 @@ void main() {
   group('SupabaseBackupSettings', () {
     test('normalizes whitespace and path prefix', () {
       final settings = const SupabaseBackupSettings(
-        url: ' https://example.supabase.co ',
+        url: ' https://example.supabase.co/ ',
         anonKey: ' key ',
         bucket: ' backups ',
         authEmail: ' user@example.com ',

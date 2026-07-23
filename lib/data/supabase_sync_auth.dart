@@ -184,7 +184,9 @@ class SupabaseSyncAuthService {
 
     final stored = await _tokenStore.read();
     if (stored == null ||
-        (stored.projectUrl.isNotEmpty && stored.projectUrl != normalized.url)) {
+        (stored.projectUrl.isNotEmpty &&
+            SupabaseBackupSettings.normalizeProjectUrl(stored.projectUrl) !=
+                normalized.url)) {
       throw const AuthException(
         'Supabase 이메일 로그인 세션이 없습니다. 이메일과 비밀번호를 입력한 뒤 설정 저장을 눌러주세요.',
       );

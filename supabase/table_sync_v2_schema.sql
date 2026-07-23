@@ -126,6 +126,7 @@ declare
     'mlb_monthly_income',
     'mlb_investments',
     'mlb_recurring_transactions',
+    'mlb_transaction_presets',
     'mlb_tags',
     'mlb_calendar_events'
   ];

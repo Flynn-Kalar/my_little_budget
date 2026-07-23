@@ -37,7 +37,7 @@ class SupabaseBackupSettings {
 
   SupabaseBackupSettings normalized() {
     return SupabaseBackupSettings(
-      url: url.trim(),
+      url: normalizeProjectUrl(url),
       anonKey: anonKey.trim(),
       bucket: bucket.trim(),
       authEmail: authEmail.trim(),
@@ -73,6 +73,14 @@ class SupabaseBackupSettings {
     final trimmed = value.trim();
     if (trimmed.isEmpty) return defaultPathPrefix;
     return trimmed.split('/').where((part) => part.trim().isNotEmpty).join('/');
+  }
+
+  static String normalizeProjectUrl(String value) {
+    var normalized = value.trim();
+    while (normalized.endsWith('/')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    return normalized;
   }
 }
 

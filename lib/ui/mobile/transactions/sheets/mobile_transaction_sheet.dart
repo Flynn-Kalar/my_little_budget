@@ -5,10 +5,12 @@ import '../../../../core/date.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
+import '../../../../data/daos/transaction_presets_dao.dart';
 import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/providers.dart';
 import '../../../../features/transactions/validation.dart';
+import '../../../../features/settings/providers.dart';
 import '../../mobile_widgets.dart';
 
 final _quickInputTagsProvider = FutureProvider.autoDispose<List<Tag>>(
@@ -112,6 +114,62 @@ class _MobileTransactionSheetState
   Future<void> _pickTime() async {
     final picked = await showTimePicker(context: context, initialTime: _time);
     if (picked != null) setState(() => _time = picked);
+  }
+
+  Future<void> _pickPreset() async {
+    final items = await ref.read(transactionPresetItemsProvider.future);
+    if (!mounted) return;
+    final item = await showModalBottomSheet<TransactionPresetListItem>(
+      context: context,
+      useSafeArea: true,
+      builder: (pickerContext) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            '프리셋 불러오기',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            const ListTile(title: Text('저장된 프리셋이 없습니다.'))
+          else
+            for (final item in items)
+              ListTile(
+                enabled: item.isUsable,
+                leading: Icon(
+                  item.isUsable
+                      ? Icons.bookmark_outline
+                      : Icons.warning_amber_outlined,
+                ),
+                title: Text(item.displayName),
+                subtitle: Text(
+                  '${formatKRW(item.preset.amount)}'
+                  '${item.isUsable ? '' : ' · 사용 불가'}',
+                ),
+                onTap: item.isUsable
+                    ? () => Navigator.pop(pickerContext, item)
+                    : null,
+              ),
+        ],
+      ),
+    );
+    if (item == null || !mounted) return;
+    final now = DateTime.now();
+    setState(() {
+      final draft = item.toDraft();
+      _type = draft.type;
+      _date = now;
+      _time = TimeOfDay.fromDateTime(now);
+      _accountId = draft.accountId;
+      _categoryId = draft.categoryId;
+      _fromAccountId = draft.fromAccountId;
+      _toAccountId = draft.toAccountId;
+      _amount.text = draft.amount.toString();
+      _memo.text = draft.memo ?? '';
+      _tagNames
+        ..clear()
+        ..addAll(draft.tagNames);
+    });
   }
 
   Future<void> _save() async {
@@ -228,6 +286,15 @@ class _MobileTransactionSheetState
               _isDuplicate ? '거래 복사' : (_isEdit ? '거래 수정' : '거래 추가'),
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
+            if (!_isEdit) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key: const ValueKey('mobile-transaction-preset-button'),
+                onPressed: _busy ? null : _pickPreset,
+                icon: const Icon(Icons.bookmarks_outlined),
+                label: const Text('프리셋 불러오기'),
+              ),
+            ],
             const SizedBox(height: 16),
             SegmentedButton<String>(
               segments: const [

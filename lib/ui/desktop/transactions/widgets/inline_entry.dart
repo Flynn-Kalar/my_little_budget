@@ -7,11 +7,15 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
+import '../../../../features/presets/validation.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 import 'form_fields.dart';
 
 class InlineEntry extends ConsumerStatefulWidget {
-  const InlineEntry({super.key});
+  const InlineEntry({super.key, this.preset, this.presetRevision = 0});
+
+  final TransactionPresetDraft? preset;
+  final int presetRevision;
 
   @override
   ConsumerState<InlineEntry> createState() => _InlineEntryState();
@@ -48,6 +52,35 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
     super.initState();
     _dateFocus.addListener(_handleDateFocusChanged);
     _timeFocus.addListener(_handleTimeFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant InlineEntry oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.preset != null &&
+        widget.presetRevision != oldWidget.presetRevision) {
+      _applyPreset(widget.preset!);
+    }
+  }
+
+  void _applyPreset(TransactionPresetDraft preset) {
+    final now = DateTime.now();
+    setState(() {
+      _type = preset.type;
+      _date = now;
+      _dateCtrl.text = toDateKey(now);
+      _timeCtrl.text = nowTime();
+      _accountId = preset.accountId;
+      _categoryId = preset.categoryId;
+      _fromAccountId = preset.fromAccountId;
+      _toAccountId = preset.toAccountId;
+      _amountCtrl.text = preset.amount.toString();
+      _memoCtrl.text = preset.memo ?? '';
+      _tags = List<String>.from(preset.tagNames);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusFirstField();
+    });
   }
 
   @override

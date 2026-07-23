@@ -66,6 +66,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     path: '/settings/recurring',
                   ),
                   _SettingsCard(
+                    icon: Icons.bookmarks_outlined,
+                    title: '내역 프리셋',
+                    subtitle: '자주 쓰는 거래 내용을 저장하고 빠르게 불러오기',
+                    path: '/settings/presets',
+                  ),
+                  _SettingsCard(
                     icon: Icons.palette_outlined,
                     title: '테마 설정',
                     subtitle: '화면 모드와 주요 색상 토큰 설정',

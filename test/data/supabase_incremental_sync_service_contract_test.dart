@@ -91,7 +91,7 @@ void main() {
   });
 
   test(
-    'an edit during upload survives the stale ACK and uploads next',
+    'an edit during upload survives the stale ACK and retries in the same run',
     () async {
       final db = await _openDatabase();
       addTearDown(db.close);
@@ -116,20 +116,46 @@ void main() {
       final firstResult = await firstPush;
       final newerEntry = await local.currentEntry('tags', uuid);
       expect(firstResult.isOk, isTrue, reason: firstResult.error);
-      expect(firstResult.uploaded, 0);
-      expect(newerEntry, isNotNull);
-      expect(newerEntry!.generation, 2);
-      expect(await _syncStatus(db, 'tags', uuid), syncStatusPending);
-      expect(remote.upsertCalls.single.payload['name'], 'first-name');
+      expect(firstResult.uploaded, 1);
+      expect(newerEntry, isNull);
+      expect(await _syncStatus(db, 'tags', uuid), syncStatusSynced);
+      expect(remote.upsertCalls.first.payload['name'], 'first-name');
+      expect(remote.upsertCalls.last.payload['name'], 'second-name');
 
       final secondResult = await service.pushPending(_settings);
 
       expect(secondResult.isOk, isTrue, reason: secondResult.error);
-      expect(secondResult.uploaded, 1);
+      expect(secondResult.uploaded, 0);
       expect(await local.currentEntry('tags', uuid), isNull);
-      expect(remote.upsertCalls.last.payload['name'], 'second-name');
     },
   );
+
+  test('a new edit jumps ahead of an active full-sync backlog', () async {
+    final db = await _openDatabase();
+    addTearDown(db.close);
+    await _markAllSyncedAndClearOutbox(db);
+    final remote = _FakeSupabaseSyncGateway();
+    final service = SupabaseIncrementalSyncService(
+      local: LocalSyncStore(db),
+      remote: remote,
+      uploadChunkSize: 1,
+    );
+    await db.tagsDao.createTag('older-one', '#111111');
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await db.tagsDao.createTag('older-two', '#222222');
+    final release = Completer<void>();
+    final started = remote.blockNextUpsert(release);
+
+    final push = service.pushPending(_settings);
+    await started;
+    await db.tagsDao.createTag('new-user-edit', '#333333');
+    release.complete();
+
+    final result = await push;
+
+    expect(result.isOk, isTrue, reason: result.error);
+    expect(remote.upsertCalls[1].payload['name'], 'new-user-edit');
+  });
 
   test(
     'bootstrap merges random-UUID seed rows by natural key and then uses a cursor',

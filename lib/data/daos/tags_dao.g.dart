@@ -9,6 +9,8 @@ mixin _$TagsDaoMixin on DatabaseAccessor<AppDatabase> {
   $CategoriesTable get categories => attachedDatabase.categories;
   $TransactionsTable get transactions => attachedDatabase.transactions;
   $TransactionTagsTable get transactionTags => attachedDatabase.transactionTags;
+  $TransactionPresetsTable get transactionPresets =>
+      attachedDatabase.transactionPresets;
   TagsDaoManager get managers => TagsDaoManager(this);
 }
 
@@ -27,5 +29,10 @@ class TagsDaoManager {
       $$TransactionTagsTableTableManager(
         _db.attachedDatabase,
         _db.transactionTags,
+      );
+  $$TransactionPresetsTableTableManager get transactionPresets =>
+      $$TransactionPresetsTableTableManager(
+        _db.attachedDatabase,
+        _db.transactionPresets,
       );
 }

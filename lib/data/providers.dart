@@ -10,6 +10,7 @@ import 'daos/investments_dao.dart';
 import 'daos/notes_dao.dart';
 import 'daos/recurring_dao.dart';
 import 'daos/tags_dao.dart';
+import 'daos/transaction_presets_dao.dart';
 import 'daos/transactions_dao.dart';
 import 'database.dart';
 import 'local_sync_store.dart';
@@ -62,6 +63,10 @@ final categoriesDaoProvider = Provider<CategoriesDao>(
 
 final tagsDaoProvider = Provider<TagsDao>(
   (ref) => ref.watch(appDatabaseProvider).tagsDao,
+);
+
+final transactionPresetsDaoProvider = Provider<TransactionPresetsDao>(
+  (ref) => ref.watch(appDatabaseProvider).transactionPresetsDao,
 );
 
 final investmentsDaoProvider = Provider<InvestmentsDao>(

@@ -15,6 +15,7 @@ const localSyncTableNames = <String>[
   'monthly_income',
   'investments',
   'recurring_transactions',
+  'transaction_presets',
   'tags',
   'calendar_events',
 ];

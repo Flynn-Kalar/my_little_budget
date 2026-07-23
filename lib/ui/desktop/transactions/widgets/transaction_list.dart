@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../color_hex.dart';
+import '../../settings/widgets/transaction_preset_dialog.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 import 'transaction_edit_dialog.dart';
 
@@ -644,6 +645,8 @@ class _Row extends ConsumerWidget {
                         TransactionEditDialog.show(context, row);
                       } else if (value == 'copy') {
                         TransactionEditDialog.showDuplicate(context, row);
+                      } else if (value == 'preset') {
+                        TransactionPresetDialog.show(context, source: row);
                       } else if (value == 'delete') {
                         _confirmAndDelete(context, ref);
                       }
@@ -651,6 +654,10 @@ class _Row extends ConsumerWidget {
                     itemBuilder: (context) => [
                       const PopupMenuItem(value: 'edit', child: Text('수정')),
                       const PopupMenuItem(value: 'copy', child: Text('복사')),
+                      const PopupMenuItem(
+                        value: 'preset',
+                        child: Text('프리셋으로 저장'),
+                      ),
                       const PopupMenuDivider(),
                       PopupMenuItem(
                         value: 'delete',

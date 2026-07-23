@@ -42,13 +42,26 @@ class LocalSyncStore {
     }
   }
 
-  Future<List<SyncOutboxEntry>> pendingEntries() async {
-    final rows = await _db.customSelect('''
+  Future<List<SyncOutboxEntry>> pendingEntries({int? limit}) async {
+    final rows = await _db
+        .customSelect(
+          '''
 SELECT entity, uuid, operation, generation, changed_at, tombstone_payload
 FROM sync_outbox
-ORDER BY changed_at, entity, uuid
-''').get();
+ORDER BY changed_at DESC, entity, uuid
+${limit == null ? '' : 'LIMIT ?'}
+''',
+          variables: [if (limit != null) Variable<int>(limit)],
+        )
+        .get();
     return rows.map(_outboxFromRow).toList(growable: false);
+  }
+
+  Future<int> pendingEntryCount() async {
+    final row = await _db
+        .customSelect('SELECT COUNT(*) AS count FROM sync_outbox')
+        .getSingle();
+    return row.read<int>('count');
   }
 
   Future<SyncOutboxEntry?> currentEntry(String entity, String uuid) async {
@@ -155,6 +168,7 @@ WHERE uuid = ?
         );
         break;
       case 'recurring_transactions':
+      case 'transaction_presets':
         payload['account_uuid'] = await _uuidForId(
           'accounts',
           row.data['account_id'] as int?,
@@ -391,6 +405,7 @@ WHERE uuid = ?
         );
         break;
       case 'recurring_transactions':
+      case 'transaction_presets':
         values['account_id'] = await _idForUuid(
           'accounts',
           payload['account_uuid'] as String?,
@@ -659,6 +674,7 @@ const _primaryKeys = <String, String>{
   'monthly_income': 'month',
   'investments': 'id',
   'recurring_transactions': 'id',
+  'transaction_presets': 'id',
   'tags': 'id',
   'calendar_events': 'id',
 };
@@ -737,6 +753,14 @@ const _payloadColumns = <String, List<String>>{
     'active',
     'created_at',
   ],
+  'transaction_presets': [
+    'name',
+    'type',
+    'amount',
+    'memo',
+    'tag_names',
+    'created_at',
+  ],
   'tags': [
     'name',
     'color',
@@ -770,6 +794,7 @@ const _boolColumns = <String, Set<String>>{
   'monthly_income': {},
   'investments': {},
   'recurring_transactions': {'active'},
+  'transaction_presets': {},
   'tags': {'is_pinned'},
   'calendar_events': {'all_day', 'notification_enabled'},
 };

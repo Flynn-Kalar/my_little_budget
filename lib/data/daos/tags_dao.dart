@@ -4,12 +4,15 @@ import '../../core/date.dart';
 import '../database.dart';
 import '../sync_metadata.dart';
 import '../tables/tags.dart';
+import '../tables/transaction_presets.dart';
 import '../tables/transactions.dart';
 
 part 'tags_dao.g.dart';
 
 /// SPEC §3.8 / §4.8.3 — 태그 CRUD + 거래-태그 매핑(id 기준).
-@DriftAccessor(tables: [Tags, TransactionTags, Transactions])
+@DriftAccessor(
+  tables: [Tags, TransactionTags, Transactions, TransactionPresets],
+)
 class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   TagsDao(super.db);
 
@@ -93,6 +96,9 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
 
   Future<void> deleteTag(int id) async {
     await transaction(() async {
+      final tag = await (select(
+        tags,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
       final linkedTransactions =
           await (selectOnly(transactionTags)
                 ..addColumns([transactionTags.transactionId])
@@ -108,6 +114,9 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
             syncStatus: const Value(syncStatusPending),
           ),
         );
+      }
+      if (tag != null) {
+        await db.transactionPresetsDao.removeTagName(tag.name);
       }
       await (delete(tags)..where((t) => t.id.equals(id))).go();
     });

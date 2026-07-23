@@ -14,6 +14,7 @@ import '../ui/desktop/settings/data_management_screen.dart';
 import '../ui/desktop/settings/recurring_screen.dart';
 import '../ui/desktop/settings/tags_screen.dart';
 import '../ui/desktop/settings/theme_screen.dart';
+import '../ui/desktop/settings/transaction_presets_screen.dart';
 import '../ui/desktop/stats/stats_screen.dart';
 import '../ui/desktop/stats/yearly_stats_screen.dart';
 import '../ui/desktop/transactions/transactions_screen.dart';
@@ -31,6 +32,7 @@ import '../ui/mobile/settings/mobile_data_management_screen.dart';
 import '../ui/mobile/settings/mobile_recurring_screen.dart';
 import '../ui/mobile/settings/mobile_tags_screen.dart';
 import '../ui/mobile/settings/mobile_theme_screen.dart';
+import '../ui/mobile/settings/mobile_transaction_presets_screen.dart';
 import '../ui/mobile/shell/mobile_shell.dart';
 import '../ui/mobile/stats/mobile_stats_screen.dart';
 import '../ui/mobile/stats/mobile_yearly_stats_screen.dart';
@@ -159,6 +161,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const ResponsivePage(
                   desktop: RecurringScreen(),
                   mobile: MobileRecurringScreen(),
+                ),
+              ),
+              GoRoute(
+                path: 'presets',
+                builder: (context, state) => const ResponsivePage(
+                  desktop: TransactionPresetsScreen(),
+                  mobile: MobileTransactionPresetsScreen(),
                 ),
               ),
               GoRoute(

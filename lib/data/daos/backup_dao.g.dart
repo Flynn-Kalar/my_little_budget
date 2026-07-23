@@ -20,6 +20,8 @@ mixin _$BackupDaoMixin on DatabaseAccessor<AppDatabase> {
   $NoteChecklistItemsTable get noteChecklistItems =>
       attachedDatabase.noteChecklistItems;
   $CalendarEventsTable get calendarEvents => attachedDatabase.calendarEvents;
+  $TransactionPresetsTable get transactionPresets =>
+      attachedDatabase.transactionPresets;
   BackupDaoManager get managers => BackupDaoManager(this);
 }
 
@@ -66,5 +68,10 @@ class BackupDaoManager {
       $$CalendarEventsTableTableManager(
         _db.attachedDatabase,
         _db.calendarEvents,
+      );
+  $$TransactionPresetsTableTableManager get transactionPresets =>
+      $$TransactionPresetsTableTableManager(
+        _db.attachedDatabase,
+        _db.transactionPresets,
       );
 }

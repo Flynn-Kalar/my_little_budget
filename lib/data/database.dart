@@ -10,6 +10,7 @@ import 'daos/investments_dao.dart';
 import 'daos/notes_dao.dart';
 import 'daos/recurring_dao.dart';
 import 'daos/tags_dao.dart';
+import 'daos/transaction_presets_dao.dart';
 import 'daos/transactions_dao.dart';
 import 'seed.dart';
 import 'sync_metadata.dart';
@@ -23,6 +24,7 @@ import 'tables/note_checklist_items.dart';
 import 'tables/notes.dart';
 import 'tables/recurring_transactions.dart';
 import 'tables/tags.dart';
+import 'tables/transaction_presets.dart';
 import 'tables/transactions.dart';
 
 part 'database.g.dart';
@@ -42,6 +44,7 @@ part 'database.g.dart';
     Notes,
     NoteChecklistItems,
     CalendarEvents,
+    TransactionPresets,
   ],
   daos: [
     AccountsDao,
@@ -54,6 +57,7 @@ part 'database.g.dart';
     BackupDao,
     NotesDao,
     CalendarEventsDao,
+    TransactionPresetsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -61,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -136,6 +140,9 @@ WHERE reminder_at IS NOT NULL
           tableName: 'calendar_events',
           idColumn: 'id',
         );
+      }
+      if (from < 16) {
+        await m.createTable(transactionPresets);
       }
     },
     beforeOpen: (details) async {

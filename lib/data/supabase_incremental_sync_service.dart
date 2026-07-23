@@ -15,6 +15,7 @@ const syncPullOrder = <String>[
   'transactions',
   'investments',
   'recurring_transactions',
+  'transaction_presets',
   'calendar_events',
 ];
 
@@ -108,12 +109,15 @@ class SupabaseIncrementalSyncService {
     required LocalSyncStore local,
     required SupabaseSyncGateway remote,
     this.pageSize = 200,
+    this.uploadChunkSize = 10,
   }) : _local = local,
-       _remote = remote;
+       _remote = remote,
+       assert(uploadChunkSize > 0);
 
   final LocalSyncStore _local;
   final SupabaseSyncGateway _remote;
   final int pageSize;
+  final int uploadChunkSize;
 
   Future<SyncRunResult> synchronize(
     SupabaseBackupSettings settings, {
@@ -235,61 +239,55 @@ class SupabaseIncrementalSyncService {
 
     var uploaded = 0;
     try {
-      final entries = await _local.pendingEntries();
+      var total = await _local.pendingEntryCount();
+      var entries = await _local.pendingEntries(limit: uploadChunkSize);
       if (entries.isEmpty) {
         onProgress?.call(
           const SyncProgress(percent: 100, label: '동기화를 완료했습니다.'),
         );
         return const SyncRunResult();
       }
+      if (total < entries.length) total = entries.length;
 
-      for (var entryIndex = 0; entryIndex < entries.length; entryIndex++) {
-        final entry = entries[entryIndex];
-        final current = await _local.currentEntry(entry.entity, entry.uuid);
-        if (current == null || current.generation != entry.generation) {
-          _reportUploadProgress(
-            onProgress,
-            startPercent,
-            entryIndex + 1,
-            entries.length,
+      var completed = 0;
+      while (entries.isNotEmpty) {
+        for (final entry in entries) {
+          final current = await _local.currentEntry(entry.entity, entry.uuid);
+          if (current == null || current.generation != entry.generation) {
+            completed++;
+            _reportUploadProgress(onProgress, startPercent, completed, total);
+            continue;
+          }
+
+          final payload = entry.isDelete
+              ? entry.tombstonePayload
+              : await _local.buildPayload(entry.entity, entry.uuid);
+          if (!entry.isDelete && payload == null) {
+            throw StateError(
+              '${entry.entity}/${entry.uuid} 업로드 대상 행을 찾을 수 없습니다.',
+            );
+          }
+
+          final accepted = await _remote.upsert(
+            settings: settings.normalized(),
+            entity: entry.entity,
+            uuid: entry.uuid,
+            payload: payload!,
+            deletedAt: entry.isDelete ? entry.changedAt : null,
           );
-          continue;
+          if (accepted.uuid != entry.uuid ||
+              accepted.isDeleted != entry.isDelete) {
+            throw StateError(
+              '${entry.entity}/${entry.uuid} 동기화 결과가 요청 상태와 다릅니다. '
+              'Supabase 동기화 SQL을 최신 버전으로 다시 실행해주세요.',
+            );
+          }
+          if (await _local.acknowledge(entry)) uploaded++;
+          completed++;
+          _reportUploadProgress(onProgress, startPercent, completed, total);
         }
 
-        final payload = entry.isDelete
-            ? entry.tombstonePayload
-            : await _local.buildPayload(entry.entity, entry.uuid);
-        if (!entry.isDelete && payload == null) {
-          _reportUploadProgress(
-            onProgress,
-            startPercent,
-            entryIndex + 1,
-            entries.length,
-          );
-          continue;
-        }
-
-        final accepted = await _remote.upsert(
-          settings: settings.normalized(),
-          entity: entry.entity,
-          uuid: entry.uuid,
-          payload: payload!,
-          deletedAt: entry.isDelete ? entry.changedAt : null,
-        );
-        if (accepted.uuid != entry.uuid ||
-            accepted.isDeleted != entry.isDelete) {
-          throw StateError(
-            '${entry.entity}/${entry.uuid} 동기화 결과가 요청 상태와 다릅니다. '
-            'Supabase 동기화 SQL을 최신 버전으로 다시 실행해주세요.',
-          );
-        }
-        if (await _local.acknowledge(entry)) uploaded++;
-        _reportUploadProgress(
-          onProgress,
-          startPercent,
-          entryIndex + 1,
-          entries.length,
-        );
+        entries = await _local.pendingEntries(limit: uploadChunkSize);
       }
       return SyncRunResult(uploaded: uploaded);
     } catch (error) {
@@ -303,12 +301,14 @@ class SupabaseIncrementalSyncService {
     int completed,
     int total,
   ) {
+    final boundedCompleted = completed.clamp(0, total);
     final percent =
-        startPercent + (completed * (100 - startPercent) / total).round();
+        startPercent +
+        (boundedCompleted * (100 - startPercent) / total).round();
     onProgress?.call(
       SyncProgress(
         percent: percent,
-        label: completed == total
+        label: completed >= total
             ? '동기화를 완료했습니다.'
             : '로컬 데이터 업로드 중 ($completed/$total)',
       ),

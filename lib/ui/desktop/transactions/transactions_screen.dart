@@ -8,6 +8,8 @@ import 'widgets/month_nav.dart';
 import 'widgets/summary_bar.dart';
 import 'widgets/transaction_list.dart';
 import 'widgets/transactions_side_panel.dart';
+import 'widgets/transaction_preset_picker_dialog.dart';
+import '../../../features/presets/validation.dart';
 
 const _contentGap = 24.0;
 const _compactMainColumnWidth = 720.0;
@@ -38,6 +40,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   bool _isHeaderCollapsed = false;
   bool _isFilterExpanded = false;
   final _filterPanelKey = GlobalKey();
+  TransactionPresetDraft? _selectedPreset;
+  int _presetRevision = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +147,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!_isFilterExpanded) Flexible(child: _buildFilterPanel()),
+              if (!_isFilterExpanded) ...[
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: _pickPreset,
+                  icon: const Icon(Icons.bookmarks_outlined, size: 18),
+                  label: const Text('프리셋'),
+                ),
+              ],
             ],
           ),
           if (_isFilterExpanded) ...[
@@ -154,7 +166,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ),
           ],
           const SizedBox(height: 10),
-          const InlineEntry(),
+          InlineEntry(preset: _selectedPreset, presetRevision: _presetRevision),
         ],
         const SizedBox(height: 8),
         const Expanded(child: TransactionList()),
@@ -176,5 +188,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         setState(() => _isFilterExpanded = expanded);
       },
     );
+  }
+
+  Future<void> _pickPreset() async {
+    final item = await TransactionPresetPickerDialog.show(context);
+    if (item == null || !mounted) return;
+    setState(() {
+      _selectedPreset = item.toDraft();
+      _presetRevision++;
+    });
   }
 }

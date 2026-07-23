@@ -48,6 +48,11 @@ class _MobileSettingsScreenState extends ConsumerState<MobileSettingsScreen> {
           path: '/settings/recurring',
         ),
         const _SettingsTile(
+          icon: Icons.bookmarks_outlined,
+          title: '내역 프리셋',
+          path: '/settings/presets',
+        ),
+        const _SettingsTile(
           icon: Icons.palette_outlined,
           title: '테마 설정',
           path: '/settings/theme',

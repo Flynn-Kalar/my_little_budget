@@ -59,11 +59,14 @@ class SupabaseSyncCoordinator {
         TableUpdateQuery.onTableName(table),
     ]);
     _updatesSubscription = _database.tableUpdates(query).listen((_) {
+      if (_debounceTimer == null) {
+        unawaited(pushNow());
+      }
       _debounceTimer?.cancel();
-      _debounceTimer = Timer(
-        const Duration(milliseconds: 250),
-        () => unawaited(pushNow()),
-      );
+      _debounceTimer = Timer(const Duration(milliseconds: 250), () {
+        _debounceTimer = null;
+        unawaited(pushNow());
+      });
     });
   }
 
