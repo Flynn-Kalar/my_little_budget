@@ -9,6 +9,7 @@ import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
+import '../../../shared/amount_input_formatter.dart';
 import '../../../shared/spending_limit_warning.dart';
 import 'form_fields.dart';
 
@@ -49,7 +50,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
   late int? _toAccountId = widget.row.toAccountId;
   late List<String> _tags = widget.row.tags.map((t) => t.name).toList();
   late final _amountCtrl = TextEditingController(
-    text: widget.row.amount.toString(),
+    text: formatAmountInput(widget.row.amount.toString()),
   );
   late final _timeCtrl = TextEditingController(text: widget.row.occurredTime);
   late final _memoCtrl = TextEditingController(text: widget.row.memo ?? '');
@@ -226,6 +227,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
               TextField(
                 controller: _amountCtrl,
                 keyboardType: TextInputType.text,
+                inputFormatters: const [amountInputFormatter],
                 decoration: const InputDecoration(
                   labelText: '금액',
                   isDense: true,

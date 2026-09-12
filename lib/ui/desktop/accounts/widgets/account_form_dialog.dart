@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/accounts_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/accounts/validation.dart';
+import '../../../shared/amount_input_formatter.dart';
 import '../account_refresh.dart';
 import 'color_swatch_picker.dart';
 
@@ -33,10 +34,10 @@ class _State extends ConsumerState<AccountFormDialog> {
     text: widget.account?.name ?? '',
   );
   late final _balanceCtrl = TextEditingController(
-    text: (widget.account?.balance ?? 0).toString(),
+    text: formatAmountInput((widget.account?.balance ?? 0).toString()),
   );
   late final _cardLimitCtrl = TextEditingController(
-    text: widget.account?.cardLimit?.toString() ?? '',
+    text: formatAmountInput(widget.account?.cardLimit?.toString() ?? ''),
   );
   late String _kind = widget.account?.kind ?? 'bank';
   late String _color =
@@ -166,6 +167,7 @@ class _State extends ConsumerState<AccountFormDialog> {
                 TextField(
                   controller: _cardLimitCtrl,
                   keyboardType: TextInputType.number,
+                  inputFormatters: const [amountInputFormatter],
                   decoration: const InputDecoration(
                     labelText: '카드 한도',
                     suffixText: '원',
@@ -179,6 +181,7 @@ class _State extends ConsumerState<AccountFormDialog> {
               TextField(
                 controller: _balanceCtrl,
                 keyboardType: TextInputType.number,
+                inputFormatters: const [amountInputFormatter],
                 decoration: InputDecoration(
                   labelText: _isEditing ? '현재 잔액' : '초기 잔액',
                   isDense: true,

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shell/sidebar_shell.dart';
 import 'package:my_little_budget/features/notes/providers.dart';
-import '../responsive_page.dart';
+import '../../../shell/layout_policy.dart';
 
 class ResponsiveShell extends StatelessWidget {
   const ResponsiveShell({super.key, required this.child});
@@ -15,7 +15,7 @@ class ResponsiveShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= mobileBreakpoint) {
+        if (!usesMobileLayout(constraints.maxWidth)) {
           return SidebarShell(child: child);
         }
         return MobileShell(child: child);

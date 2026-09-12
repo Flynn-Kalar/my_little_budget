@@ -146,7 +146,7 @@ BackupParseResult parseBackup(String jsonString) {
         recurringTransactions: _list(data['recurringTransactions'])
             .map(
               (j) => RecurringTransaction.fromJson(
-                _withSyncFields(_bools(j, const ['active'])),
+                _withSyncFields(_recurringJson(j)),
               ),
             )
             .toList(),
@@ -200,6 +200,13 @@ Map<String, Object?> _tagJson(Map<String, dynamic> m) {
   m['usageCount'] ??= 0;
   m['isPinned'] ??= false;
   return _bools(m, const ['isPinned']);
+}
+
+Map<String, Object?> _recurringJson(Map<String, dynamic> m) {
+  m['includeNonBusinessDays'] ??= true;
+  m['monthlyMode'] ??= 'day';
+  m['nonBusinessDayAdjustment'] ??= 'same';
+  return _bools(m, const ['active', 'includeNonBusinessDays']);
 }
 
 Map<String, Object?> _noteJson(Map<String, dynamic> m) {

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-const mobileBreakpoint = 900.0;
+import '../../shell/layout_policy.dart';
+export '../../shell/layout_policy.dart' show mobileBreakpoint;
 
 class ResponsivePage extends StatelessWidget {
   const ResponsivePage({
@@ -16,7 +17,7 @@ class ResponsivePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return constraints.maxWidth < mobileBreakpoint ? mobile : desktop;
+        return usesMobileLayout(constraints.maxWidth) ? mobile : desktop;
       },
     );
   }

@@ -10,6 +10,7 @@ import '../../../data/providers.dart';
 import '../../../features/budget/logic.dart';
 import '../../../features/budget/validation.dart';
 import 'package:my_little_budget/features/budget/providers.dart';
+import '../../shared/amount_input_formatter.dart';
 import 'widgets/budget_read_only_content.dart';
 
 class BudgetScreen extends ConsumerWidget {
@@ -348,6 +349,7 @@ class _BudgetGroupCreateDialogState
                 controller: _amount,
                 enabled: !_busy,
                 keyboardType: TextInputType.number,
+                inputFormatters: const [amountInputFormatter],
                 decoration: const InputDecoration(
                   labelText: '월 예산 금액',
                   suffixText: '원',
@@ -572,6 +574,7 @@ class _BudgetGroupModeDialogState
                   controller: _amount,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
+                  inputFormatters: const [amountInputFormatter],
                   decoration: const InputDecoration(
                     labelText: '월 예산 금액',
                     suffixText: '원',
@@ -878,13 +881,13 @@ class _BudgetGroupModeEditDialog extends ConsumerStatefulWidget {
 class _BudgetGroupModeEditDialogState
     extends ConsumerState<_BudgetGroupModeEditDialog> {
   late final _amount = TextEditingController(
-    text: widget.row.baseAmount.toString(),
+    text: formatAmountInput(widget.row.baseAmount.toString()),
   );
   late final _percentage = TextEditingController(
     text: widget.row.incomePercentage?.toString() ?? '',
   );
   late final _adjustment = TextEditingController(
-    text: widget.row.adjustment.toString(),
+    text: formatAmountInput(widget.row.adjustment.toString()),
   );
   late final Set<int> _categoryIds;
   late int? _accountId = widget.row.accountId;
@@ -1002,6 +1005,7 @@ class _BudgetGroupModeEditDialogState
                   controller: _amount,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
+                  inputFormatters: const [amountInputFormatter],
                   decoration: const InputDecoration(
                     labelText: '월 예산 금액',
                     suffixText: '원',
@@ -1039,6 +1043,7 @@ class _BudgetGroupModeEditDialogState
                   controller: _adjustment,
                   enabled: !_busy,
                   keyboardType: TextInputType.number,
+                  inputFormatters: const [amountInputFormatter],
                   decoration: const InputDecoration(
                     labelText: '조정액',
                     suffixText: '원',
@@ -1104,7 +1109,9 @@ class _ExpectedIncomeState extends ConsumerState<_ExpectedIncomeDialog> {
   @override
   void initState() {
     super.initState();
-    _income = TextEditingController(text: widget.income.toString());
+    _income = TextEditingController(
+      text: formatAmountInput(widget.income.toString()),
+    );
   }
 
   @override
@@ -1137,6 +1144,7 @@ class _ExpectedIncomeState extends ConsumerState<_ExpectedIncomeDialog> {
           controller: _income,
           autofocus: true,
           keyboardType: TextInputType.number,
+          inputFormatters: const [amountInputFormatter],
           decoration: const InputDecoration(
             labelText: '월 예상 수입',
             suffixText: '원',
@@ -1179,8 +1187,12 @@ class _BudgetGroupEditDialogState
   @override
   void initState() {
     super.initState();
-    _amount = TextEditingController(text: widget.row.baseAmount.toString());
-    _adjustment = TextEditingController(text: widget.row.adjustment.toString());
+    _amount = TextEditingController(
+      text: formatAmountInput(widget.row.baseAmount.toString()),
+    );
+    _adjustment = TextEditingController(
+      text: formatAmountInput(widget.row.adjustment.toString()),
+    );
     _carryForward = widget.row.carryForward;
   }
 
@@ -1245,6 +1257,7 @@ class _BudgetGroupEditDialogState
               controller: _amount,
               enabled: _canEditAmount && !_busy,
               keyboardType: TextInputType.number,
+              inputFormatters: const [amountInputFormatter],
               decoration: const InputDecoration(
                 labelText: '기준 예산',
                 suffixText: '원',
@@ -1255,6 +1268,7 @@ class _BudgetGroupEditDialogState
               controller: _adjustment,
               enabled: widget.row.accountId == null && !_busy,
               keyboardType: TextInputType.number,
+              inputFormatters: const [amountInputFormatter],
               decoration: const InputDecoration(
                 labelText: '조정액',
                 suffixText: '원',

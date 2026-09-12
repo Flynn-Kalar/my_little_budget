@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/date.dart';
 import '../../core/money.dart';
 import '../../core/theme/app_theme.dart';
+import '../shared/amount_input_formatter.dart';
 
 double mobileBottomPadding(BuildContext context, {double spacing = 0}) {
   final mediaQuery = MediaQuery.of(context);
@@ -357,7 +358,7 @@ class EmptyMobileCard extends StatelessWidget {
   }
 }
 
-class MobileAmountField extends StatelessWidget {
+class MobileAmountField extends StatefulWidget {
   const MobileAmountField({
     super.key,
     required this.controller,
@@ -377,39 +378,77 @@ class MobileAmountField extends StatelessWidget {
   final String? helperText;
   final VoidCallback? onCompleted;
 
+  @override
+  State<MobileAmountField> createState() => _MobileAmountFieldState();
+}
+
+class _MobileAmountFieldState extends State<MobileAmountField> {
+  bool _formatting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_formatAmount);
+    _formatAmount();
+  }
+
+  @override
+  void didUpdateWidget(covariant MobileAmountField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    oldWidget.controller.removeListener(_formatAmount);
+    widget.controller.addListener(_formatAmount);
+    _formatAmount();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_formatAmount);
+    super.dispose();
+  }
+
+  void _formatAmount() {
+    if (_formatting) return;
+    final formatted = formatAmountEditingValue(widget.controller.value);
+    if (formatted == widget.controller.value) return;
+    _formatting = true;
+    widget.controller.value = formatted;
+    _formatting = false;
+  }
+
   Future<void> _openCalculator(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final result = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => _MobileAmountCalculatorPage(
-          initialValue: controller.text,
-          title: label,
+          initialValue: widget.controller.text,
+          title: widget.label,
         ),
       ),
     );
     if (!context.mounted || result == null) return;
-    controller.value = TextEditingValue(
+    widget.controller.value = TextEditingValue(
       text: result,
       selection: TextSelection.collapsed(offset: result.length),
     );
-    onCompleted?.call();
+    widget.onCompleted?.call();
   }
 
   @override
   Widget build(BuildContext context) {
     return TextField(
-      key: fieldKey,
-      controller: controller,
-      enabled: enabled,
+      key: widget.fieldKey,
+      controller: widget.controller,
+      enabled: widget.enabled,
       readOnly: true,
       showCursor: false,
       keyboardType: TextInputType.none,
-      onTap: enabled ? () => _openCalculator(context) : null,
+      onTap: widget.enabled ? () => _openCalculator(context) : null,
       decoration: InputDecoration(
-        labelText: label,
-        suffixText: suffixText,
-        helperText: helperText,
+        labelText: widget.label,
+        suffixText: widget.suffixText,
+        helperText: widget.helperText,
         border: const OutlineInputBorder(),
       ),
     );
@@ -432,7 +471,9 @@ class _MobileAmountCalculatorPage extends StatefulWidget {
 
 class _MobileAmountCalculatorPageState
     extends State<_MobileAmountCalculatorPage> {
-  late final _controller = TextEditingController(text: widget.initialValue);
+  late final _controller = TextEditingController(
+    text: formatAmountInput(widget.initialValue),
+  );
 
   @override
   void dispose() {
@@ -443,7 +484,7 @@ class _MobileAmountCalculatorPageState
   void _complete() {
     final text = _controller.text.trim();
     if (text.isNotEmpty) {
-      final result = parseKRW(text).toString();
+      final result = formatAmountInput(parseKRW(text).toString());
       _controller.value = TextEditingValue(
         text: result,
         selection: TextSelection.collapsed(offset: result.length),
@@ -584,7 +625,9 @@ class _MobileAmountKeypad extends StatelessWidget {
         _backspace();
       case _MobileAmountKeyAction.done:
         final text = controller.text.trim();
-        if (text.isNotEmpty) _replaceAll(parseKRW(text).toString());
+        if (text.isNotEmpty) {
+          _replaceAll(formatAmountInput(parseKRW(text).toString()));
+        }
         onDone();
     }
   }
@@ -598,10 +641,12 @@ class _MobileAmountKeypad extends StatelessWidget {
     final normalizedStart = start.clamp(0, text.length).toInt();
     final normalizedEnd = end.clamp(0, text.length).toInt();
     final nextText = text.replaceRange(normalizedStart, normalizedEnd, value);
-    controller.value = TextEditingValue(
-      text: nextText,
-      selection: TextSelection.collapsed(
-        offset: normalizedStart + value.length,
+    controller.value = formatAmountEditingValue(
+      TextEditingValue(
+        text: nextText,
+        selection: TextSelection.collapsed(
+          offset: normalizedStart + value.length,
+        ),
       ),
     );
   }
@@ -614,9 +659,11 @@ class _MobileAmountKeypad extends StatelessWidget {
     if (selection.isValid && !selection.isCollapsed) {
       final start = selection.start.clamp(0, text.length).toInt();
       final end = selection.end.clamp(0, text.length).toInt();
-      controller.value = TextEditingValue(
-        text: text.replaceRange(start, end, ''),
-        selection: TextSelection.collapsed(offset: start),
+      controller.value = formatAmountEditingValue(
+        TextEditingValue(
+          text: text.replaceRange(start, end, ''),
+          selection: TextSelection.collapsed(offset: start),
+        ),
       );
       return;
     }
@@ -624,9 +671,14 @@ class _MobileAmountKeypad extends StatelessWidget {
     final cursor = selection.isValid ? selection.start : text.length;
     final offset = cursor.clamp(0, text.length).toInt();
     if (offset == 0) return;
-    controller.value = TextEditingValue(
-      text: text.replaceRange(offset - 1, offset, ''),
-      selection: TextSelection.collapsed(offset: offset - 1),
+    final removeStart = text[offset - 1] == ',' && offset > 1
+        ? offset - 2
+        : offset - 1;
+    controller.value = formatAmountEditingValue(
+      TextEditingValue(
+        text: text.replaceRange(removeStart, offset, ''),
+        selection: TextSelection.collapsed(offset: removeStart),
+      ),
     );
   }
 

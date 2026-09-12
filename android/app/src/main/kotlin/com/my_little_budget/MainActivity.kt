@@ -17,6 +17,7 @@ import java.io.File
 class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
     private var soundResult: MethodChannel.Result? = null
+    private var fullScreenPermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -54,10 +55,7 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     }
                     "canUseFullScreenIntent" -> result.success(canUseFullScreenIntent())
-                    "requestFullScreenIntentPermission" -> {
-                        requestFullScreenIntentPermission()
-                        result.success(null)
-                    }
+                    "requestFullScreenIntentPermission" -> requestFullScreenIntentPermission(result)
                     else -> result.notImplemented()
                 }
             }
@@ -90,6 +88,11 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Deprecated in Android")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_FULL_SCREEN_INTENT) {
+            fullScreenPermissionResult?.success(null)
+            fullScreenPermissionResult = null
+            return
+        }
         if (requestCode != REQUEST_RINGTONE) return
         val result = soundResult ?: return
         soundResult = null
@@ -140,19 +143,32 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun requestFullScreenIntentPermission() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || canUseFullScreenIntent()) return
-        runCatching {
-            startActivity(
+    private fun requestFullScreenIntentPermission(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || canUseFullScreenIntent()) {
+            result.success(null)
+            return
+        }
+        if (fullScreenPermissionResult != null) {
+            result.error("permission_busy", "전체 화면 알람 권한 설정이 이미 열려 있습니다.", null)
+            return
+        }
+        fullScreenPermissionResult = result
+        try {
+            startActivityForResult(
                 Intent(
                     Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
                     Uri.parse("package:$packageName"),
                 ),
+                REQUEST_FULL_SCREEN_INTENT,
             )
+        } catch (_: Exception) {
+            fullScreenPermissionResult = null
+            result.success(null)
         }
     }
 
     companion object {
         private const val REQUEST_RINGTONE = 9301
+        private const val REQUEST_FULL_SCREEN_INTENT = 9302
     }
 }

@@ -8,6 +8,7 @@ import '../sync_metadata.dart';
 /// 반복 거래 템플릿. type ∈ {income, expense, transfer} (adjustment 없음).
 ///   monthly: day_of_month 1~31 (그 달에 없으면 마지막 날로 폴백)
 ///   weekly:  day_of_week 0(일) ~ 6(토)
+///   daily:   매일. include_non_business_days=false 면 주말·공휴일 제외
 /// last_generated_on 이후 ~ horizon 까지 자동 backfill. /transactions 진입 시 매번 호출. 멱등.
 /// 자산/카테고리 삭제 시 set null → 실질 비활성.
 @DataClassName('RecurringTransaction')
@@ -46,10 +47,16 @@ class RecurringTransactions extends Table {
     onDelete: KeyAction.setNull,
   )();
   TextColumn get frequency => text().customConstraint(
-    "NOT NULL CHECK (frequency IN ('monthly','weekly'))",
+    "NOT NULL CHECK (frequency IN ('monthly','weekly','daily'))",
   )();
   IntColumn get dayOfMonth => integer().nullable()();
   IntColumn get dayOfWeek => integer().nullable()();
+  TextColumn get monthlyMode => text().withDefault(const Constant('day'))();
+  IntColumn get weekOfMonth => integer().nullable()();
+  TextColumn get nonBusinessDayAdjustment =>
+      text().withDefault(const Constant('same'))();
+  BoolColumn get includeNonBusinessDays =>
+      boolean().withDefault(const Constant(true))();
   TextColumn get occurredTime => text().withDefault(const Constant('00:00'))();
   TextColumn get startDate => text()();
   TextColumn get endDate => text().nullable()();
@@ -82,11 +89,24 @@ class RecurringTransactions extends Table {
             AND to_account_id IS NOT NULL
             AND from_account_id <> to_account_id)
         )''',
-    // cadence: monthly 면 day_of_month 만, weekly 면 day_of_week 만.
+    // cadence: monthly 는 N일 또는 N주차 N요일, daily 는 특정 일을 쓰지 않는다.
     '''CHECK (
-          (frequency = 'monthly' AND day_of_month BETWEEN 1 AND 31 AND day_of_week IS NULL)
+          (frequency = 'monthly' AND monthly_mode = 'day'
+            AND day_of_month BETWEEN 1 AND 31
+            AND day_of_week IS NULL AND week_of_month IS NULL)
           OR
-          (frequency = 'weekly'  AND day_of_week  BETWEEN 0 AND 6  AND day_of_month IS NULL)
+          (frequency = 'monthly' AND monthly_mode = 'nth_weekday'
+            AND day_of_month IS NULL
+            AND day_of_week BETWEEN 0 AND 6
+            AND week_of_month BETWEEN 1 AND 5)
+          OR
+          (frequency = 'weekly' AND day_of_week BETWEEN 0 AND 6
+            AND day_of_month IS NULL AND week_of_month IS NULL)
+          OR
+          (frequency = 'daily' AND day_of_month IS NULL
+            AND day_of_week IS NULL AND week_of_month IS NULL)
         )''',
+    "CHECK (monthly_mode IN ('day','nth_weekday'))",
+    "CHECK (non_business_day_adjustment IN ('same','previous','next'))",
   ];
 }

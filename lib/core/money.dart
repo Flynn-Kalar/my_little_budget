@@ -9,6 +9,27 @@ final NumberFormat _krw = NumberFormat.currency(
 
 String formatKRW(int amount) => _krw.format(amount);
 
+/// 금액 입력 중 숫자 토큰마다 천 단위 구분점을 표시한다.
+///
+/// 사칙연산 기호와 괄호는 유지하므로 `1000+2000×3`은
+/// `1,000+2,000×3`으로 표시된다.
+String formatAmountInput(String input) {
+  final withoutSeparators = input.replaceAll(',', '');
+  return withoutSeparators.replaceAllMapped(RegExp(r'\d+(?:\.\d*)?'), (match) {
+    final token = match.group(0)!;
+    final decimalIndex = token.indexOf('.');
+    final integer = decimalIndex == -1
+        ? token
+        : token.substring(0, decimalIndex);
+    final decimal = decimalIndex == -1 ? '' : token.substring(decimalIndex);
+    final grouped = integer.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
+    return '$grouped$decimal';
+  });
+}
+
 /// KRW 금액 입력. 콤마/원 표기를 허용하고 사칙연산 식은 계산한다. 빈 입력은 0.
 int parseKRW(String input) {
   final expression = input

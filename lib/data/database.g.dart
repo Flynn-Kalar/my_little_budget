@@ -4731,7 +4731,7 @@ class $RecurringTransactionsTable extends RecurringTransactions
     type: DriftSqlType.string,
     requiredDuringInsert: true,
     $customConstraints:
-        'NOT NULL CHECK (frequency IN (\'monthly\',\'weekly\'))',
+        'NOT NULL CHECK (frequency IN (\'monthly\',\'weekly\',\'daily\'))',
   );
   static const VerificationMeta _dayOfMonthMeta = const VerificationMeta(
     'dayOfMonth',
@@ -4755,6 +4755,56 @@ class $RecurringTransactionsTable extends RecurringTransactions
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _monthlyModeMeta = const VerificationMeta(
+    'monthlyMode',
+  );
+  @override
+  late final GeneratedColumn<String> monthlyMode = GeneratedColumn<String>(
+    'monthly_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('day'),
+  );
+  static const VerificationMeta _weekOfMonthMeta = const VerificationMeta(
+    'weekOfMonth',
+  );
+  @override
+  late final GeneratedColumn<int> weekOfMonth = GeneratedColumn<int>(
+    'week_of_month',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nonBusinessDayAdjustmentMeta =
+      const VerificationMeta('nonBusinessDayAdjustment');
+  @override
+  late final GeneratedColumn<String> nonBusinessDayAdjustment =
+      GeneratedColumn<String>(
+        'non_business_day_adjustment',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('same'),
+      );
+  static const VerificationMeta _includeNonBusinessDaysMeta =
+      const VerificationMeta('includeNonBusinessDays');
+  @override
+  late final GeneratedColumn<bool> includeNonBusinessDays =
+      GeneratedColumn<bool>(
+        'include_non_business_days',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("include_non_business_days" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
   static const VerificationMeta _occurredTimeMeta = const VerificationMeta(
     'occurredTime',
   );
@@ -4886,6 +4936,10 @@ class $RecurringTransactionsTable extends RecurringTransactions
     frequency,
     dayOfMonth,
     dayOfWeek,
+    monthlyMode,
+    weekOfMonth,
+    nonBusinessDayAdjustment,
+    includeNonBusinessDays,
     occurredTime,
     startDate,
     endDate,
@@ -4999,6 +5053,42 @@ class $RecurringTransactionsTable extends RecurringTransactions
       context.handle(
         _dayOfWeekMeta,
         dayOfWeek.isAcceptableOrUnknown(data['day_of_week']!, _dayOfWeekMeta),
+      );
+    }
+    if (data.containsKey('monthly_mode')) {
+      context.handle(
+        _monthlyModeMeta,
+        monthlyMode.isAcceptableOrUnknown(
+          data['monthly_mode']!,
+          _monthlyModeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('week_of_month')) {
+      context.handle(
+        _weekOfMonthMeta,
+        weekOfMonth.isAcceptableOrUnknown(
+          data['week_of_month']!,
+          _weekOfMonthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('non_business_day_adjustment')) {
+      context.handle(
+        _nonBusinessDayAdjustmentMeta,
+        nonBusinessDayAdjustment.isAcceptableOrUnknown(
+          data['non_business_day_adjustment']!,
+          _nonBusinessDayAdjustmentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('include_non_business_days')) {
+      context.handle(
+        _includeNonBusinessDaysMeta,
+        includeNonBusinessDays.isAcceptableOrUnknown(
+          data['include_non_business_days']!,
+          _includeNonBusinessDaysMeta,
+        ),
       );
     }
     if (data.containsKey('occurred_time')) {
@@ -5130,6 +5220,22 @@ class $RecurringTransactionsTable extends RecurringTransactions
         DriftSqlType.int,
         data['${effectivePrefix}day_of_week'],
       ),
+      monthlyMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}monthly_mode'],
+      )!,
+      weekOfMonth: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}week_of_month'],
+      ),
+      nonBusinessDayAdjustment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}non_business_day_adjustment'],
+      )!,
+      includeNonBusinessDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}include_non_business_days'],
+      )!,
       occurredTime: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}occurred_time'],
@@ -5194,6 +5300,10 @@ class RecurringTransaction extends DataClass
   final String frequency;
   final int? dayOfMonth;
   final int? dayOfWeek;
+  final String monthlyMode;
+  final int? weekOfMonth;
+  final String nonBusinessDayAdjustment;
+  final bool includeNonBusinessDays;
   final String occurredTime;
   final String startDate;
   final String? endDate;
@@ -5218,6 +5328,10 @@ class RecurringTransaction extends DataClass
     required this.frequency,
     this.dayOfMonth,
     this.dayOfWeek,
+    required this.monthlyMode,
+    this.weekOfMonth,
+    required this.nonBusinessDayAdjustment,
+    required this.includeNonBusinessDays,
     required this.occurredTime,
     required this.startDate,
     this.endDate,
@@ -5259,6 +5373,14 @@ class RecurringTransaction extends DataClass
     if (!nullToAbsent || dayOfWeek != null) {
       map['day_of_week'] = Variable<int>(dayOfWeek);
     }
+    map['monthly_mode'] = Variable<String>(monthlyMode);
+    if (!nullToAbsent || weekOfMonth != null) {
+      map['week_of_month'] = Variable<int>(weekOfMonth);
+    }
+    map['non_business_day_adjustment'] = Variable<String>(
+      nonBusinessDayAdjustment,
+    );
+    map['include_non_business_days'] = Variable<bool>(includeNonBusinessDays);
     map['occurred_time'] = Variable<String>(occurredTime);
     map['start_date'] = Variable<String>(startDate);
     if (!nullToAbsent || endDate != null) {
@@ -5307,6 +5429,12 @@ class RecurringTransaction extends DataClass
       dayOfWeek: dayOfWeek == null && nullToAbsent
           ? const Value.absent()
           : Value(dayOfWeek),
+      monthlyMode: Value(monthlyMode),
+      weekOfMonth: weekOfMonth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(weekOfMonth),
+      nonBusinessDayAdjustment: Value(nonBusinessDayAdjustment),
+      includeNonBusinessDays: Value(includeNonBusinessDays),
       occurredTime: Value(occurredTime),
       startDate: Value(startDate),
       endDate: endDate == null && nullToAbsent
@@ -5347,6 +5475,14 @@ class RecurringTransaction extends DataClass
       frequency: serializer.fromJson<String>(json['frequency']),
       dayOfMonth: serializer.fromJson<int?>(json['dayOfMonth']),
       dayOfWeek: serializer.fromJson<int?>(json['dayOfWeek']),
+      monthlyMode: serializer.fromJson<String>(json['monthlyMode']),
+      weekOfMonth: serializer.fromJson<int?>(json['weekOfMonth']),
+      nonBusinessDayAdjustment: serializer.fromJson<String>(
+        json['nonBusinessDayAdjustment'],
+      ),
+      includeNonBusinessDays: serializer.fromJson<bool>(
+        json['includeNonBusinessDays'],
+      ),
       occurredTime: serializer.fromJson<String>(json['occurredTime']),
       startDate: serializer.fromJson<String>(json['startDate']),
       endDate: serializer.fromJson<String?>(json['endDate']),
@@ -5376,6 +5512,12 @@ class RecurringTransaction extends DataClass
       'frequency': serializer.toJson<String>(frequency),
       'dayOfMonth': serializer.toJson<int?>(dayOfMonth),
       'dayOfWeek': serializer.toJson<int?>(dayOfWeek),
+      'monthlyMode': serializer.toJson<String>(monthlyMode),
+      'weekOfMonth': serializer.toJson<int?>(weekOfMonth),
+      'nonBusinessDayAdjustment': serializer.toJson<String>(
+        nonBusinessDayAdjustment,
+      ),
+      'includeNonBusinessDays': serializer.toJson<bool>(includeNonBusinessDays),
       'occurredTime': serializer.toJson<String>(occurredTime),
       'startDate': serializer.toJson<String>(startDate),
       'endDate': serializer.toJson<String?>(endDate),
@@ -5403,6 +5545,10 @@ class RecurringTransaction extends DataClass
     String? frequency,
     Value<int?> dayOfMonth = const Value.absent(),
     Value<int?> dayOfWeek = const Value.absent(),
+    String? monthlyMode,
+    Value<int?> weekOfMonth = const Value.absent(),
+    String? nonBusinessDayAdjustment,
+    bool? includeNonBusinessDays,
     String? occurredTime,
     String? startDate,
     Value<String?> endDate = const Value.absent(),
@@ -5429,6 +5575,12 @@ class RecurringTransaction extends DataClass
     frequency: frequency ?? this.frequency,
     dayOfMonth: dayOfMonth.present ? dayOfMonth.value : this.dayOfMonth,
     dayOfWeek: dayOfWeek.present ? dayOfWeek.value : this.dayOfWeek,
+    monthlyMode: monthlyMode ?? this.monthlyMode,
+    weekOfMonth: weekOfMonth.present ? weekOfMonth.value : this.weekOfMonth,
+    nonBusinessDayAdjustment:
+        nonBusinessDayAdjustment ?? this.nonBusinessDayAdjustment,
+    includeNonBusinessDays:
+        includeNonBusinessDays ?? this.includeNonBusinessDays,
     occurredTime: occurredTime ?? this.occurredTime,
     startDate: startDate ?? this.startDate,
     endDate: endDate.present ? endDate.value : this.endDate,
@@ -5465,6 +5617,18 @@ class RecurringTransaction extends DataClass
           ? data.dayOfMonth.value
           : this.dayOfMonth,
       dayOfWeek: data.dayOfWeek.present ? data.dayOfWeek.value : this.dayOfWeek,
+      monthlyMode: data.monthlyMode.present
+          ? data.monthlyMode.value
+          : this.monthlyMode,
+      weekOfMonth: data.weekOfMonth.present
+          ? data.weekOfMonth.value
+          : this.weekOfMonth,
+      nonBusinessDayAdjustment: data.nonBusinessDayAdjustment.present
+          ? data.nonBusinessDayAdjustment.value
+          : this.nonBusinessDayAdjustment,
+      includeNonBusinessDays: data.includeNonBusinessDays.present
+          ? data.includeNonBusinessDays.value
+          : this.includeNonBusinessDays,
       occurredTime: data.occurredTime.present
           ? data.occurredTime.value
           : this.occurredTime,
@@ -5500,6 +5664,10 @@ class RecurringTransaction extends DataClass
           ..write('frequency: $frequency, ')
           ..write('dayOfMonth: $dayOfMonth, ')
           ..write('dayOfWeek: $dayOfWeek, ')
+          ..write('monthlyMode: $monthlyMode, ')
+          ..write('weekOfMonth: $weekOfMonth, ')
+          ..write('nonBusinessDayAdjustment: $nonBusinessDayAdjustment, ')
+          ..write('includeNonBusinessDays: $includeNonBusinessDays, ')
           ..write('occurredTime: $occurredTime, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
@@ -5529,6 +5697,10 @@ class RecurringTransaction extends DataClass
     frequency,
     dayOfMonth,
     dayOfWeek,
+    monthlyMode,
+    weekOfMonth,
+    nonBusinessDayAdjustment,
+    includeNonBusinessDays,
     occurredTime,
     startDate,
     endDate,
@@ -5557,6 +5729,10 @@ class RecurringTransaction extends DataClass
           other.frequency == this.frequency &&
           other.dayOfMonth == this.dayOfMonth &&
           other.dayOfWeek == this.dayOfWeek &&
+          other.monthlyMode == this.monthlyMode &&
+          other.weekOfMonth == this.weekOfMonth &&
+          other.nonBusinessDayAdjustment == this.nonBusinessDayAdjustment &&
+          other.includeNonBusinessDays == this.includeNonBusinessDays &&
           other.occurredTime == this.occurredTime &&
           other.startDate == this.startDate &&
           other.endDate == this.endDate &&
@@ -5584,6 +5760,10 @@ class RecurringTransactionsCompanion
   final Value<String> frequency;
   final Value<int?> dayOfMonth;
   final Value<int?> dayOfWeek;
+  final Value<String> monthlyMode;
+  final Value<int?> weekOfMonth;
+  final Value<String> nonBusinessDayAdjustment;
+  final Value<bool> includeNonBusinessDays;
   final Value<String> occurredTime;
   final Value<String> startDate;
   final Value<String?> endDate;
@@ -5608,6 +5788,10 @@ class RecurringTransactionsCompanion
     this.frequency = const Value.absent(),
     this.dayOfMonth = const Value.absent(),
     this.dayOfWeek = const Value.absent(),
+    this.monthlyMode = const Value.absent(),
+    this.weekOfMonth = const Value.absent(),
+    this.nonBusinessDayAdjustment = const Value.absent(),
+    this.includeNonBusinessDays = const Value.absent(),
     this.occurredTime = const Value.absent(),
     this.startDate = const Value.absent(),
     this.endDate = const Value.absent(),
@@ -5633,6 +5817,10 @@ class RecurringTransactionsCompanion
     required String frequency,
     this.dayOfMonth = const Value.absent(),
     this.dayOfWeek = const Value.absent(),
+    this.monthlyMode = const Value.absent(),
+    this.weekOfMonth = const Value.absent(),
+    this.nonBusinessDayAdjustment = const Value.absent(),
+    this.includeNonBusinessDays = const Value.absent(),
     this.occurredTime = const Value.absent(),
     required String startDate,
     this.endDate = const Value.absent(),
@@ -5662,6 +5850,10 @@ class RecurringTransactionsCompanion
     Expression<String>? frequency,
     Expression<int>? dayOfMonth,
     Expression<int>? dayOfWeek,
+    Expression<String>? monthlyMode,
+    Expression<int>? weekOfMonth,
+    Expression<String>? nonBusinessDayAdjustment,
+    Expression<bool>? includeNonBusinessDays,
     Expression<String>? occurredTime,
     Expression<String>? startDate,
     Expression<String>? endDate,
@@ -5687,6 +5879,12 @@ class RecurringTransactionsCompanion
       if (frequency != null) 'frequency': frequency,
       if (dayOfMonth != null) 'day_of_month': dayOfMonth,
       if (dayOfWeek != null) 'day_of_week': dayOfWeek,
+      if (monthlyMode != null) 'monthly_mode': monthlyMode,
+      if (weekOfMonth != null) 'week_of_month': weekOfMonth,
+      if (nonBusinessDayAdjustment != null)
+        'non_business_day_adjustment': nonBusinessDayAdjustment,
+      if (includeNonBusinessDays != null)
+        'include_non_business_days': includeNonBusinessDays,
       if (occurredTime != null) 'occurred_time': occurredTime,
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
@@ -5714,6 +5912,10 @@ class RecurringTransactionsCompanion
     Value<String>? frequency,
     Value<int?>? dayOfMonth,
     Value<int?>? dayOfWeek,
+    Value<String>? monthlyMode,
+    Value<int?>? weekOfMonth,
+    Value<String>? nonBusinessDayAdjustment,
+    Value<bool>? includeNonBusinessDays,
     Value<String>? occurredTime,
     Value<String>? startDate,
     Value<String?>? endDate,
@@ -5739,6 +5941,12 @@ class RecurringTransactionsCompanion
       frequency: frequency ?? this.frequency,
       dayOfMonth: dayOfMonth ?? this.dayOfMonth,
       dayOfWeek: dayOfWeek ?? this.dayOfWeek,
+      monthlyMode: monthlyMode ?? this.monthlyMode,
+      weekOfMonth: weekOfMonth ?? this.weekOfMonth,
+      nonBusinessDayAdjustment:
+          nonBusinessDayAdjustment ?? this.nonBusinessDayAdjustment,
+      includeNonBusinessDays:
+          includeNonBusinessDays ?? this.includeNonBusinessDays,
       occurredTime: occurredTime ?? this.occurredTime,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -5794,6 +6002,22 @@ class RecurringTransactionsCompanion
     if (dayOfWeek.present) {
       map['day_of_week'] = Variable<int>(dayOfWeek.value);
     }
+    if (monthlyMode.present) {
+      map['monthly_mode'] = Variable<String>(monthlyMode.value);
+    }
+    if (weekOfMonth.present) {
+      map['week_of_month'] = Variable<int>(weekOfMonth.value);
+    }
+    if (nonBusinessDayAdjustment.present) {
+      map['non_business_day_adjustment'] = Variable<String>(
+        nonBusinessDayAdjustment.value,
+      );
+    }
+    if (includeNonBusinessDays.present) {
+      map['include_non_business_days'] = Variable<bool>(
+        includeNonBusinessDays.value,
+      );
+    }
     if (occurredTime.present) {
       map['occurred_time'] = Variable<String>(occurredTime.value);
     }
@@ -5843,6 +6067,10 @@ class RecurringTransactionsCompanion
           ..write('frequency: $frequency, ')
           ..write('dayOfMonth: $dayOfMonth, ')
           ..write('dayOfWeek: $dayOfWeek, ')
+          ..write('monthlyMode: $monthlyMode, ')
+          ..write('weekOfMonth: $weekOfMonth, ')
+          ..write('nonBusinessDayAdjustment: $nonBusinessDayAdjustment, ')
+          ..write('includeNonBusinessDays: $includeNonBusinessDays, ')
           ..write('occurredTime: $occurredTime, ')
           ..write('startDate: $startDate, ')
           ..write('endDate: $endDate, ')
@@ -15850,6 +16078,10 @@ typedef $$RecurringTransactionsTableCreateCompanionBuilder =
       required String frequency,
       Value<int?> dayOfMonth,
       Value<int?> dayOfWeek,
+      Value<String> monthlyMode,
+      Value<int?> weekOfMonth,
+      Value<String> nonBusinessDayAdjustment,
+      Value<bool> includeNonBusinessDays,
       Value<String> occurredTime,
       required String startDate,
       Value<String?> endDate,
@@ -15876,6 +16108,10 @@ typedef $$RecurringTransactionsTableUpdateCompanionBuilder =
       Value<String> frequency,
       Value<int?> dayOfMonth,
       Value<int?> dayOfWeek,
+      Value<String> monthlyMode,
+      Value<int?> weekOfMonth,
+      Value<String> nonBusinessDayAdjustment,
+      Value<bool> includeNonBusinessDays,
       Value<String> occurredTime,
       Value<String> startDate,
       Value<String?> endDate,
@@ -16041,6 +16277,26 @@ class $$RecurringTransactionsTableFilterComposer
 
   ColumnFilters<int> get dayOfWeek => $composableBuilder(
     column: $table.dayOfWeek,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get monthlyMode => $composableBuilder(
+    column: $table.monthlyMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get weekOfMonth => $composableBuilder(
+    column: $table.weekOfMonth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nonBusinessDayAdjustment => $composableBuilder(
+    column: $table.nonBusinessDayAdjustment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get includeNonBusinessDays => $composableBuilder(
+    column: $table.includeNonBusinessDays,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -16241,6 +16497,26 @@ class $$RecurringTransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get monthlyMode => $composableBuilder(
+    column: $table.monthlyMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get weekOfMonth => $composableBuilder(
+    column: $table.weekOfMonth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get nonBusinessDayAdjustment => $composableBuilder(
+    column: $table.nonBusinessDayAdjustment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get includeNonBusinessDays => $composableBuilder(
+    column: $table.includeNonBusinessDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get occurredTime => $composableBuilder(
     column: $table.occurredTime,
     builder: (column) => ColumnOrderings(column),
@@ -16421,6 +16697,26 @@ class $$RecurringTransactionsTableAnnotationComposer
 
   GeneratedColumn<int> get dayOfWeek =>
       $composableBuilder(column: $table.dayOfWeek, builder: (column) => column);
+
+  GeneratedColumn<String> get monthlyMode => $composableBuilder(
+    column: $table.monthlyMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get weekOfMonth => $composableBuilder(
+    column: $table.weekOfMonth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get nonBusinessDayAdjustment => $composableBuilder(
+    column: $table.nonBusinessDayAdjustment,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get includeNonBusinessDays => $composableBuilder(
+    column: $table.includeNonBusinessDays,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get occurredTime => $composableBuilder(
     column: $table.occurredTime,
@@ -16608,6 +16904,10 @@ class $$RecurringTransactionsTableTableManager
                 Value<String> frequency = const Value.absent(),
                 Value<int?> dayOfMonth = const Value.absent(),
                 Value<int?> dayOfWeek = const Value.absent(),
+                Value<String> monthlyMode = const Value.absent(),
+                Value<int?> weekOfMonth = const Value.absent(),
+                Value<String> nonBusinessDayAdjustment = const Value.absent(),
+                Value<bool> includeNonBusinessDays = const Value.absent(),
                 Value<String> occurredTime = const Value.absent(),
                 Value<String> startDate = const Value.absent(),
                 Value<String?> endDate = const Value.absent(),
@@ -16632,6 +16932,10 @@ class $$RecurringTransactionsTableTableManager
                 frequency: frequency,
                 dayOfMonth: dayOfMonth,
                 dayOfWeek: dayOfWeek,
+                monthlyMode: monthlyMode,
+                weekOfMonth: weekOfMonth,
+                nonBusinessDayAdjustment: nonBusinessDayAdjustment,
+                includeNonBusinessDays: includeNonBusinessDays,
                 occurredTime: occurredTime,
                 startDate: startDate,
                 endDate: endDate,
@@ -16658,6 +16962,10 @@ class $$RecurringTransactionsTableTableManager
                 required String frequency,
                 Value<int?> dayOfMonth = const Value.absent(),
                 Value<int?> dayOfWeek = const Value.absent(),
+                Value<String> monthlyMode = const Value.absent(),
+                Value<int?> weekOfMonth = const Value.absent(),
+                Value<String> nonBusinessDayAdjustment = const Value.absent(),
+                Value<bool> includeNonBusinessDays = const Value.absent(),
                 Value<String> occurredTime = const Value.absent(),
                 required String startDate,
                 Value<String?> endDate = const Value.absent(),
@@ -16682,6 +16990,10 @@ class $$RecurringTransactionsTableTableManager
                 frequency: frequency,
                 dayOfMonth: dayOfMonth,
                 dayOfWeek: dayOfWeek,
+                monthlyMode: monthlyMode,
+                weekOfMonth: weekOfMonth,
+                nonBusinessDayAdjustment: nonBusinessDayAdjustment,
+                includeNonBusinessDays: includeNonBusinessDays,
                 occurredTime: occurredTime,
                 startDate: startDate,
                 endDate: endDate,

@@ -3,7 +3,7 @@ import '../../core/validation.dart';
 /// SPEC §3.7 / §4.8.2 / §5.4 — 반복 거래 입력 검증.
 ///   income/expense: accountId + categoryId 필수
 ///   transfer:       fromAccountId + toAccountId 필수 (서로 다름)
-///   monthly: dayOfMonth 1~31 필수 / weekly: dayOfWeek 0~6 필수
+///   monthly: dayOfMonth 1~31 필수 / weekly: dayOfWeek 0~6 필수 / daily: 매일
 
 class RecurringDraft {
   const RecurringDraft({
@@ -15,6 +15,10 @@ class RecurringDraft {
     required this.startDate,
     this.dayOfMonth,
     this.dayOfWeek,
+    this.monthlyMode = 'day',
+    this.weekOfMonth,
+    this.nonBusinessDayAdjustment = 'same',
+    this.includeNonBusinessDays = true,
     this.endDate,
     this.memo,
     this.accountId,
@@ -27,11 +31,15 @@ class RecurringDraft {
   final String name;
   final String type; // income | expense | transfer
   final int amount;
-  final String frequency; // monthly | weekly
+  final String frequency; // monthly | weekly | daily
   final String occurredTime;
   final String startDate;
   final int? dayOfMonth;
   final int? dayOfWeek;
+  final String monthlyMode; // day | nth_weekday
+  final int? weekOfMonth; // nth_weekday: 1~5
+  final String nonBusinessDayAdjustment; // same | previous | next
+  final bool includeNonBusinessDays;
   final String? endDate;
   final String? memo;
   final int? accountId;
@@ -50,6 +58,10 @@ ValidationResult<RecurringDraft> validateRecurring({
   required String startDate,
   int? dayOfMonth,
   int? dayOfWeek,
+  String monthlyMode = 'day',
+  int? weekOfMonth,
+  String nonBusinessDayAdjustment = 'same',
+  bool includeNonBusinessDays = true,
   String? endDate,
   String? memo,
   int? accountId,
@@ -71,22 +83,41 @@ ValidationResult<RecurringDraft> validateRecurring({
     errors['endDate'] = 'YYYY-MM-DD 형식이어야 합니다';
   }
 
-  final cleanedMemo =
-      (memo != null && memo.trim().isNotEmpty) ? memo.trim() : null;
+  final cleanedMemo = (memo != null && memo.trim().isNotEmpty)
+      ? memo.trim()
+      : null;
   if (cleanedMemo != null && cleanedMemo.length > 200) {
     errors['memo'] = '메모는 200자 이하여야 합니다';
   }
 
   // cadence
   if (frequency == 'monthly') {
-    if (dayOfMonth == null || dayOfMonth < 1 || dayOfMonth > 31) {
-      errors['dayOfMonth'] = '월 반복일(1~31)을 선택해주세요';
+    if (monthlyMode == 'day') {
+      if (dayOfMonth == null || dayOfMonth < 1 || dayOfMonth > 31) {
+        errors['dayOfMonth'] = '월 반복일(1~31)을 선택해주세요';
+      }
+      if (!const {
+        'same',
+        'previous',
+        'next',
+      }.contains(nonBusinessDayAdjustment)) {
+        errors['nonBusinessDayAdjustment'] = '휴일 처리 방법을 선택해주세요';
+      }
+    } else if (monthlyMode == 'nth_weekday') {
+      if (weekOfMonth == null || weekOfMonth < 1 || weekOfMonth > 5) {
+        errors['weekOfMonth'] = '주차(1~5)를 선택해주세요';
+      }
+      if (dayOfWeek == null || dayOfWeek < 0 || dayOfWeek > 6) {
+        errors['dayOfWeek'] = '요일을 선택해주세요';
+      }
+    } else {
+      errors['monthlyMode'] = '월간 반복 방식을 선택해주세요';
     }
   } else if (frequency == 'weekly') {
     if (dayOfWeek == null || dayOfWeek < 0 || dayOfWeek > 6) {
       errors['dayOfWeek'] = '요일을 선택해주세요';
     }
-  } else {
+  } else if (frequency != 'daily') {
     errors['frequency'] = '반복 주기가 올바르지 않습니다';
   }
 
@@ -112,26 +143,39 @@ ValidationResult<RecurringDraft> validateRecurring({
 
   final isTransfer = type == 'transfer';
   final isMonthly = frequency == 'monthly';
+  final isWeekly = frequency == 'weekly';
+  final isMonthlyDay = isMonthly && monthlyMode == 'day';
+  final isMonthlyNthWeekday = isMonthly && monthlyMode == 'nth_weekday';
   final cleanedTags = <String>{
     for (final n in tagNames)
       if (n.trim().isNotEmpty) n.trim(),
   }.toList();
 
-  return ValidationResult.ok(RecurringDraft(
-    name: cleanedName,
-    type: type,
-    amount: amount!,
-    frequency: frequency,
-    occurredTime: occurredTime,
-    startDate: startDate,
-    dayOfMonth: isMonthly ? dayOfMonth : null,
-    dayOfWeek: isMonthly ? null : dayOfWeek,
-    endDate: endDate,
-    memo: cleanedMemo,
-    accountId: isTransfer ? null : accountId,
-    categoryId: isTransfer ? null : categoryId,
-    fromAccountId: isTransfer ? fromAccountId : null,
-    toAccountId: isTransfer ? toAccountId : null,
-    tagNames: cleanedTags,
-  ));
+  return ValidationResult.ok(
+    RecurringDraft(
+      name: cleanedName,
+      type: type,
+      amount: amount!,
+      frequency: frequency,
+      occurredTime: occurredTime,
+      startDate: startDate,
+      dayOfMonth: isMonthlyDay ? dayOfMonth : null,
+      dayOfWeek: isWeekly || isMonthlyNthWeekday ? dayOfWeek : null,
+      monthlyMode: isMonthlyNthWeekday ? 'nth_weekday' : 'day',
+      weekOfMonth: isMonthlyNthWeekday ? weekOfMonth : null,
+      nonBusinessDayAdjustment: isMonthlyDay
+          ? nonBusinessDayAdjustment
+          : 'same',
+      includeNonBusinessDays: frequency == 'daily'
+          ? includeNonBusinessDays
+          : true,
+      endDate: endDate,
+      memo: cleanedMemo,
+      accountId: isTransfer ? null : accountId,
+      categoryId: isTransfer ? null : categoryId,
+      fromAccountId: isTransfer ? fromAccountId : null,
+      toAccountId: isTransfer ? toAccountId : null,
+      tagNames: cleanedTags,
+    ),
+  );
 }

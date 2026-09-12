@@ -56,6 +56,67 @@ void main() {
       );
       expect(nextOccurrence(r, '2025-12-10'), '2026-01-10');
     });
+
+    test('N주차 N요일은 해당 월의 N번째 요일을 계산한다', () {
+      const r = RecurrenceRule(
+        frequency: RecurFrequency.monthly,
+        startDate: '2026-08-01',
+        monthlyMode: MonthlyRecurrenceMode.nthWeekday,
+        weekOfMonth: 2,
+        dayOfWeek: 3,
+      );
+
+      expect(nextOccurrence(r, null), '2026-08-12');
+      expect(nextOccurrence(r, '2026-08-12'), '2026-09-09');
+    });
+
+    test('해당 요일의 5주차가 없는 달은 건너뛴다', () {
+      const r = RecurrenceRule(
+        frequency: RecurFrequency.monthly,
+        startDate: '2026-02-01',
+        monthlyMode: MonthlyRecurrenceMode.nthWeekday,
+        weekOfMonth: 5,
+        dayOfWeek: 0,
+      );
+
+      expect(nextOccurrence(r, null), '2026-03-29');
+    });
+
+    test('N일이 휴일이면 당일·전 영업일·후 영업일 정책을 적용한다', () {
+      const same = RecurrenceRule(
+        frequency: RecurFrequency.monthly,
+        startDate: '2026-08-01',
+        dayOfMonth: 15,
+      );
+      const previous = RecurrenceRule(
+        frequency: RecurFrequency.monthly,
+        startDate: '2026-08-01',
+        dayOfMonth: 15,
+        nonBusinessDayAdjustment: NonBusinessDayAdjustment.previous,
+      );
+      const next = RecurrenceRule(
+        frequency: RecurFrequency.monthly,
+        startDate: '2026-08-01',
+        dayOfMonth: 15,
+        nonBusinessDayAdjustment: NonBusinessDayAdjustment.next,
+      );
+
+      expect(nextOccurrence(same, null), '2026-08-15');
+      expect(nextOccurrence(previous, null), '2026-08-14');
+      expect(nextOccurrence(next, null), '2026-08-18');
+    });
+
+    test('전 영업일 조정이 이전 달로 넘어가도 다음 월을 중복하지 않는다', () {
+      const r = RecurrenceRule(
+        frequency: RecurFrequency.monthly,
+        startDate: '2026-12-01',
+        dayOfMonth: 1,
+        nonBusinessDayAdjustment: NonBusinessDayAdjustment.previous,
+      );
+
+      expect(nextOccurrence(r, '2026-12-01'), '2026-12-31');
+      expect(nextOccurrence(r, '2026-12-31'), '2027-02-01');
+    });
   });
 
   group('nextOccurrence — weekly (SPEC §5.1, 0=일~6=토)', () {
@@ -98,17 +159,77 @@ void main() {
     });
   });
 
+  group('nextOccurrence — daily', () {
+    test('주말·공휴일 포함 시 시작일부터 매일 발생한다', () {
+      const r = RecurrenceRule(
+        frequency: RecurFrequency.daily,
+        startDate: '2026-08-14',
+      );
+
+      expect(nextOccurrence(r, null), '2026-08-14');
+      expect(nextOccurrence(r, '2026-08-14'), '2026-08-15');
+      expect(nextOccurrence(r, '2026-08-15'), '2026-08-16');
+    });
+
+    test('주말·공휴일 제외 시 주말과 대체공휴일을 건너뛴다', () {
+      const r = RecurrenceRule(
+        frequency: RecurFrequency.daily,
+        startDate: '2026-08-14',
+        includeNonBusinessDays: false,
+      );
+
+      expect(nextOccurrence(r, null), '2026-08-14');
+      // 8/15(토), 8/16(일), 8/17(광복절 대체공휴일) 제외
+      expect(nextOccurrence(r, '2026-08-14'), '2026-08-18');
+    });
+
+    test('제외 모드에서 시작일이 공휴일이면 다음 영업일부터 시작한다', () {
+      const r = RecurrenceRule(
+        frequency: RecurFrequency.daily,
+        startDate: '2026-06-03',
+        includeNonBusinessDays: false,
+      );
+
+      expect(nextOccurrence(r, null), '2026-06-04');
+    });
+  });
+
   group('dueOccurrences — backfill (SPEC §5.1)', () {
+    test('매일 반복은 주말·공휴일 포함 설정을 반영한다', () {
+      const included = RecurrenceRule(
+        frequency: RecurFrequency.daily,
+        startDate: '2026-08-14',
+      );
+      const excluded = RecurrenceRule(
+        frequency: RecurFrequency.daily,
+        startDate: '2026-08-14',
+        includeNonBusinessDays: false,
+      );
+
+      expect(dueOccurrences(included, horizon: '2026-08-18'), [
+        '2026-08-14',
+        '2026-08-15',
+        '2026-08-16',
+        '2026-08-17',
+        '2026-08-18',
+      ]);
+      expect(dueOccurrences(excluded, horizon: '2026-08-18'), [
+        '2026-08-14',
+        '2026-08-18',
+      ]);
+    });
+
     test('anchor 없으면 시작월부터 horizon 까지', () {
       final r = RecurrenceRule(
         frequency: RecurFrequency.monthly,
         startDate: '2025-01-01',
         dayOfMonth: 15,
       );
-      expect(
-        dueOccurrences(r, horizon: '2025-03-31'),
-        ['2025-01-15', '2025-02-15', '2025-03-15'],
-      );
+      expect(dueOccurrences(r, horizon: '2025-03-31'), [
+        '2025-01-15',
+        '2025-02-15',
+        '2025-03-15',
+      ]);
     });
 
     test('lastGeneratedOn 이후부터 생성', () {
@@ -129,10 +250,10 @@ void main() {
         startDate: '2025-01-01',
         dayOfMonth: 15,
       );
-      expect(
-        dueOccurrences(r, horizon: '2025-12-31', endDate: '2025-02-20'),
-        ['2025-01-15', '2025-02-15'],
-      );
+      expect(dueOccurrences(r, horizon: '2025-12-31', endDate: '2025-02-20'), [
+        '2025-01-15',
+        '2025-02-15',
+      ]);
     });
 
     test('horizon 이 첫 발생보다 앞이면 빈 리스트', () {

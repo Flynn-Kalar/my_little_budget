@@ -10,6 +10,7 @@ import '../../../features/investments/cost_basis.dart';
 import '../../../features/investments/quantity_precision.dart';
 import '../../../features/investments/validation.dart';
 import 'package:my_little_budget/features/investments/providers.dart';
+import '../../shared/amount_input_formatter.dart';
 import 'widgets/investment_summary_card.dart';
 
 class InvestmentsScreen extends ConsumerStatefulWidget {
@@ -883,6 +884,7 @@ class _HoldingInlineFormState extends ConsumerState<_HoldingInlineForm> {
               focusNode: _totalAmountFocus,
               enabled: !_busy,
               keyboardType: TextInputType.number,
+              inputFormatters: const [amountInputFormatter],
               textInputAction: TextInputAction.next,
               onSubmitted: (_) => _memoFocus.requestFocus(),
               decoration: InputDecoration(
@@ -1606,6 +1608,7 @@ class _InvestmentCreateDialogState
                 focusNode: _totalAmountFocus,
                 enabled: !_busy,
                 keyboardType: TextInputType.number,
+                inputFormatters: const [amountInputFormatter],
                 textInputAction: TextInputAction.next,
                 onSubmitted: (_) => _memoFocus.requestFocus(),
                 decoration: InputDecoration(

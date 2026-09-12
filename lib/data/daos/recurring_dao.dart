@@ -101,6 +101,10 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
           frequency: Value(draft.frequency),
           dayOfMonth: Value(draft.dayOfMonth),
           dayOfWeek: Value(draft.dayOfWeek),
+          monthlyMode: Value(draft.monthlyMode),
+          weekOfMonth: Value(draft.weekOfMonth),
+          nonBusinessDayAdjustment: Value(draft.nonBusinessDayAdjustment),
+          includeNonBusinessDays: Value(draft.includeNonBusinessDays),
           occurredTime: Value(draft.occurredTime),
           startDate: Value(draft.startDate),
           endDate: Value(draft.endDate),
@@ -124,6 +128,10 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
         frequency: draft.frequency,
         dayOfMonth: Value(draft.dayOfMonth),
         dayOfWeek: Value(draft.dayOfWeek),
+        monthlyMode: Value(draft.monthlyMode),
+        weekOfMonth: Value(draft.weekOfMonth),
+        nonBusinessDayAdjustment: Value(draft.nonBusinessDayAdjustment),
+        includeNonBusinessDays: Value(draft.includeNonBusinessDays),
         occurredTime: Value(draft.occurredTime),
         startDate: draft.startDate,
         endDate: Value(draft.endDate),
@@ -164,12 +172,24 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
         }
 
         final rule = RecurrenceRule(
-          frequency: r.frequency == 'weekly'
-              ? RecurFrequency.weekly
-              : RecurFrequency.monthly,
+          frequency: switch (r.frequency) {
+            'weekly' => RecurFrequency.weekly,
+            'daily' => RecurFrequency.daily,
+            _ => RecurFrequency.monthly,
+          },
           startDate: r.startDate,
           dayOfMonth: r.dayOfMonth,
           dayOfWeek: r.dayOfWeek,
+          monthlyMode: r.monthlyMode == 'nth_weekday'
+              ? MonthlyRecurrenceMode.nthWeekday
+              : MonthlyRecurrenceMode.day,
+          weekOfMonth: r.weekOfMonth,
+          nonBusinessDayAdjustment: switch (r.nonBusinessDayAdjustment) {
+            'previous' => NonBusinessDayAdjustment.previous,
+            'next' => NonBusinessDayAdjustment.next,
+            _ => NonBusinessDayAdjustment.same,
+          },
+          includeNonBusinessDays: r.includeNonBusinessDays,
         );
         final occurrences = dueOccurrences(
           rule,

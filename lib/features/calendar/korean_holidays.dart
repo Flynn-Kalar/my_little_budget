@@ -11,6 +11,18 @@ class KoreanHoliday {
   String get dateKey => toDateKey(date);
 }
 
+final _holidayKeysByYear = <int, Set<String>>{};
+
+bool isKoreanHoliday(DateTime date) {
+  final keys = _holidayKeysByYear.putIfAbsent(
+    date.year,
+    () => koreanHolidaysForYear(
+      date.year,
+    ).map((holiday) => holiday.dateKey).toSet(),
+  );
+  return keys.contains(toDateKey(date));
+}
+
 Map<String, KoreanHoliday> koreanHolidaysForMonth(String monthKey) {
   final parts = monthKey.split('-');
   final year = int.parse(parts[0]);

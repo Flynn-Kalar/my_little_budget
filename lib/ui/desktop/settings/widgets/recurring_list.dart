@@ -169,9 +169,15 @@ class _RecurringRow extends StatelessWidget {
     final target = r.type == 'transfer'
         ? '${item.fromAccountName ?? '?'} → ${item.toAccountName ?? '?'}'
         : '${item.categoryName ?? '?'} · ${item.accountName ?? '?'}';
-    final cadence = r.frequency == 'monthly'
-        ? '매월 ${r.dayOfMonth}일'
-        : '매주 ${_weekdays[r.dayOfWeek ?? 0]}요일';
+    final cadence = switch (r.frequency) {
+      'weekly' => '매주 ${_weekdays[r.dayOfWeek ?? 0]}요일',
+      'daily' => r.includeNonBusinessDays ? '매일 · 주말·공휴일 포함' : '매일 · 주말·공휴일 제외',
+      _ =>
+        r.monthlyMode == 'nth_weekday'
+            ? '매월 ${r.weekOfMonth}주차 ${_weekdays[r.dayOfWeek ?? 0]}요일'
+            : '매월 ${r.dayOfMonth}일'
+                  '${_monthlyAdjustmentLabel(r.nonBusinessDayAdjustment)}',
+    };
     final tagNames = _parseTagNames(r.tagNames);
 
     return Container(
@@ -265,3 +271,9 @@ List<String> _parseTagNames(String? raw) {
   }
   return const [];
 }
+
+String _monthlyAdjustmentLabel(String value) => switch (value) {
+  'previous' => ' · 전 영업일',
+  'next' => ' · 후 영업일',
+  _ => '',
+};

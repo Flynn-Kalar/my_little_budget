@@ -10,6 +10,7 @@ import '../../../../data/daos/recurring_dao.dart';
 import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/recurring/validation.dart';
+import '../../../shared/amount_input_formatter.dart';
 import '../../../desktop/transactions/widgets/form_fields.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 
@@ -38,7 +39,7 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
     text: widget.item?.recurring.name ?? '',
   );
   late final _amountCtrl = TextEditingController(
-    text: widget.item?.recurring.amount.toString() ?? '',
+    text: formatAmountInput(widget.item?.recurring.amount.toString() ?? ''),
   );
   late final _startCtrl = TextEditingController(
     text: widget.item?.recurring.startDate ?? currentDateKey(),
@@ -61,6 +62,12 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
   late int? _toAccountId = widget.item?.recurring.toAccountId;
   late int _dayOfMonth = widget.item?.recurring.dayOfMonth ?? 1;
   late int _dayOfWeek = widget.item?.recurring.dayOfWeek ?? 1;
+  late String _monthlyMode = widget.item?.recurring.monthlyMode ?? 'day';
+  late int _weekOfMonth = widget.item?.recurring.weekOfMonth ?? 1;
+  late String _nonBusinessDayAdjustment =
+      widget.item?.recurring.nonBusinessDayAdjustment ?? 'same';
+  late bool _includeNonBusinessDays =
+      widget.item?.recurring.includeNonBusinessDays ?? true;
   late List<String> _tagNames = _parseTagNames(widget.item?.recurring.tagNames);
   bool _busy = false;
 
@@ -86,7 +93,15 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
       occurredTime: parsedTime,
       startDate: _startCtrl.text.trim(),
       dayOfMonth: _frequency == 'monthly' ? _dayOfMonth : null,
-      dayOfWeek: _frequency == 'weekly' ? _dayOfWeek : null,
+      dayOfWeek:
+          _frequency == 'weekly' ||
+              (_frequency == 'monthly' && _monthlyMode == 'nth_weekday')
+          ? _dayOfWeek
+          : null,
+      monthlyMode: _monthlyMode,
+      weekOfMonth: _weekOfMonth,
+      nonBusinessDayAdjustment: _nonBusinessDayAdjustment,
+      includeNonBusinessDays: _includeNonBusinessDays,
       endDate: endDate,
       memo: _memoCtrl.text,
       accountId: _accountId,
@@ -182,6 +197,7 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
                 child: TextField(
                   controller: _amountCtrl,
                   keyboardType: TextInputType.number,
+                  inputFormatters: const [amountInputFormatter],
                   decoration: const InputDecoration(
                     labelText: '금액',
                     isDense: true,
@@ -201,11 +217,33 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
                   items: const [
                     DropdownMenuItem(value: 'monthly', child: Text('매월')),
                     DropdownMenuItem(value: 'weekly', child: Text('매주')),
+                    DropdownMenuItem(value: 'daily', child: Text('매일')),
                   ],
                   onChanged: (v) => setState(() => _frequency = v ?? 'monthly'),
                 ),
               ),
               if (_frequency == 'monthly')
+                SizedBox(
+                  width: 170,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _monthlyMode,
+                    decoration: const InputDecoration(
+                      labelText: '월간 방식',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'day', child: Text('N일')),
+                      DropdownMenuItem(
+                        value: 'nth_weekday',
+                        child: Text('N주차 N요일'),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _monthlyMode = value ?? 'day'),
+                  ),
+                ),
+              if (_frequency == 'monthly' && _monthlyMode == 'day')
                 SizedBox(
                   width: 110,
                   child: DropdownButtonFormField<int>(
@@ -221,8 +259,47 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
                     ],
                     onChanged: (v) => setState(() => _dayOfMonth = v ?? 1),
                   ),
-                )
-              else
+                ),
+              if (_frequency == 'monthly' && _monthlyMode == 'day')
+                SizedBox(
+                  width: 190,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _nonBusinessDayAdjustment,
+                    decoration: const InputDecoration(
+                      labelText: '주말·공휴일 처리',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'same', child: Text('당일 유지')),
+                      DropdownMenuItem(value: 'previous', child: Text('전 영업일')),
+                      DropdownMenuItem(value: 'next', child: Text('후 영업일')),
+                    ],
+                    onChanged: (value) => setState(
+                      () => _nonBusinessDayAdjustment = value ?? 'same',
+                    ),
+                  ),
+                ),
+              if (_frequency == 'monthly' && _monthlyMode == 'nth_weekday')
+                SizedBox(
+                  width: 110,
+                  child: DropdownButtonFormField<int>(
+                    initialValue: _weekOfMonth,
+                    decoration: const InputDecoration(
+                      labelText: '주차',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      for (var i = 1; i <= 5; i++)
+                        DropdownMenuItem(value: i, child: Text('$i주차')),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _weekOfMonth = value ?? 1),
+                  ),
+                ),
+              if ((_frequency == 'monthly' && _monthlyMode == 'nth_weekday') ||
+                  _frequency == 'weekly')
                 SizedBox(
                   width: 130,
                   child: DropdownButtonFormField<int>(
@@ -240,6 +317,25 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
                         ),
                     ],
                     onChanged: (v) => setState(() => _dayOfWeek = v ?? 1),
+                  ),
+                ),
+              if (_frequency == 'daily')
+                SizedBox(
+                  width: 250,
+                  child: CheckboxListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    dense: true,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: const Text('주말·공휴일 포함'),
+                    subtitle: Text(
+                      _includeNonBusinessDays ? '휴일에도 거래 생성' : '평일에만 거래 생성',
+                    ),
+                    value: _includeNonBusinessDays,
+                    onChanged: _busy
+                        ? null
+                        : (value) => setState(
+                            () => _includeNonBusinessDays = value ?? true,
+                          ),
                   ),
                 ),
             ],

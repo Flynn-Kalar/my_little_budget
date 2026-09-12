@@ -30,15 +30,21 @@ void main() {
       expect(r.isOk, true);
       await db.recurringDao.saveRecurring(draft: r.value!);
 
-      final n1 = await db.recurringDao.generateDueRecurringTransactions('2025-03-31');
+      final n1 = await db.recurringDao.generateDueRecurringTransactions(
+        '2025-03-31',
+      );
       expect(n1, 3); // 1/1, 2/1, 3/1
 
       // 두 번째 호출은 같은 horizon → 추가 생성 0 (멱등)
-      final n2 = await db.recurringDao.generateDueRecurringTransactions('2025-03-31');
+      final n2 = await db.recurringDao.generateDueRecurringTransactions(
+        '2025-03-31',
+      );
       expect(n2, 0);
 
       // horizon 확장하면 추가분만
-      final n3 = await db.recurringDao.generateDueRecurringTransactions('2025-05-31');
+      final n3 = await db.recurringDao.generateDueRecurringTransactions(
+        '2025-05-31',
+      );
       expect(n3, 2); // 4/1, 5/1
 
       final jan = await db.transactionsDao.listTransactionsByMonth('2025-01');
@@ -82,8 +88,78 @@ void main() {
       final id = await db.recurringDao.saveRecurring(draft: r.value!);
       await db.recurringDao.toggleRecurringActive(id, false);
 
-      final n = await db.recurringDao.generateDueRecurringTransactions('2025-03-31');
+      final n = await db.recurringDao.generateDueRecurringTransactions(
+        '2025-03-31',
+      );
       expect(n, 0);
+    });
+
+    test('매일 반복은 주말·공휴일 제외 설정대로 거래를 생성한다', () async {
+      final result = validateRecurring(
+        type: 'expense',
+        name: '평일 점심',
+        amount: 12000,
+        frequency: 'daily',
+        includeNonBusinessDays: false,
+        occurredTime: '12:00',
+        startDate: '2026-08-14',
+        accountId: await account(),
+        categoryId: await category(),
+      );
+      expect(result.isOk, isTrue);
+      final id = await db.recurringDao.saveRecurring(draft: result.value!);
+
+      final generated = await db.recurringDao.generateDueRecurringTransactions(
+        '2026-08-18',
+      );
+
+      expect(generated, 2);
+      final recurring = (await db.recurringDao.listRecurringTransactions())
+          .singleWhere((item) => item.recurring.id == id)
+          .recurring;
+      expect(recurring.frequency, 'daily');
+      expect(recurring.includeNonBusinessDays, isFalse);
+      expect(recurring.dayOfMonth, isNull);
+      expect(recurring.dayOfWeek, isNull);
+      final rows = await db.transactionsDao.listTransactionsByMonth('2026-08');
+      expect(rows.map((row) => row.occurredOn), ['2026-08-18', '2026-08-14']);
+    });
+
+    test('월간 N주차 N요일 설정을 저장하고 해당 날짜에 생성한다', () async {
+      final result = validateRecurring(
+        type: 'expense',
+        name: '둘째 수요일 납부',
+        amount: 30000,
+        frequency: 'monthly',
+        monthlyMode: 'nth_weekday',
+        weekOfMonth: 2,
+        dayOfWeek: 3,
+        occurredTime: '09:00',
+        startDate: '2026-08-01',
+        accountId: await account(),
+        categoryId: await category(),
+      );
+      final id = await db.recurringDao.saveRecurring(draft: result.value!);
+
+      final generated = await db.recurringDao.generateDueRecurringTransactions(
+        '2026-09-30',
+      );
+
+      expect(generated, 2);
+      final recurring = (await db.recurringDao.listRecurringTransactions())
+          .singleWhere((item) => item.recurring.id == id)
+          .recurring;
+      expect(recurring.monthlyMode, 'nth_weekday');
+      expect(recurring.weekOfMonth, 2);
+      expect(recurring.dayOfWeek, 3);
+      final august = await db.transactionsDao.listTransactionsByMonth(
+        '2026-08',
+      );
+      final september = await db.transactionsDao.listTransactionsByMonth(
+        '2026-09',
+      );
+      expect(august.single.occurredOn, '2026-08-12');
+      expect(september.single.occurredOn, '2026-09-09');
     });
   });
 }

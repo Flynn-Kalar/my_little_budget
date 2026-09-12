@@ -65,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -144,6 +144,14 @@ WHERE reminder_at IS NOT NULL
       if (from < 16) {
         await m.createTable(transactionPresets);
       }
+      if (from < 17 && await _tableExists('recurring_transactions')) {
+        await _upgradeRecurringTransactionsToV17(m);
+      }
+      if (from < 18 &&
+          await _tableExists('recurring_transactions') &&
+          !await _columnExists('recurring_transactions', 'monthly_mode')) {
+        await _upgradeRecurringTransactionsToV18(m);
+      }
     },
     beforeOpen: (details) async {
       // SPEC §3 의 외래키 제약을 실제 SQLite 에서 강제하려면 PRAGMA 필요.
@@ -156,6 +164,58 @@ WHERE reminder_at IS NOT NULL
       }
     },
   );
+
+  Future<void> _upgradeRecurringTransactionsToV17(Migrator m) async {
+    await customStatement('DROP INDEX IF EXISTS idx_rec_active');
+    await customStatement(
+      'ALTER TABLE recurring_transactions '
+      'RENAME TO recurring_transactions_v16',
+    );
+    await m.createTable(recurringTransactions);
+    await customStatement('''
+INSERT INTO recurring_transactions (
+  id, uuid, name, type, amount, memo,
+  account_id, category_id, from_account_id, to_account_id,
+  frequency, day_of_month, day_of_week, include_non_business_days,
+  occurred_time, start_date, end_date, last_generated_on, tag_names, active,
+  created_at, updated_at, deleted_at, sync_status
+)
+SELECT
+  id, uuid, name, type, amount, memo,
+  account_id, category_id, from_account_id, to_account_id,
+  frequency, day_of_month, day_of_week, 1,
+  occurred_time, start_date, end_date, last_generated_on, tag_names, active,
+  created_at, updated_at, deleted_at, sync_status
+FROM recurring_transactions_v16
+''');
+    await customStatement('DROP TABLE recurring_transactions_v16');
+  }
+
+  Future<void> _upgradeRecurringTransactionsToV18(Migrator m) async {
+    await customStatement('DROP INDEX IF EXISTS idx_rec_active');
+    await customStatement(
+      'ALTER TABLE recurring_transactions '
+      'RENAME TO recurring_transactions_v17',
+    );
+    await m.createTable(recurringTransactions);
+    await customStatement('''
+INSERT INTO recurring_transactions (
+  id, uuid, name, type, amount, memo,
+  account_id, category_id, from_account_id, to_account_id,
+  frequency, day_of_month, day_of_week, include_non_business_days,
+  occurred_time, start_date, end_date, last_generated_on, tag_names, active,
+  created_at, updated_at, deleted_at, sync_status
+)
+SELECT
+  id, uuid, name, type, amount, memo,
+  account_id, category_id, from_account_id, to_account_id,
+  frequency, day_of_month, day_of_week, include_non_business_days,
+  occurred_time, start_date, end_date, last_generated_on, tag_names, active,
+  created_at, updated_at, deleted_at, sync_status
+FROM recurring_transactions_v17
+''');
+    await customStatement('DROP TABLE recurring_transactions_v17');
+  }
 
   /// Hard deletes stay invisible to all existing queries, while this durable
   /// outbox preserves the information needed to create a server tombstone.

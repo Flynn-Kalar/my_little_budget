@@ -141,7 +141,7 @@ void main() {
             find.byKey(const ValueKey('mobile-transaction-calculator-display')),
           )
           .data,
-      '1000+2000×3',
+      '1,000+2,000×3',
     );
 
     await tester.tap(find.byKey(const ValueKey('mobile-transaction-keypad-=')));
@@ -157,7 +157,7 @@ void main() {
     final returnedAmountField = find.byKey(amountKey);
     expect(
       tester.widget<TextField>(returnedAmountField).controller?.text,
-      '7000',
+      '7,000',
     );
     expect(
       tester

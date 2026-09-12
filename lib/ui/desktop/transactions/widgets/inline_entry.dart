@@ -8,6 +8,7 @@ import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
 import '../../../../features/presets/validation.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
+import '../../../shared/amount_input_formatter.dart';
 import '../../../shared/spending_limit_warning.dart';
 import 'form_fields.dart';
 
@@ -74,7 +75,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
       _categoryId = preset.categoryId;
       _fromAccountId = preset.fromAccountId;
       _toAccountId = preset.toAccountId;
-      _amountCtrl.text = preset.amount.toString();
+      _amountCtrl.text = formatAmountInput(preset.amount.toString());
       _memoCtrl.text = preset.memo ?? '';
       _tags = List<String>.from(preset.tagNames);
     });
@@ -399,6 +400,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                       controller: _amountCtrl,
                       focusNode: _amountFocus,
                       keyboardType: TextInputType.text,
+                      inputFormatters: const [amountInputFormatter],
                       textAlign: TextAlign.left,
                       textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(

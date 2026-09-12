@@ -559,6 +559,10 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
         setState(() => _error = '알림과 정확한 알람 권한을 모두 허용하세요.');
         return;
       }
+      if (!permission.canShowAlarmScreen) {
+        setState(() => _error = '전체 화면 알람 권한을 허용하세요.');
+        return;
+      }
     }
 
     setState(() {

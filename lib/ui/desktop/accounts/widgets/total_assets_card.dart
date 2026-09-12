@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/money.dart';
+import '../../desktop_section.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/accounts_dao.dart';
 import '../../../../features/accounts/grouping.dart';
@@ -55,36 +56,39 @@ class TotalAssetsCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _AssetMetric(
-                  label: '총자산',
-                  amount: assetTotal,
-                  color: context.desktopIncome,
+          DesktopSection(
+            minWidth: 600,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _AssetMetric(
+                    label: '총자산',
+                    amount: assetTotal,
+                    color: context.desktopIncome,
+                  ),
                 ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _AssetMetric(
-                  label: '총부채',
-                  amount: debtTotal,
-                  color: context.desktopExpense,
+                SizedBox(width: 12),
+                Expanded(
+                  child: _AssetMetric(
+                    label: '총부채',
+                    amount: debtTotal,
+                    color: context.desktopExpense,
+                  ),
                 ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _AssetMetric(
-                  label: '총 순자산',
-                  amount: netTotal,
-                  color: netTotal < 0
-                      ? context.desktopExpense
-                      : context.desktopAccent,
-                  emphasized: true,
+                SizedBox(width: 12),
+                Expanded(
+                  child: _AssetMetric(
+                    label: '총 순자산',
+                    amount: netTotal,
+                    color: netTotal < 0
+                        ? context.desktopExpense
+                        : context.desktopAccent,
+                    emphasized: true,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           if (groupRows.isNotEmpty) ...[
             SizedBox(height: 16),

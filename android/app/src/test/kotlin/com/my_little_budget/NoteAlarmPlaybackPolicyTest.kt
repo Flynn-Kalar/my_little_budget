@@ -54,8 +54,9 @@ class NoteAlarmPlaybackPolicyTest {
     }
 
     @Test
-    fun `foreground notification is always silent to prevent duplicate playback`() {
-        assertTrue(NoteAlarmPlaybackPolicy.NOTIFICATION_MUST_BE_SILENT)
+    fun `foreground notification avoids the suppressive silent group`() {
+        assertFalse(NoteAlarmPlaybackPolicy.NOTIFICATION_MUST_USE_SILENT_GROUP)
         assertTrue(NoteAlarmPlaybackPolicy.CHANNEL_ID.endsWith("_v2"))
+        assertTrue(NoteAlarmPlaybackPolicy.PRESENTATION_CHANNEL_ID.endsWith("_v1"))
     }
 }

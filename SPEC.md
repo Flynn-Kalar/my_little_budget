@@ -146,9 +146,13 @@ UNIQUE `(name, type)`.
 | amount | > 0 |
 | memo | NULL 가능 |
 | account_id / category_id / from_account_id / to_account_id | type 에 따라 transactions 와 동일 형상 규칙. **자산/카테고리 삭제 시 set null** (그러면 사실상 자동 비활성) |
-| frequency | `monthly` / `weekly` |
-| day_of_month | monthly 면 1~31. **31 같은 경우 그 달 마지막 날로 폴백.** |
-| day_of_week | weekly 면 0(일)~6(토) |
+| frequency | `monthly` / `weekly` / `daily` |
+| monthly_mode | monthly 면 `day`(N일) / `nth_weekday`(N주차 N요일) |
+| day_of_month | monthly `day`면 1~31. **31 같은 경우 그 달 마지막 날로 폴백.** |
+| week_of_month | monthly `nth_weekday`면 1~5. 해당 5주차 요일이 없으면 그 달은 건너뜀 |
+| day_of_week | weekly 또는 monthly `nth_weekday`면 0(일)~6(토) |
+| non_business_day_adjustment | monthly `day`의 주말·공휴일 처리: `same` / `previous` / `next` |
+| include_non_business_days | daily 면 주말·대한민국 공휴일 포함 여부. bool, default 1 |
 | occurred_time | default "00:00" |
 | start_date | `YYYY-MM-DD` 필수 |
 | end_date | NULL 가능 (무기한) |
@@ -359,7 +363,7 @@ adjustment 거래도 여기서는 보임 (잔액 조정 내역 확인용).
 ```
 for each active recurring r:
   anchor = r.last_generated_on   // NULL 이면 첫 발생
-  loop (최대 120회 — 무한루프 방지):
+  loop (최대 100년치 — 무한루프 방지):
     next = nextOccurrence(r, anchor)
     if next == null: break
     if next > horizon: break
@@ -376,11 +380,15 @@ for each active recurring r:
 
 `nextOccurrence(r, anchor)`:
 - `monthly`:
-  - anchor null → start_date 의 (year, month) 에서 `min(dayOfMonth, 그달 마지막일)` 로 후보. 후보 ≥ start_date 면 채택, 아니면 다음 달로.
-  - anchor 있으면 anchor 의 **다음 달**, `min(dayOfMonth, 다음달 마지막일)`.
+  - `day`: 해당 월의 `min(dayOfMonth, 그달 마지막일)`을 기준일로 계산.
+  - 기준일이 주말·공휴일이면 설정에 따라 당일 유지, 전 영업일 또는 다음 영업일로 이동.
+  - `nth_weekday`: 해당 월의 N번째 요일로 계산. 존재하지 않는 5주차 요일은 그 달을 건너뜀.
 - `weekly`:
   - anchor null → start_date 부터 가장 가까운 dayOfWeek (`(dayOfWeek - sd.dayOfWeek + 7) % 7` 일 더함).
   - anchor 있으면 anchor + 7일.
+- `daily`:
+  - anchor null → start_date, anchor 있으면 anchor + 1일.
+  - `include_non_business_days=false`면 토·일요일과 대한민국 공휴일·대체공휴일을 건너뜀.
 
 전 과정 단일 트랜잭션. 새 거래 한 건당 anchor 갱신. 멱등(같은 horizon 으로 재호출 시 추가 INSERT 없음).
 

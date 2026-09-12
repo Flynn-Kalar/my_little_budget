@@ -2,6 +2,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_little_budget/core/money.dart';
 
 void main() {
+  group('formatAmountInput', () {
+    test('adds separators to plain, signed, and decimal amounts', () {
+      expect(formatAmountInput('1234567'), '1,234,567');
+      expect(formatAmountInput('-1234567'), '-1,234,567');
+      expect(formatAmountInput('1234.56'), '1,234.56');
+      expect(formatAmountInput('1,234,567'), '1,234,567');
+    });
+
+    test('formats every number in an arithmetic expression', () {
+      expect(formatAmountInput('1000+2000×3'), '1,000+2,000×3');
+      expect(
+        formatAmountInput('(1000 + 2000) * 3000'),
+        '(1,000 + 2,000) * 3,000',
+      );
+    });
+  });
+
   group('parseKRW', () {
     test('parses plain and formatted amounts', () {
       expect(parseKRW('12000'), 12000);

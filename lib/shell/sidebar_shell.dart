@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_theme.dart';
 import '../features/notes/providers.dart';
+import 'layout_policy.dart';
 
 class _NavItem {
   const _NavItem({required this.path, required this.label, required this.icon});
@@ -44,6 +45,7 @@ class SidebarShell extends ConsumerWidget {
     final border = context.desktopBorder;
     final background = context.desktopBackground;
     final muted = context.desktopMuted;
+    final compact = isCompactDesktop(context);
 
     int badgeFor(String path) => switch (path) {
       '/notes' => pendingReminders,
@@ -55,12 +57,12 @@ class SidebarShell extends ConsumerWidget {
         child: Row(
           children: [
             Container(
-              width: 224,
+              width: compact ? 104 : 224,
               decoration: BoxDecoration(
                 color: sidebarBg,
                 border: Border(right: BorderSide(color: border)),
               ),
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(compact ? 6 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -73,7 +75,7 @@ class SidebarShell extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'my_little_budget',
+                          compact ? '가계부' : 'my_little_budget',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -81,10 +83,11 @@ class SidebarShell extends ConsumerWidget {
                           ),
                         ),
                         SizedBox(height: 4),
-                        Text(
-                          '나만의 작은 가계부',
-                          style: TextStyle(fontSize: 11, color: muted),
-                        ),
+                        if (!compact)
+                          Text(
+                            '나만의 작은 가계부',
+                            style: TextStyle(fontSize: 11, color: muted),
+                          ),
                       ],
                     ),
                   ),
@@ -94,11 +97,16 @@ class SidebarShell extends ConsumerWidget {
                       item: item,
                       current: location,
                       badge: badgeFor(item.path),
+                      compact: compact,
                     ),
                   ),
                   const Spacer(),
                   ..._bottomItems.map(
-                    (item) => _NavTile(item: item, current: location),
+                    (item) => _NavTile(
+                      item: item,
+                      current: location,
+                      compact: compact,
+                    ),
                   ),
                 ],
               ),
@@ -106,7 +114,10 @@ class SidebarShell extends ConsumerWidget {
             Expanded(
               child: ColoredBox(
                 color: background,
-                child: Padding(padding: const EdgeInsets.all(32), child: child),
+                child: Padding(
+                  padding: EdgeInsets.all(compact ? 12 : 32),
+                  child: child,
+                ),
               ),
             ),
           ],
@@ -117,10 +128,16 @@ class SidebarShell extends ConsumerWidget {
 }
 
 class _NavTile extends StatelessWidget {
-  const _NavTile({required this.item, required this.current, this.badge = 0});
+  const _NavTile({
+    required this.item,
+    required this.current,
+    this.badge = 0,
+    this.compact = false,
+  });
   final _NavItem item;
   final String current;
   final int badge;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -136,11 +153,22 @@ class _NavTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           onTap: () => context.go(item.path),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 6 : 12,
+              vertical: 8,
+            ),
             child: Row(
               children: [
-                Icon(item.icon, size: 16, color: active ? foreground : muted),
-                SizedBox(width: 12),
+                Badge(
+                  isLabelVisible: compact && badge > 0,
+                  label: Text('$badge'),
+                  child: Icon(
+                    item.icon,
+                    size: 16,
+                    color: active ? foreground : muted,
+                  ),
+                ),
+                SizedBox(width: compact ? 6 : 12),
                 Expanded(
                   child: Text(
                     item.label,
@@ -151,7 +179,7 @@ class _NavTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (badge > 0) _Badge(count: badge),
+                if (badge > 0 && !compact) _Badge(count: badge),
               ],
             ),
           ),

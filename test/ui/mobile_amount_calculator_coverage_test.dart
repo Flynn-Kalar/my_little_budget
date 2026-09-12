@@ -51,7 +51,7 @@ void main() {
       findsOneWidget,
     );
     await _calculate(tester);
-    expect(tester.widget<TextField>(_amountField()).controller?.text, '7000');
+    expect(tester.widget<TextField>(_amountField()).controller?.text, '7,000');
   });
 
   testWidgets('investment amount opens the arithmetic calculator', (
@@ -73,7 +73,32 @@ void main() {
       findsOneWidget,
     );
     await _calculate(tester);
-    expect(tester.widget<TextField>(_amountField()).controller?.text, '7000');
+    expect(tester.widget<TextField>(_amountField()).controller?.text, '7,000');
+  });
+
+  testWidgets('recurring form exposes monthly and daily cadence options', (
+    tester,
+  ) async {
+    final db = await _pumpScreen(tester, const MobileRecurringScreen());
+    addTearDown(db.close);
+
+    await tester.tap(find.byTooltip('반복거래 추가'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('N일'), findsOneWidget);
+    expect(find.text('N주차 N요일'), findsOneWidget);
+    expect(find.text('주말·공휴일 처리'), findsOneWidget);
+
+    await tester.tap(find.text('N주차 N요일'));
+    await tester.pumpAndSettle();
+    expect(find.text('주차'), findsOneWidget);
+    expect(find.text('요일'), findsOneWidget);
+
+    await tester.tap(find.text('매일'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('주말·공휴일 포함'), findsOneWidget);
+    expect(find.text('토·일요일과 대한민국 공휴일에도 거래를 생성합니다.'), findsOneWidget);
   });
 }
 

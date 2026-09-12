@@ -9,6 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/database.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
+import '../../../shared/amount_input_formatter.dart';
 import 'form_fields.dart';
 import 'type_filter.dart';
 
@@ -44,8 +45,12 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
     super.initState();
     final filter = ref.read(searchFilterProvider);
     _qCtrl.text = filter.q ?? '';
-    _minCtrl.text = filter.minAmount == null ? '' : '${filter.minAmount}';
-    _maxCtrl.text = filter.maxAmount == null ? '' : '${filter.maxAmount}';
+    _minCtrl.text = filter.minAmount == null
+        ? ''
+        : formatAmountInput('${filter.minAmount}');
+    _maxCtrl.text = filter.maxAmount == null
+        ? ''
+        : formatAmountInput('${filter.maxAmount}');
     _accountId = filter.accountId;
     _categoryIds.addAll(filter.categoryIds ?? const []);
     _tagIds.addAll(filter.tagIds ?? const []);
@@ -197,16 +202,17 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: hasFilter
-                        ? context.desktopIncome
-                        : context.desktopMuted,
+                Expanded(
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: hasFilter
+                          ? context.desktopIncome
+                          : context.desktopMuted,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 IconButton(
                   tooltip: '필터 접기',
                   onPressed: () => _setExpanded(false),
@@ -363,6 +369,7 @@ class _FilterControls extends StatelessWidget {
                 key: const ValueKey('transactions-min-amount-field'),
                 controller: minCtrl,
                 keyboardType: TextInputType.number,
+                inputFormatters: const [amountInputFormatter],
                 decoration: const InputDecoration(
                   labelText: '최소 금액',
                   isDense: true,
@@ -376,6 +383,7 @@ class _FilterControls extends StatelessWidget {
                 key: const ValueKey('transactions-max-amount-field'),
                 controller: maxCtrl,
                 keyboardType: TextInputType.number,
+                inputFormatters: const [amountInputFormatter],
                 decoration: const InputDecoration(
                   labelText: '최대 금액',
                   isDense: true,

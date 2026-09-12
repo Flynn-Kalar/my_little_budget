@@ -89,9 +89,19 @@ class _RecurringCard extends ConsumerWidget {
               value: formatKRW(recurring.amount),
             ),
             Text(
-              recurring.frequency == 'weekly'
-                  ? '매주 ${_weekdayLabel(recurring.dayOfWeek)}'
-                  : '매월 ${recurring.dayOfMonth ?? 1}일',
+              switch (recurring.frequency) {
+                'weekly' => '매주 ${_weekdayLabel(recurring.dayOfWeek)}',
+                'daily' =>
+                  recurring.includeNonBusinessDays
+                      ? '매일 · 주말·공휴일 포함'
+                      : '매일 · 주말·공휴일 제외',
+                _ =>
+                  recurring.monthlyMode == 'nth_weekday'
+                      ? '매월 ${recurring.weekOfMonth}주차 '
+                            '${_weekdayLabel(recurring.dayOfWeek)}'
+                      : '매월 ${recurring.dayOfMonth ?? 1}일'
+                            '${_monthlyAdjustmentLabel(recurring.nonBusinessDayAdjustment)}',
+              },
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
               ),
@@ -150,6 +160,12 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
   late String _frequency = widget.item?.recurring.frequency ?? 'monthly';
   late int _dayOfMonth = widget.item?.recurring.dayOfMonth ?? 1;
   late int _dayOfWeek = widget.item?.recurring.dayOfWeek ?? 1;
+  late String _monthlyMode = widget.item?.recurring.monthlyMode ?? 'day';
+  late int _weekOfMonth = widget.item?.recurring.weekOfMonth ?? 1;
+  late String _nonBusinessDayAdjustment =
+      widget.item?.recurring.nonBusinessDayAdjustment ?? 'same';
+  late bool _includeNonBusinessDays =
+      widget.item?.recurring.includeNonBusinessDays ?? true;
   late int? _accountId = widget.item?.recurring.accountId;
   late int? _categoryId = widget.item?.recurring.categoryId;
   late int? _fromAccountId = widget.item?.recurring.fromAccountId;
@@ -199,6 +215,10 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
       endDate: _endDate == null ? null : toDateKey(_endDate!),
       dayOfMonth: _dayOfMonth,
       dayOfWeek: _dayOfWeek,
+      monthlyMode: _monthlyMode,
+      weekOfMonth: _weekOfMonth,
+      nonBusinessDayAdjustment: _nonBusinessDayAdjustment,
+      includeNonBusinessDays: _includeNonBusinessDays,
       memo: _memo.text,
       accountId: _accountId,
       categoryId: _categoryId,
@@ -332,6 +352,7 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
               segments: const [
                 ButtonSegment(value: 'monthly', label: Text('매월')),
                 ButtonSegment(value: 'weekly', label: Text('매주')),
+                ButtonSegment(value: 'daily', label: Text('매일')),
               ],
               selected: {_frequency},
               showSelectedIcon: false,
@@ -340,18 +361,84 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
                   : (selected) => setState(() => _frequency = selected.first),
             ),
             const SizedBox(height: 12),
-            if (_frequency == 'monthly')
-              TextField(
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: '반복 일자',
-                  suffixText: '일',
-                  border: OutlineInputBorder(),
+            if (_frequency == 'monthly') ...[
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'day', label: Text('N일')),
+                  ButtonSegment(value: 'nth_weekday', label: Text('N주차 N요일')),
+                ],
+                selected: {_monthlyMode},
+                showSelectedIcon: false,
+                onSelectionChanged: _busy
+                    ? null
+                    : (selected) =>
+                          setState(() => _monthlyMode = selected.first),
+              ),
+              const SizedBox(height: 12),
+              if (_monthlyMode == 'day') ...[
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: '반복 일자',
+                    suffixText: '일',
+                    border: OutlineInputBorder(),
+                  ),
+                  controller: _dayOfMonthCtrl,
+                  onChanged: (value) => _dayOfMonth = int.tryParse(value) ?? 1,
                 ),
-                controller: _dayOfMonthCtrl,
-                onChanged: (value) => _dayOfMonth = int.tryParse(value) ?? 1,
-              )
-            else
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _nonBusinessDayAdjustment,
+                  items: const [
+                    DropdownMenuItem(value: 'same', child: Text('당일 입력 유지')),
+                    DropdownMenuItem(
+                      value: 'previous',
+                      child: Text('전 영업일로 당기기'),
+                    ),
+                    DropdownMenuItem(value: 'next', child: Text('다음 영업일로 미루기')),
+                  ],
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(
+                          () => _nonBusinessDayAdjustment = value ?? 'same',
+                        ),
+                  decoration: const InputDecoration(
+                    labelText: '주말·공휴일 처리',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        initialValue: _weekOfMonth,
+                        items: [
+                          for (var i = 1; i <= 5; i++)
+                            DropdownMenuItem(value: i, child: Text('$i주차')),
+                        ],
+                        onChanged: _busy
+                            ? null
+                            : (value) =>
+                                  setState(() => _weekOfMonth = value ?? 1),
+                        decoration: const InputDecoration(
+                          labelText: '주차',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _RecurringWeekdayField(
+                        value: _dayOfWeek,
+                        enabled: !_busy,
+                        onChanged: (value) =>
+                            setState(() => _dayOfWeek = value),
+                      ),
+                    ),
+                  ],
+                ),
+            ] else if (_frequency == 'weekly')
               DropdownButtonFormField<int>(
                 initialValue: _dayOfWeek,
                 items: const [
@@ -370,6 +457,21 @@ class _RecurringSheetState extends ConsumerState<_RecurringSheet> {
                   labelText: '요일',
                   border: OutlineInputBorder(),
                 ),
+              )
+            else
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('주말·공휴일 포함'),
+                subtitle: Text(
+                  _includeNonBusinessDays
+                      ? '토·일요일과 대한민국 공휴일에도 거래를 생성합니다.'
+                      : '평일 중 대한민국 공휴일이 아닌 날에만 생성합니다.',
+                ),
+                value: _includeNonBusinessDays,
+                onChanged: _busy
+                    ? null
+                    : (value) =>
+                          setState(() => _includeNonBusinessDays = value),
               ),
             const SizedBox(height: 12),
             TextField(
@@ -494,6 +596,43 @@ class _AccountField extends StatelessWidget {
   }
 }
 
+class _RecurringWeekdayField extends StatelessWidget {
+  const _RecurringWeekdayField({
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final int value;
+  final bool enabled;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int>(
+      initialValue: value,
+      items: const [
+        DropdownMenuItem(value: 1, child: Text('월요일')),
+        DropdownMenuItem(value: 2, child: Text('화요일')),
+        DropdownMenuItem(value: 3, child: Text('수요일')),
+        DropdownMenuItem(value: 4, child: Text('목요일')),
+        DropdownMenuItem(value: 5, child: Text('금요일')),
+        DropdownMenuItem(value: 6, child: Text('토요일')),
+        DropdownMenuItem(value: 0, child: Text('일요일')),
+      ],
+      onChanged: enabled
+          ? (value) {
+              if (value != null) onChanged(value);
+            }
+          : null,
+      decoration: const InputDecoration(
+        labelText: '요일',
+        border: OutlineInputBorder(),
+      ),
+    );
+  }
+}
+
 class _CategoryField extends StatelessWidget {
   const _CategoryField({
     required this.categories,
@@ -613,4 +752,10 @@ String _weekdayLabel(int? value) => switch (value) {
   5 => '금요일',
   6 => '토요일',
   _ => '월요일',
+};
+
+String _monthlyAdjustmentLabel(String value) => switch (value) {
+  'previous' => ' · 전 영업일',
+  'next' => ' · 후 영업일',
+  _ => '',
 };

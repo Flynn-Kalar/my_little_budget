@@ -17,6 +17,7 @@ import '../../../features/notes/rich_note.dart';
 import '../../../features/notes/note_schedule.dart';
 import 'package:my_little_budget/features/notes/providers.dart';
 import '../../shared/rich_note_editor.dart';
+import '../../../shell/layout_policy.dart';
 
 enum _NoteFilter { all, inProgress, completed }
 
@@ -55,6 +56,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   @override
   Widget build(BuildContext context) {
     final notes = ref.watch(notesProvider);
+    final compact = isCompactDesktop(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -90,30 +92,41 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         const SizedBox(height: 24),
         Row(
           children: [
-            SizedBox(
-              width: 300,
-              child: TextField(
-                controller: _search,
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  hintText: '제목 또는 내용 검색',
-                  prefixIcon: Icon(Icons.search),
+            Flexible(
+              child: SizedBox(
+                width: compact ? 220 : 300,
+                child: TextField(
+                  controller: _search,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: '제목 또는 내용 검색',
+                    prefixIcon: Icon(Icons.search),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: compact ? 8 : 16),
             SegmentedButton<_NoteFilter>(
-              segments: const [
-                ButtonSegment(value: _NoteFilter.all, label: Text('전체')),
+              showSelectedIcon: !compact,
+              style: compact
+                  ? SegmentedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(40, 36),
+                    )
+                  : null,
+              segments: [
+                const ButtonSegment(value: _NoteFilter.all, label: Text('전체')),
                 ButtonSegment(
                   value: _NoteFilter.inProgress,
-                  label: Text('진행 중'),
-                  icon: Icon(Icons.notifications_outlined),
+                  label: const Text('진행 중'),
+                  icon: compact
+                      ? null
+                      : const Icon(Icons.notifications_outlined),
                 ),
                 ButtonSegment(
                   value: _NoteFilter.completed,
-                  label: Text('완료'),
-                  icon: Icon(Icons.check),
+                  label: const Text('완료'),
+                  icon: compact ? null : const Icon(Icons.check),
                 ),
               ],
               selected: {_filter},
@@ -147,8 +160,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               }).toList();
               if (filtered.isEmpty) return const _EmptyNotes();
               return GridView.builder(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 330,
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: compact ? 600 : 330,
                   mainAxisExtent: 212,
                   crossAxisSpacing: 14,
                   mainAxisSpacing: 14,
@@ -649,6 +662,10 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
       final permission = await service.requestPermissions();
       if (!permission.granted) {
         setState(() => _error = '알림과 정확한 알람 권한을 모두 허용하세요.');
+        return;
+      }
+      if (!permission.canShowAlarmScreen) {
+        setState(() => _error = '전체 화면 알람 권한을 허용하세요.');
         return;
       }
     }

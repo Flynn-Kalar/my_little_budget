@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
+import '../desktop_section.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
@@ -45,12 +46,15 @@ class StatsScreen extends ConsumerWidget {
               data: (rows) {
                 final effectiveCategory =
                     selectedCategory ?? (rows.isEmpty ? null : rows.first);
-                return _ExpenseBreakdownCard(
-                  rows: rows,
-                  tagRows: tagBreakdown,
-                  netAmount: _netForMonth(trend, month),
-                  selectedCategoryId: effectiveCategory?.categoryId,
-                  selectedTag: selectedTag,
+                return DesktopSection(
+                  minWidth: 700,
+                  child: _ExpenseBreakdownCard(
+                    rows: rows,
+                    tagRows: tagBreakdown,
+                    netAmount: _netForMonth(trend, month),
+                    selectedCategoryId: effectiveCategory?.categoryId,
+                    selectedTag: selectedTag,
+                  ),
                 );
               },
               loading: () => const _StatsCard(
@@ -66,13 +70,16 @@ class StatsScreen extends ConsumerWidget {
                   if (effectiveCategory == null) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 16),
-                    child: _CategoryAndTagDetailCard(
-                      category: effectiveCategory,
-                      categoryRows: selectedTransactions,
-                      tagRows: tagTransactions,
-                      tagBreakdown: tagBreakdown,
-                      selectedTag: selectedTag,
-                      month: month,
+                    child: DesktopSection(
+                      minWidth: 700,
+                      child: _CategoryAndTagDetailCard(
+                        category: effectiveCategory,
+                        categoryRows: selectedTransactions,
+                        tagRows: tagTransactions,
+                        tagBreakdown: tagBreakdown,
+                        selectedTag: selectedTag,
+                        month: month,
+                      ),
                     ),
                   );
                 },
@@ -80,7 +87,8 @@ class StatsScreen extends ConsumerWidget {
               ),
             SizedBox(height: 16),
             trend.when(
-              data: (rows) => _TrendCard(rows: rows),
+              data: (rows) =>
+                  DesktopSection(minWidth: 600, child: _TrendCard(rows: rows)),
               loading: () => const _StatsCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),

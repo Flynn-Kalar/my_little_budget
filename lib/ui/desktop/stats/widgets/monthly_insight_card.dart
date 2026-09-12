@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/money.dart';
+import '../../desktop_section.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 
@@ -36,57 +37,60 @@ class MonthlyInsightCard extends StatelessWidget {
           final topCategory = categoryRows.isEmpty ? null : categoryRows.first;
 
           return _InsightCard(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _InsightTile(
-                    icon: Icons.payments_outlined,
-                    label: '이번 달 지출',
-                    value: formatKRW(monthExpense),
-                    color: context.desktopExpense,
+            child: DesktopSection(
+              minWidth: 960,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _InsightTile(
+                      icon: Icons.payments_outlined,
+                      label: '이번 달 지출',
+                      value: formatKRW(monthExpense),
+                      color: context.desktopExpense,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _InsightTile(
-                    icon: diff <= 0
-                        ? Icons.trending_down_outlined
-                        : Icons.trending_up_outlined,
-                    label: '전월 대비',
-                    value: previousExpense == 0
-                        ? '-'
-                        : '${diff >= 0 ? '+' : ''}${formatKRW(diff)}',
-                    color: diff > 0
-                        ? context.desktopExpense
-                        : context.desktopIncome,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _InsightTile(
+                      icon: diff <= 0
+                          ? Icons.trending_down_outlined
+                          : Icons.trending_up_outlined,
+                      label: '전월 대비',
+                      value: previousExpense == 0
+                          ? '-'
+                          : '${diff >= 0 ? '+' : ''}${formatKRW(diff)}',
+                      color: diff > 0
+                          ? context.desktopExpense
+                          : context.desktopIncome,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _InsightTile(
-                    icon: Icons.query_stats_outlined,
-                    label: '12개월 평균',
-                    value: formatKRW(averageExpense),
-                    color: context.desktopAccent,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _InsightTile(
+                      icon: Icons.query_stats_outlined,
+                      label: '12개월 평균',
+                      value: formatKRW(averageExpense),
+                      color: context.desktopAccent,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _InsightTile(
-                    icon: Icons.category_outlined,
-                    label: '최다 지출 카테고리',
-                    value: topCategory == null
-                        ? '-'
-                        : '${topCategory.categoryName} · ${formatKRW(topCategory.total)}',
-                    color: topCategory == null
-                        ? context.desktopMuted
-                        : _parseColor(
-                            topCategory.categoryColor,
-                            context.desktopAccent,
-                          ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _InsightTile(
+                      icon: Icons.category_outlined,
+                      label: '최다 지출 카테고리',
+                      value: topCategory == null
+                          ? '-'
+                          : '${topCategory.categoryName} · ${formatKRW(topCategory.total)}',
+                      color: topCategory == null
+                          ? context.desktopMuted
+                          : _parseColor(
+                              topCategory.categoryColor,
+                              context.desktopAccent,
+                            ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

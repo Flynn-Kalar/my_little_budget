@@ -241,19 +241,25 @@ class NoteAlarmPlaybackService : Service() {
                 ),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val builder = NotificationCompat.Builder(this, NoteAlarmPlaybackPolicy.CHANNEL_ID)
+        val notificationTap = NoteAlarmPresentationPolicy.notificationTapTarget(
+            openNote = open,
+            alarmScreen = alarmScreen,
+        )
+        val builder = NotificationCompat.Builder(
+            this,
+            NoteAlarmPlaybackPolicy.PRESENTATION_CHANNEL_ID,
+        )
             .setSmallIcon(com.my_little_budget.R.drawable.ic_notification)
             .setContentTitle(title)
-            .setContentText("메모 알람이 울리고 있습니다.")
-            .setContentIntent(open)
+            .setContentText(NoteAlarmPresentationPolicy.NOTIFICATION_TEXT)
+            .setContentIntent(notificationTap)
             .setOngoing(true)
             .setAutoCancel(false)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setSilent(NoteAlarmPlaybackPolicy.NOTIFICATION_MUST_BE_SILENT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setFullScreenIntent(alarmScreen, true)
-            .addAction(0, "정지", stop)
+            .addAction(0, NoteAlarmPresentationPolicy.STOP_ACTION_LABEL, stop)
         if (job.optInt("snoozeMinutes", 0) > 0) {
             builder.addAction(0, "스누즈", snooze)
         }
@@ -316,6 +322,20 @@ internal object NoteAlarmChannel {
             }
             manager.createNotificationChannel(channel)
         }
+        if (manager.getNotificationChannel(NoteAlarmPlaybackPolicy.PRESENTATION_CHANNEL_ID) == null) {
+            val presentationChannel = NotificationChannel(
+                NoteAlarmPlaybackPolicy.PRESENTATION_CHANNEL_ID,
+                "메모 알람 화면",
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = "전체 화면 알람과 알람 끄기 버튼"
+                setSound(null, null)
+                enableVibration(false)
+                setShowBadge(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+            manager.createNotificationChannel(presentationChannel)
+        }
         if (legacy != null) {
             manager.deleteNotificationChannel(NoteAlarmPlaybackPolicy.LEGACY_CHANNEL_ID)
         }
@@ -331,11 +351,17 @@ internal object NoteAlarmChannel {
                 channelVibrationAllowed = true,
             )
         }
-        val channel = context.getSystemService(NotificationManager::class.java)
-            .getNotificationChannel(NoteAlarmPlaybackPolicy.CHANNEL_ID)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val channel = manager.getNotificationChannel(NoteAlarmPlaybackPolicy.CHANNEL_ID)
+        val presentationChannel = manager.getNotificationChannel(
+            NoteAlarmPlaybackPolicy.PRESENTATION_CHANNEL_ID,
+        )
+        val presentationAllowed = presentationChannel != null &&
+            presentationChannel.importance != NotificationManager.IMPORTANCE_NONE
         return NoteAlarmPlaybackPolicy.systemSettings(
             notificationsAllowed = notificationsAllowed,
-            channelEnabled = channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE,
+            channelEnabled = presentationAllowed &&
+                channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE,
             channelSoundAllowed = channel != null &&
                 channel.importance >= NotificationManager.IMPORTANCE_DEFAULT &&
                 channel.sound != null,

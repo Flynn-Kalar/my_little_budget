@@ -9,6 +9,12 @@
 
 ## Responsive Rules
 
+Windows/Linux/macOS 네이티브 앱은 폭과 무관하게 desktop shell + sidebar를 유지한다.
+네이티브 데스크톱 창 폭 < 1200에서는 compact desktop을 사용한다.
+플랫폼 판정과 공통 breakpoint는 lib/shell/layout_policy.dart에서 관리한다.
+
+Android/iOS/Web의 기존 폭 기반 동작은 유지한다:
+
 width >= 900
 → desktop shell + sidebar
 
@@ -26,6 +32,7 @@ width < 900
 ✅ shell.dart 에서 플랫폼 분기
 ✅ mobile 폴더 신규 생성
 ✅ feature 단위 UI 분리
+✅ 좁은 네이티브 데스크톱의 여백/사이드바 축소 및 밀집 영역별 스크롤
 
 ## Agent skills
 

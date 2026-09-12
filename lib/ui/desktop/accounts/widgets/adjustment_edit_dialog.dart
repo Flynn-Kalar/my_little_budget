@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
+import '../../../shared/amount_input_formatter.dart';
 import '../account_refresh.dart';
 
 /// SPEC §4.3 — 자산 잔액 조정 거래 편집. 타입 토글 없이 날짜/시각/금액/메모만.
@@ -39,7 +40,7 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
   late DateTime _date = parseDateKey(widget.row.occurredOn);
   late final String _time = widget.row.occurredTime;
   late final _amountCtrl = TextEditingController(
-    text: widget.row.amount.toString(),
+    text: formatAmountInput(widget.row.amount.toString()),
   );
   late final _memoCtrl = TextEditingController(text: widget.row.memo ?? '');
   bool _busy = false;
@@ -111,6 +112,7 @@ class _State extends ConsumerState<AdjustmentEditDialog> {
             TextField(
               controller: _amountCtrl,
               keyboardType: const TextInputType.numberWithOptions(signed: true),
+              inputFormatters: const [amountInputFormatter],
               decoration: const InputDecoration(
                 labelText: '±금액 (음수는 잔액 감소)',
                 isDense: true,

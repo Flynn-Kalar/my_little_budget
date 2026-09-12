@@ -288,4 +288,139 @@ VALUES (7, '기존 반복 메모', '보존할 본문', 'daily', '06:00')
     expect(checklistTable?.read<String>('name'), 'note_checklist_items');
     expect(await db.select(db.noteChecklistItems).get(), isEmpty);
   });
+
+  test(
+    'schema v16 upgrades all recurring options and preserves rows',
+    () async {
+      final executor = NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''
+CREATE TABLE recurring_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  memo TEXT,
+  account_id INTEGER,
+  category_id INTEGER,
+  from_account_id INTEGER,
+  to_account_id INTEGER,
+  frequency TEXT NOT NULL,
+  day_of_month INTEGER,
+  day_of_week INTEGER,
+  occurred_time TEXT NOT NULL DEFAULT '00:00',
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  last_generated_on TEXT,
+  tag_names TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending'
+)
+''');
+          raw.execute('''
+INSERT INTO recurring_transactions (
+  id, uuid, name, type, amount, account_id, category_id,
+  frequency, day_of_month, occurred_time, start_date,
+  active, created_at, updated_at, sync_status
+) VALUES (
+  7, 'recurring-v16', '기존 월세', 'expense', 500000, 1, 1,
+  'monthly', 1, '09:00', '2026-01-01',
+  1, '2026-01-01', '2026-01-01', 'pending'
+)
+''');
+          raw.execute('PRAGMA user_version = 16');
+        },
+      );
+      final db = AppDatabase.forTesting(executor);
+      addTearDown(db.close);
+
+      final row = await db.customSelect('''
+SELECT name, frequency, include_non_business_days,
+       monthly_mode, week_of_month, non_business_day_adjustment
+FROM recurring_transactions
+WHERE id = 7
+''').getSingle();
+
+      expect(row.read<String>('name'), '기존 월세');
+      expect(row.read<String>('frequency'), 'monthly');
+      expect(row.read<int>('include_non_business_days'), 1);
+      expect(row.read<String>('monthly_mode'), 'day');
+      expect(row.readNullable<int>('week_of_month'), isNull);
+      expect(row.read<String>('non_business_day_adjustment'), 'same');
+      final sql = await db.customSelect('''
+SELECT sql FROM sqlite_master
+WHERE type = 'table' AND name = 'recurring_transactions'
+''').getSingle();
+      expect(sql.read<String>('sql'), contains("'daily'"));
+      expect(sql.read<String>('sql'), contains("'nth_weekday'"));
+    },
+  );
+
+  test(
+    'schema v17 preserves daily holiday option when adding monthly modes',
+    () async {
+      final executor = NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''
+CREATE TABLE recurring_transactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  memo TEXT,
+  account_id INTEGER,
+  category_id INTEGER,
+  from_account_id INTEGER,
+  to_account_id INTEGER,
+  frequency TEXT NOT NULL,
+  day_of_month INTEGER,
+  day_of_week INTEGER,
+  include_non_business_days INTEGER NOT NULL DEFAULT 1,
+  occurred_time TEXT NOT NULL DEFAULT '00:00',
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  last_generated_on TEXT,
+  tag_names TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  deleted_at TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending'
+)
+''');
+          raw.execute('''
+INSERT INTO recurring_transactions (
+  id, uuid, name, type, amount, account_id, category_id,
+  frequency, include_non_business_days, occurred_time, start_date,
+  active, created_at, updated_at, sync_status
+) VALUES (
+  8, 'recurring-v17', '기존 평일 거래', 'expense', 12000, 1, 1,
+  'daily', 0, '12:00', '2026-01-01',
+  1, '2026-01-01', '2026-01-01', 'pending'
+)
+''');
+          raw.execute('PRAGMA user_version = 17');
+        },
+      );
+      final db = AppDatabase.forTesting(executor);
+      addTearDown(db.close);
+
+      final row = await db.customSelect('''
+SELECT frequency, include_non_business_days,
+       monthly_mode, non_business_day_adjustment
+FROM recurring_transactions
+WHERE id = 8
+''').getSingle();
+
+      expect(row.read<String>('frequency'), 'daily');
+      expect(row.read<int>('include_non_business_days'), 0);
+      expect(row.read<String>('monthly_mode'), 'day');
+      expect(row.read<String>('non_business_day_adjustment'), 'same');
+    },
+  );
 }

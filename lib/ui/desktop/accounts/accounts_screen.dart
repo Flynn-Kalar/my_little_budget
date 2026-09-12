@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'widgets/account_list.dart';
 import 'widgets/archived_accounts.dart';
 import 'widgets/total_assets_card.dart';
+import '../desktop_section.dart';
 
 /// SPEC §4.2 — 자산 메인 화면 (PC).
 class AccountsScreen extends StatelessWidget {
@@ -23,7 +24,7 @@ class AccountsScreen extends StatelessWidget {
             SizedBox(height: 20),
             TotalAssetsCard(),
             SizedBox(height: 20),
-            AccountList(),
+            DesktopSection(minWidth: 680, child: AccountList()),
             ArchivedAccounts(),
             SizedBox(height: 40),
           ],

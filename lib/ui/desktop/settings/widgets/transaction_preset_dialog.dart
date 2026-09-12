@@ -8,6 +8,7 @@ import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/presets/validation.dart';
 import '../../../../features/settings/providers.dart';
+import '../../../shared/amount_input_formatter.dart';
 
 class TransactionPresetDialog extends ConsumerStatefulWidget {
   const TransactionPresetDialog({super.key, this.item, this.source});
@@ -43,8 +44,9 @@ class _State extends ConsumerState<TransactionPresetDialog> {
     text: widget.item?.preset.name ?? '',
   );
   late final _amount = TextEditingController(
-    text:
-        (widget.item?.preset.amount ?? widget.source?.amount)?.toString() ?? '',
+    text: formatAmountInput(
+      (widget.item?.preset.amount ?? widget.source?.amount)?.toString() ?? '',
+    ),
   );
   late final _memo = TextEditingController(
     text: widget.item?.preset.memo ?? widget.source?.memo ?? '',
@@ -147,6 +149,7 @@ class _State extends ConsumerState<TransactionPresetDialog> {
               TextField(
                 controller: _amount,
                 keyboardType: TextInputType.number,
+                inputFormatters: const [amountInputFormatter],
                 decoration: const InputDecoration(
                   labelText: '금액',
                   border: OutlineInputBorder(),
