@@ -339,6 +339,10 @@ class _YearlyCategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = rows.fold<int>(0, (sum, row) => sum + row.total);
+    final monthlyTotals = List<int>.generate(
+      12,
+      (month) => rows.fold<int>(0, (sum, row) => sum + row.months[month]),
+    );
 
     return _StatsCard(
       child: Column(
@@ -352,13 +356,10 @@ class _YearlyCategoryCard extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
-              Text(
-                formatKRW(total),
-                style: TextStyle(
-                  color: context.desktopExpense,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+              _YearlyExpenseAmount(
+                total: total,
+                months: monthlyTotals,
+                emphasized: true,
               ),
             ],
           ),
@@ -420,15 +421,54 @@ class _CategoryRow extends StatelessWidget {
           SizedBox(width: 16),
           SizedBox(
             width: 140,
-            child: Text(
-              formatKRW(row.total),
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
+            child: _YearlyExpenseAmount(total: row.total, months: row.months),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _YearlyExpenseAmount extends StatelessWidget {
+  const _YearlyExpenseAmount({
+    required this.total,
+    required this.months,
+    this.emphasized = false,
+  });
+
+  final int total;
+  final List<int> months;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    // Sort a copy so the monthly chart retains January-to-December order.
+    final sortedMonths = List<int>.of(months)..sort();
+    final median = ((sortedMonths[5] + sortedMonths[6]) / 2).round();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          formatKRW(total),
+          textAlign: TextAlign.right,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: emphasized ? context.desktopExpense : null,
+            fontSize: emphasized ? 18 : null,
+            fontWeight: emphasized ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Tooltip(
+          message:
+              '월 중앙값 = 12개월 지출액을 정렬한 뒤 6번째와 7번째 금액의 평균 (지출이 없는 달 포함, 원 단위 반올림)',
+          child: Text(
+            '월 중앙값 ${formatKRW(median)}',
+            textAlign: TextAlign.right,
+            style: TextStyle(fontSize: 12, color: context.desktopMuted),
+          ),
+        ),
+      ],
     );
   }
 }
