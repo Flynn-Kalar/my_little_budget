@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -11,6 +12,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/notes/checklist.dart';
+import '../../../features/notes/note_amount_goal.dart';
+import '../../shared/note_amount_goal.dart';
 import '../../../features/notes/note_alarm.dart';
 import '../../../features/notes/note_format.dart';
 import '../../../features/notes/rich_note.dart';
@@ -182,13 +185,19 @@ class _MobileNoteCard extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (note.goalTargetAmount != null)
+                NoteGoalSummary(
+                  goal: NoteAmountGoal.fromNote(note)!,
+                  compact: true,
+                ),
               if (note.content.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
-                  note.content,
+                  noteBodyPreview(note),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
+                    fontSize: 18,
                     height: 1.4,
                     color: colors.onSurface.withValues(alpha: 0.72),
                   ),
@@ -298,6 +307,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
     document: _note == null ? Document() : documentFromNote(_note!),
     selection: const TextSelection.collapsed(offset: 0),
   );
+  late final _goalDraft = NoteGoalDraft(_note);
   final _richFocus = FocusNode();
   final _richScroll = ScrollController();
   late final _dayOfMonth = TextEditingController(
@@ -355,6 +365,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
 
   @override
   void dispose() {
+    _goalDraft.dispose();
     _title.dispose();
     _richController.dispose();
     _richFocus.dispose();
@@ -482,6 +493,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
     if (entry == null) return;
     final note = entry.note;
     setState(() {
+      _goalDraft.restore(note);
       _title.text = note.title;
       _richController.document = documentFromNote(note);
       _dayOfMonth.text = '${note.resetDayOfMonth ?? 1}';
@@ -537,6 +549,11 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
       setState(() => _error = '제목을 입력하세요.');
       return;
     }
+    final goalError = _goalDraft.validationError;
+    if (goalError != null) {
+      setState(() => _error = goalError);
+      return;
+    }
     final schedule = _schedule();
     final scheduleError = validateNoteSchedule(schedule);
     if (scheduleError != null) {
@@ -577,6 +594,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
             title: _title.text,
             content: plainTextFromDocument(_richController.document),
             richContent: encodeDocument(_richController.document),
+            amountGoal: Value(_goalDraft.goal),
             schedule: schedule,
             checklistItems: [
               for (final item in checklistFromDocument(
@@ -710,6 +728,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
               decoration: InputDecoration(labelText: '제목', errorText: _error),
             ),
             const SizedBox(height: 8),
+            NoteGoalForm(draft: _goalDraft, busy: _busy),
             RichNoteEditor(
               controller: _richController,
               focusNode: _richFocus,
@@ -1118,6 +1137,8 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
               ],
             ),
             const SizedBox(height: 12),
+            if (note.goalTargetAmount != null)
+              NoteGoalSummary(goal: NoteAmountGoal.fromNote(note)!),
             RichNoteViewer(
               document: documentFromNote(note),
               onTap: _restoreDraftAndEdit,

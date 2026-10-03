@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -11,6 +12,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/notes/checklist.dart';
+import '../../../features/notes/note_amount_goal.dart';
+import '../../shared/note_amount_goal.dart';
 import '../../../features/notes/note_alarm.dart';
 import '../../../features/notes/note_format.dart';
 import '../../../features/notes/rich_note.dart';
@@ -267,15 +270,23 @@ class _NoteCard extends ConsumerWidget {
                 ],
               ),
               Expanded(
-                child: Text(
-                  note.content.isEmpty ? '내용 없음' : note.content,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    height: 1.45,
-                    color: colors.onSurface.withValues(alpha: 0.72),
-                  ),
-                ),
+                child: note.goalTargetAmount != null
+                    ? SingleChildScrollView(
+                        child: NoteGoalSummary(
+                          goal: NoteAmountGoal.fromNote(note)!,
+                          compact: true,
+                        ),
+                      )
+                    : Text(
+                        note.content.isEmpty ? '내용 없음' : noteBodyPreview(note),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 18,
+                          height: 1.45,
+                          color: colors.onSurface.withValues(alpha: 0.72),
+                        ),
+                      ),
               ),
               if (entry.hasChecklist)
                 Padding(
@@ -399,6 +410,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     document: _note == null ? Document() : documentFromNote(_note!),
     selection: const TextSelection.collapsed(offset: 0),
   );
+  late final _goalDraft = NoteGoalDraft(_note);
   final _richFocus = FocusNode();
   final _richScroll = ScrollController();
   late final _dayOfMonth = TextEditingController(
@@ -456,6 +468,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
 
   @override
   void dispose() {
+    _goalDraft.dispose();
     _title.dispose();
     _richController.dispose();
     _richFocus.dispose();
@@ -583,6 +596,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     if (entry == null) return;
     final note = entry.note;
     setState(() {
+      _goalDraft.restore(note);
       _title.text = note.title;
       _richController.document = documentFromNote(note);
       _dayOfMonth.text = '${note.resetDayOfMonth ?? 1}';
@@ -641,6 +655,11 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
       setState(() => _error = '제목을 입력하세요.');
       return;
     }
+    final goalError = _goalDraft.validationError;
+    if (goalError != null) {
+      setState(() => _error = goalError);
+      return;
+    }
     final schedule = _schedule();
     final scheduleError = validateNoteSchedule(schedule);
     if (scheduleError != null) {
@@ -682,6 +701,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
             title: _title.text,
             content: plainTextFromDocument(_richController.document),
             richContent: encodeDocument(_richController.document),
+            amountGoal: Value(_goalDraft.goal),
             schedule: schedule,
             checklistItems: [
               for (final item in checklistFromDocument(
@@ -863,6 +883,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
                 decoration: InputDecoration(labelText: '제목', errorText: _error),
               ),
               const SizedBox(height: 8),
+              NoteGoalForm(draft: _goalDraft, busy: _busy),
               RichNoteEditor(
                 controller: _richController,
                 focusNode: _richFocus,
@@ -1133,6 +1154,8 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (note.goalTargetAmount != null)
+                NoteGoalSummary(goal: NoteAmountGoal.fromNote(note)!),
               RichNoteViewer(
                 document: documentFromNote(note),
                 onTap: _restoreDraftAndEdit,

@@ -115,11 +115,12 @@ class _MobileCalendarGrid extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: days.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               crossAxisSpacing: 4,
               mainAxisSpacing: 4,
-              childAspectRatio: 0.82,
+              // Leave room for the date, two labels, and the hidden count.
+              mainAxisExtent: 86 * MediaQuery.textScalerOf(context).scale(12) / 12,
             ),
             itemBuilder: (context, index) {
               final day = days[index];

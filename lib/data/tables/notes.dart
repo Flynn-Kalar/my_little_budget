@@ -8,6 +8,10 @@ class Notes extends Table {
   TextColumn get title => text().withLength(min: 1, max: 120)();
   TextColumn get content => text().withDefault(const Constant(''))();
   TextColumn get richContent => text().nullable()();
+  IntColumn get goalTargetAmount => integer().nullable()();
+  IntColumn get goalCurrentAmount => integer().nullable()();
+  TextColumn get goalStartDate => text().nullable()();
+  TextColumn get goalDueDate => text().nullable()();
   TextColumn get reminderAt => text().nullable()();
   TextColumn get scheduleType => text().withDefault(const Constant('none'))();
   TextColumn get resetTime => text().nullable()();

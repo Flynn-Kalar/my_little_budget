@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 import '../../features/notes/checklist.dart';
+import '../../features/notes/note_amount_goal.dart';
 import '../../features/notes/note_alarm.dart';
 import '../../features/notes/note_schedule.dart';
 import '../../features/notes/rich_note.dart';
@@ -84,6 +85,7 @@ AND EXISTS (
     required String title,
     required String content,
     String? richContent,
+    Value<NoteAmountGoal?> amountGoal = const Value.absent(),
     DateTime? reminderAt,
     NoteScheduleDraft? schedule,
     List<ChecklistItemDraft>? checklistItems,
@@ -104,6 +106,7 @@ AND EXISTS (
         title: title,
         content: content,
         richContent: richContent,
+        amountGoal: amountGoal,
         reminderAt: reminderAt,
         schedule: schedule,
         completed: completed,
@@ -123,6 +126,7 @@ AND EXISTS (
     required String title,
     required String content,
     required String? richContent,
+    required Value<NoteAmountGoal?> amountGoal,
     required DateTime? reminderAt,
     required NoteScheduleDraft? schedule,
     required bool completed,
@@ -131,6 +135,24 @@ AND EXISTS (
     required NoteAlarmSettings alarmSettings,
   }) async {
     final normalizedTitle = title.trim();
+    final goal = amountGoal.present ? amountGoal.value : null;
+    if (goal?.validationError != null) {
+      throw ArgumentError(goal!.validationError, 'amountGoal');
+    }
+    final goalFields = NotesCompanion(
+      goalTargetAmount: amountGoal.present
+          ? Value(goal?.targetAmount)
+          : const Value.absent(),
+      goalCurrentAmount: amountGoal.present
+          ? Value(goal?.currentAmount)
+          : const Value.absent(),
+      goalStartDate: amountGoal.present
+          ? Value(goal == null ? null : formatGoalDate(goal.startDate))
+          : const Value.absent(),
+      goalDueDate: amountGoal.present
+          ? Value(goal?.dueDate == null ? null : formatGoalDate(goal!.dueDate!))
+          : const Value.absent(),
+    );
     if (normalizedTitle.isEmpty) {
       throw ArgumentError.value(title, 'title', '제목을 입력하세요.');
     }
@@ -175,6 +197,10 @@ AND EXISTS (
           alarmClipEndMs: Value(alarmSettings.clipEndMs),
           alarmVibrationEnabled: Value(alarmSettings.vibrationEnabled),
         ).copyWith(
+          goalTargetAmount: goalFields.goalTargetAmount,
+          goalCurrentAmount: goalFields.goalCurrentAmount,
+          goalStartDate: goalFields.goalStartDate,
+          goalDueDate: goalFields.goalDueDate,
           reminderAt: scheduleCompanion.reminderAt,
           scheduleType: scheduleCompanion.scheduleType,
           resetTime: scheduleCompanion.resetTime,
@@ -196,6 +222,10 @@ AND EXISTS (
     }
     await (update(notes)..where((n) => n.id.equals(id))).write(
       scheduleCompanion.copyWith(
+        goalTargetAmount: goalFields.goalTargetAmount,
+        goalCurrentAmount: goalFields.goalCurrentAmount,
+        goalStartDate: goalFields.goalStartDate,
+        goalDueDate: goalFields.goalDueDate,
         title: Value(normalizedTitle),
         content: Value(content.trim()),
         richContent: Value(richContent),

@@ -65,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -73,6 +73,12 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
+      if (from >= 4 && from < 19 && await _tableExists('notes')) {
+        await m.addColumn(notes, notes.goalTargetAmount);
+        await m.addColumn(notes, notes.goalCurrentAmount);
+        await m.addColumn(notes, notes.goalStartDate);
+        await m.addColumn(notes, notes.goalDueDate);
+      }
       if (from < 2) {
         await m.addColumn(tags, tags.usageCount);
         await m.addColumn(tags, tags.lastUsedAt);
@@ -158,6 +164,7 @@ WHERE reminder_at IS NOT NULL
       await customStatement('PRAGMA foreign_keys = ON');
       await _ensureSyncInfrastructure();
       await _repairRequiredTagFields();
+      await _repairCategoryUpdatedAt();
       // SPEC §5.3 — 첫 생성 시 기본 자산·카테고리 시드.
       if (details.wasCreated) {
         await seedDefaults(this);
@@ -342,6 +349,16 @@ WHERE uuid IS NOT NULL AND sync_status = '$syncStatusPending'
         "UPDATE $tableName SET sync_status = '$syncStatusPending'",
       );
     }
+  }
+
+  Future<void> _repairCategoryUpdatedAt() async {
+    if (!await _tableExists('categories')) return;
+    // v3 added this column without a default. Preserve existing timestamps and
+    // recover rows inserted by older clients before Drift maps non-null fields.
+    await customStatement(
+      "UPDATE categories SET updated_at = COALESCE(created_at, datetime('now')) "
+      'WHERE updated_at IS NULL',
+    );
   }
 
   Future<void> _repairRequiredTagFields() async {

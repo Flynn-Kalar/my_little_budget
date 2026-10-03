@@ -51,3 +51,17 @@ app.*.map.json
 *.keystore
 **/*.jks
 **/*.keystore
+
+# Local secrets and service account credentials
+.env
+.env.*
+!.env.example
+!.env.template
+**/credentials.json
+**/service-account*.json
+**/service_account*.json
+*.p12
+*.pfx
+
+# Kotlin compiler cache
+/android/.kotlin/

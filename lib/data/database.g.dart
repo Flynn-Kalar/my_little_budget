@@ -7059,6 +7059,50 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _goalTargetAmountMeta = const VerificationMeta(
+    'goalTargetAmount',
+  );
+  @override
+  late final GeneratedColumn<int> goalTargetAmount = GeneratedColumn<int>(
+    'goal_target_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _goalCurrentAmountMeta = const VerificationMeta(
+    'goalCurrentAmount',
+  );
+  @override
+  late final GeneratedColumn<int> goalCurrentAmount = GeneratedColumn<int>(
+    'goal_current_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _goalStartDateMeta = const VerificationMeta(
+    'goalStartDate',
+  );
+  @override
+  late final GeneratedColumn<String> goalStartDate = GeneratedColumn<String>(
+    'goal_start_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _goalDueDateMeta = const VerificationMeta(
+    'goalDueDate',
+  );
+  @override
+  late final GeneratedColumn<String> goalDueDate = GeneratedColumn<String>(
+    'goal_due_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _reminderAtMeta = const VerificationMeta(
     'reminderAt',
   );
@@ -7376,6 +7420,10 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     title,
     content,
     richContent,
+    goalTargetAmount,
+    goalCurrentAmount,
+    goalStartDate,
+    goalDueDate,
     reminderAt,
     scheduleType,
     resetTime,
@@ -7438,6 +7486,42 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         richContent.isAcceptableOrUnknown(
           data['rich_content']!,
           _richContentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('goal_target_amount')) {
+      context.handle(
+        _goalTargetAmountMeta,
+        goalTargetAmount.isAcceptableOrUnknown(
+          data['goal_target_amount']!,
+          _goalTargetAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('goal_current_amount')) {
+      context.handle(
+        _goalCurrentAmountMeta,
+        goalCurrentAmount.isAcceptableOrUnknown(
+          data['goal_current_amount']!,
+          _goalCurrentAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('goal_start_date')) {
+      context.handle(
+        _goalStartDateMeta,
+        goalStartDate.isAcceptableOrUnknown(
+          data['goal_start_date']!,
+          _goalStartDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('goal_due_date')) {
+      context.handle(
+        _goalDueDateMeta,
+        goalDueDate.isAcceptableOrUnknown(
+          data['goal_due_date']!,
+          _goalDueDateMeta,
         ),
       );
     }
@@ -7679,6 +7763,22 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         DriftSqlType.string,
         data['${effectivePrefix}rich_content'],
       ),
+      goalTargetAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}goal_target_amount'],
+      ),
+      goalCurrentAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}goal_current_amount'],
+      ),
+      goalStartDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}goal_start_date'],
+      ),
+      goalDueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}goal_due_date'],
+      ),
       reminderAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}reminder_at'],
@@ -7797,6 +7897,10 @@ class Note extends DataClass implements Insertable<Note> {
   final String title;
   final String content;
   final String? richContent;
+  final int? goalTargetAmount;
+  final int? goalCurrentAmount;
+  final String? goalStartDate;
+  final String? goalDueDate;
   final String? reminderAt;
   final String scheduleType;
   final String? resetTime;
@@ -7828,6 +7932,10 @@ class Note extends DataClass implements Insertable<Note> {
     required this.title,
     required this.content,
     this.richContent,
+    this.goalTargetAmount,
+    this.goalCurrentAmount,
+    this.goalStartDate,
+    this.goalDueDate,
     this.reminderAt,
     required this.scheduleType,
     this.resetTime,
@@ -7863,6 +7971,18 @@ class Note extends DataClass implements Insertable<Note> {
     map['content'] = Variable<String>(content);
     if (!nullToAbsent || richContent != null) {
       map['rich_content'] = Variable<String>(richContent);
+    }
+    if (!nullToAbsent || goalTargetAmount != null) {
+      map['goal_target_amount'] = Variable<int>(goalTargetAmount);
+    }
+    if (!nullToAbsent || goalCurrentAmount != null) {
+      map['goal_current_amount'] = Variable<int>(goalCurrentAmount);
+    }
+    if (!nullToAbsent || goalStartDate != null) {
+      map['goal_start_date'] = Variable<String>(goalStartDate);
+    }
+    if (!nullToAbsent || goalDueDate != null) {
+      map['goal_due_date'] = Variable<String>(goalDueDate);
     }
     if (!nullToAbsent || reminderAt != null) {
       map['reminder_at'] = Variable<String>(reminderAt);
@@ -7929,6 +8049,18 @@ class Note extends DataClass implements Insertable<Note> {
       richContent: richContent == null && nullToAbsent
           ? const Value.absent()
           : Value(richContent),
+      goalTargetAmount: goalTargetAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(goalTargetAmount),
+      goalCurrentAmount: goalCurrentAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(goalCurrentAmount),
+      goalStartDate: goalStartDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(goalStartDate),
+      goalDueDate: goalDueDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(goalDueDate),
       reminderAt: reminderAt == null && nullToAbsent
           ? const Value.absent()
           : Value(reminderAt),
@@ -7992,6 +8124,10 @@ class Note extends DataClass implements Insertable<Note> {
       title: serializer.fromJson<String>(json['title']),
       content: serializer.fromJson<String>(json['content']),
       richContent: serializer.fromJson<String?>(json['richContent']),
+      goalTargetAmount: serializer.fromJson<int?>(json['goalTargetAmount']),
+      goalCurrentAmount: serializer.fromJson<int?>(json['goalCurrentAmount']),
+      goalStartDate: serializer.fromJson<String?>(json['goalStartDate']),
+      goalDueDate: serializer.fromJson<String?>(json['goalDueDate']),
       reminderAt: serializer.fromJson<String?>(json['reminderAt']),
       scheduleType: serializer.fromJson<String>(json['scheduleType']),
       resetTime: serializer.fromJson<String?>(json['resetTime']),
@@ -8038,6 +8174,10 @@ class Note extends DataClass implements Insertable<Note> {
       'title': serializer.toJson<String>(title),
       'content': serializer.toJson<String>(content),
       'richContent': serializer.toJson<String?>(richContent),
+      'goalTargetAmount': serializer.toJson<int?>(goalTargetAmount),
+      'goalCurrentAmount': serializer.toJson<int?>(goalCurrentAmount),
+      'goalStartDate': serializer.toJson<String?>(goalStartDate),
+      'goalDueDate': serializer.toJson<String?>(goalDueDate),
       'reminderAt': serializer.toJson<String?>(reminderAt),
       'scheduleType': serializer.toJson<String>(scheduleType),
       'resetTime': serializer.toJson<String?>(resetTime),
@@ -8076,6 +8216,10 @@ class Note extends DataClass implements Insertable<Note> {
     String? title,
     String? content,
     Value<String?> richContent = const Value.absent(),
+    Value<int?> goalTargetAmount = const Value.absent(),
+    Value<int?> goalCurrentAmount = const Value.absent(),
+    Value<String?> goalStartDate = const Value.absent(),
+    Value<String?> goalDueDate = const Value.absent(),
     Value<String?> reminderAt = const Value.absent(),
     String? scheduleType,
     Value<String?> resetTime = const Value.absent(),
@@ -8107,6 +8251,16 @@ class Note extends DataClass implements Insertable<Note> {
     title: title ?? this.title,
     content: content ?? this.content,
     richContent: richContent.present ? richContent.value : this.richContent,
+    goalTargetAmount: goalTargetAmount.present
+        ? goalTargetAmount.value
+        : this.goalTargetAmount,
+    goalCurrentAmount: goalCurrentAmount.present
+        ? goalCurrentAmount.value
+        : this.goalCurrentAmount,
+    goalStartDate: goalStartDate.present
+        ? goalStartDate.value
+        : this.goalStartDate,
+    goalDueDate: goalDueDate.present ? goalDueDate.value : this.goalDueDate,
     reminderAt: reminderAt.present ? reminderAt.value : this.reminderAt,
     scheduleType: scheduleType ?? this.scheduleType,
     resetTime: resetTime.present ? resetTime.value : this.resetTime,
@@ -8157,6 +8311,18 @@ class Note extends DataClass implements Insertable<Note> {
       richContent: data.richContent.present
           ? data.richContent.value
           : this.richContent,
+      goalTargetAmount: data.goalTargetAmount.present
+          ? data.goalTargetAmount.value
+          : this.goalTargetAmount,
+      goalCurrentAmount: data.goalCurrentAmount.present
+          ? data.goalCurrentAmount.value
+          : this.goalCurrentAmount,
+      goalStartDate: data.goalStartDate.present
+          ? data.goalStartDate.value
+          : this.goalStartDate,
+      goalDueDate: data.goalDueDate.present
+          ? data.goalDueDate.value
+          : this.goalDueDate,
       reminderAt: data.reminderAt.present
           ? data.reminderAt.value
           : this.reminderAt,
@@ -8235,6 +8401,10 @@ class Note extends DataClass implements Insertable<Note> {
           ..write('title: $title, ')
           ..write('content: $content, ')
           ..write('richContent: $richContent, ')
+          ..write('goalTargetAmount: $goalTargetAmount, ')
+          ..write('goalCurrentAmount: $goalCurrentAmount, ')
+          ..write('goalStartDate: $goalStartDate, ')
+          ..write('goalDueDate: $goalDueDate, ')
           ..write('reminderAt: $reminderAt, ')
           ..write('scheduleType: $scheduleType, ')
           ..write('resetTime: $resetTime, ')
@@ -8271,6 +8441,10 @@ class Note extends DataClass implements Insertable<Note> {
     title,
     content,
     richContent,
+    goalTargetAmount,
+    goalCurrentAmount,
+    goalStartDate,
+    goalDueDate,
     reminderAt,
     scheduleType,
     resetTime,
@@ -8306,6 +8480,10 @@ class Note extends DataClass implements Insertable<Note> {
           other.title == this.title &&
           other.content == this.content &&
           other.richContent == this.richContent &&
+          other.goalTargetAmount == this.goalTargetAmount &&
+          other.goalCurrentAmount == this.goalCurrentAmount &&
+          other.goalStartDate == this.goalStartDate &&
+          other.goalDueDate == this.goalDueDate &&
           other.reminderAt == this.reminderAt &&
           other.scheduleType == this.scheduleType &&
           other.resetTime == this.resetTime &&
@@ -8340,6 +8518,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
   final Value<String> title;
   final Value<String> content;
   final Value<String?> richContent;
+  final Value<int?> goalTargetAmount;
+  final Value<int?> goalCurrentAmount;
+  final Value<String?> goalStartDate;
+  final Value<String?> goalDueDate;
   final Value<String?> reminderAt;
   final Value<String> scheduleType;
   final Value<String?> resetTime;
@@ -8371,6 +8553,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
     this.title = const Value.absent(),
     this.content = const Value.absent(),
     this.richContent = const Value.absent(),
+    this.goalTargetAmount = const Value.absent(),
+    this.goalCurrentAmount = const Value.absent(),
+    this.goalStartDate = const Value.absent(),
+    this.goalDueDate = const Value.absent(),
     this.reminderAt = const Value.absent(),
     this.scheduleType = const Value.absent(),
     this.resetTime = const Value.absent(),
@@ -8403,6 +8589,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
     required String title,
     this.content = const Value.absent(),
     this.richContent = const Value.absent(),
+    this.goalTargetAmount = const Value.absent(),
+    this.goalCurrentAmount = const Value.absent(),
+    this.goalStartDate = const Value.absent(),
+    this.goalDueDate = const Value.absent(),
     this.reminderAt = const Value.absent(),
     this.scheduleType = const Value.absent(),
     this.resetTime = const Value.absent(),
@@ -8435,6 +8625,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
     Expression<String>? title,
     Expression<String>? content,
     Expression<String>? richContent,
+    Expression<int>? goalTargetAmount,
+    Expression<int>? goalCurrentAmount,
+    Expression<String>? goalStartDate,
+    Expression<String>? goalDueDate,
     Expression<String>? reminderAt,
     Expression<String>? scheduleType,
     Expression<String>? resetTime,
@@ -8467,6 +8661,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
       if (title != null) 'title': title,
       if (content != null) 'content': content,
       if (richContent != null) 'rich_content': richContent,
+      if (goalTargetAmount != null) 'goal_target_amount': goalTargetAmount,
+      if (goalCurrentAmount != null) 'goal_current_amount': goalCurrentAmount,
+      if (goalStartDate != null) 'goal_start_date': goalStartDate,
+      if (goalDueDate != null) 'goal_due_date': goalDueDate,
       if (reminderAt != null) 'reminder_at': reminderAt,
       if (scheduleType != null) 'schedule_type': scheduleType,
       if (resetTime != null) 'reset_time': resetTime,
@@ -8506,6 +8704,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
     Value<String>? title,
     Value<String>? content,
     Value<String?>? richContent,
+    Value<int?>? goalTargetAmount,
+    Value<int?>? goalCurrentAmount,
+    Value<String?>? goalStartDate,
+    Value<String?>? goalDueDate,
     Value<String?>? reminderAt,
     Value<String>? scheduleType,
     Value<String?>? resetTime,
@@ -8538,6 +8740,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
       title: title ?? this.title,
       content: content ?? this.content,
       richContent: richContent ?? this.richContent,
+      goalTargetAmount: goalTargetAmount ?? this.goalTargetAmount,
+      goalCurrentAmount: goalCurrentAmount ?? this.goalCurrentAmount,
+      goalStartDate: goalStartDate ?? this.goalStartDate,
+      goalDueDate: goalDueDate ?? this.goalDueDate,
       reminderAt: reminderAt ?? this.reminderAt,
       scheduleType: scheduleType ?? this.scheduleType,
       resetTime: resetTime ?? this.resetTime,
@@ -8585,6 +8791,18 @@ class NotesCompanion extends UpdateCompanion<Note> {
     }
     if (richContent.present) {
       map['rich_content'] = Variable<String>(richContent.value);
+    }
+    if (goalTargetAmount.present) {
+      map['goal_target_amount'] = Variable<int>(goalTargetAmount.value);
+    }
+    if (goalCurrentAmount.present) {
+      map['goal_current_amount'] = Variable<int>(goalCurrentAmount.value);
+    }
+    if (goalStartDate.present) {
+      map['goal_start_date'] = Variable<String>(goalStartDate.value);
+    }
+    if (goalDueDate.present) {
+      map['goal_due_date'] = Variable<String>(goalDueDate.value);
     }
     if (reminderAt.present) {
       map['reminder_at'] = Variable<String>(reminderAt.value);
@@ -8682,6 +8900,10 @@ class NotesCompanion extends UpdateCompanion<Note> {
           ..write('title: $title, ')
           ..write('content: $content, ')
           ..write('richContent: $richContent, ')
+          ..write('goalTargetAmount: $goalTargetAmount, ')
+          ..write('goalCurrentAmount: $goalCurrentAmount, ')
+          ..write('goalStartDate: $goalStartDate, ')
+          ..write('goalDueDate: $goalDueDate, ')
           ..write('reminderAt: $reminderAt, ')
           ..write('scheduleType: $scheduleType, ')
           ..write('resetTime: $resetTime, ')
@@ -17936,6 +18158,10 @@ typedef $$NotesTableCreateCompanionBuilder =
       required String title,
       Value<String> content,
       Value<String?> richContent,
+      Value<int?> goalTargetAmount,
+      Value<int?> goalCurrentAmount,
+      Value<String?> goalStartDate,
+      Value<String?> goalDueDate,
       Value<String?> reminderAt,
       Value<String> scheduleType,
       Value<String?> resetTime,
@@ -17969,6 +18195,10 @@ typedef $$NotesTableUpdateCompanionBuilder =
       Value<String> title,
       Value<String> content,
       Value<String?> richContent,
+      Value<int?> goalTargetAmount,
+      Value<int?> goalCurrentAmount,
+      Value<String?> goalStartDate,
+      Value<String?> goalDueDate,
       Value<String?> reminderAt,
       Value<String> scheduleType,
       Value<String?> resetTime,
@@ -18051,6 +18281,26 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
 
   ColumnFilters<String> get richContent => $composableBuilder(
     column: $table.richContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get goalTargetAmount => $composableBuilder(
+    column: $table.goalTargetAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get goalCurrentAmount => $composableBuilder(
+    column: $table.goalCurrentAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get goalStartDate => $composableBuilder(
+    column: $table.goalStartDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get goalDueDate => $composableBuilder(
+    column: $table.goalDueDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18239,6 +18489,26 @@ class $$NotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get goalTargetAmount => $composableBuilder(
+    column: $table.goalTargetAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get goalCurrentAmount => $composableBuilder(
+    column: $table.goalCurrentAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get goalStartDate => $composableBuilder(
+    column: $table.goalStartDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get goalDueDate => $composableBuilder(
+    column: $table.goalDueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get reminderAt => $composableBuilder(
     column: $table.reminderAt,
     builder: (column) => ColumnOrderings(column),
@@ -18390,6 +18660,26 @@ class $$NotesTableAnnotationComposer
 
   GeneratedColumn<String> get richContent => $composableBuilder(
     column: $table.richContent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get goalTargetAmount => $composableBuilder(
+    column: $table.goalTargetAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get goalCurrentAmount => $composableBuilder(
+    column: $table.goalCurrentAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get goalStartDate => $composableBuilder(
+    column: $table.goalStartDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get goalDueDate => $composableBuilder(
+    column: $table.goalDueDate,
     builder: (column) => column,
   );
 
@@ -18572,6 +18862,10 @@ class $$NotesTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<String> content = const Value.absent(),
                 Value<String?> richContent = const Value.absent(),
+                Value<int?> goalTargetAmount = const Value.absent(),
+                Value<int?> goalCurrentAmount = const Value.absent(),
+                Value<String?> goalStartDate = const Value.absent(),
+                Value<String?> goalDueDate = const Value.absent(),
                 Value<String?> reminderAt = const Value.absent(),
                 Value<String> scheduleType = const Value.absent(),
                 Value<String?> resetTime = const Value.absent(),
@@ -18604,6 +18898,10 @@ class $$NotesTableTableManager
                 title: title,
                 content: content,
                 richContent: richContent,
+                goalTargetAmount: goalTargetAmount,
+                goalCurrentAmount: goalCurrentAmount,
+                goalStartDate: goalStartDate,
+                goalDueDate: goalDueDate,
                 reminderAt: reminderAt,
                 scheduleType: scheduleType,
                 resetTime: resetTime,
@@ -18637,6 +18935,10 @@ class $$NotesTableTableManager
                 required String title,
                 Value<String> content = const Value.absent(),
                 Value<String?> richContent = const Value.absent(),
+                Value<int?> goalTargetAmount = const Value.absent(),
+                Value<int?> goalCurrentAmount = const Value.absent(),
+                Value<String?> goalStartDate = const Value.absent(),
+                Value<String?> goalDueDate = const Value.absent(),
                 Value<String?> reminderAt = const Value.absent(),
                 Value<String> scheduleType = const Value.absent(),
                 Value<String?> resetTime = const Value.absent(),
@@ -18669,6 +18971,10 @@ class $$NotesTableTableManager
                 title: title,
                 content: content,
                 richContent: richContent,
+                goalTargetAmount: goalTargetAmount,
+                goalCurrentAmount: goalCurrentAmount,
+                goalStartDate: goalStartDate,
+                goalDueDate: goalDueDate,
                 reminderAt: reminderAt,
                 scheduleType: scheduleType,
                 resetTime: resetTime,

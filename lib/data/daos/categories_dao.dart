@@ -97,12 +97,16 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
         readsFrom: {categories},
       ).getSingle();
       final nextOrder = maxRow.read<int>('m') + 1;
+      final now = sqlNow();
       await into(categories).insert(
         CategoriesCompanion.insert(
           name: draft.name,
           type: draft.type,
           color: Value(draft.color),
           sortOrder: Value(nextOrder),
+          // Upgraded databases may lack the SQL timestamp defaults.
+          createdAt: Value(now),
+          updatedAt: Value(now),
         ),
       );
     }

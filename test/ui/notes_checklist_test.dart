@@ -10,6 +10,7 @@ import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/ui/desktop/notes/notes_screen.dart';
 import 'package:my_little_budget/ui/mobile/notes/mobile_notes_screen.dart';
 import 'package:my_little_budget/ui/shared/rich_note_editor.dart';
+import 'package:my_little_budget/ui/shared/note_amount_goal.dart';
 
 void main() {
   Future<AppDatabase> pumpNotesScreen(
@@ -128,9 +129,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(RichNoteEditor), findsOneWidget);
-    expect(find.text('12 pt'), findsOneWidget);
+    expect(find.text('18 pt'), findsOneWidget);
 
-    final fontSizeX = tester.getCenter(find.text('12 pt')).dx;
+    final fontSizeX = tester.getCenter(find.text('18 pt')).dx;
     final checklistX = tester.getCenter(find.byIcon(Icons.check_box).first).dx;
     final boldX = tester.getCenter(find.byIcon(Icons.format_bold).first).dx;
     expect(fontSizeX, lessThan(checklistX));
@@ -139,5 +140,137 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
     await db.close();
+  });
+
+  for (final mobile in [false, true]) {
+    testWidgets(
+      '${mobile ? 'mobile' : 'desktop'} creates and edits normal and amount goal notes',
+      (tester) async {
+        final db = await pumpNotesScreen(tester, mobile: mobile);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        addTearDown(db.close);
+        final titleField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField && widget.decoration?.labelText == '제목',
+        );
+        Future<void> createNote(String title, {bool goal = false}) async {
+          await tester.tap(mobile ? find.byTooltip('새 메모') : find.text('새 메모'));
+          await tester.pumpAndSettle();
+          await tester.enterText(titleField, title);
+          if (goal) {
+            await tester.tap(find.byType(DropdownButtonFormField<bool>));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('금액 목표').last);
+            await tester.pumpAndSettle();
+            final form = tester.widget<NoteGoalForm>(find.byType(NoteGoalForm));
+            form.draft.target.text = '2,681,630';
+            form.draft.current.text = '1,000,000';
+            await tester.ensureVisible(find.text('+400,000'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('+400,000'));
+            await tester.pumpAndSettle();
+            expect(form.draft.current.text, '1,400,000');
+          }
+          final editor = tester.widget<RichNoteEditor>(
+            find.byType(RichNoteEditor),
+          );
+          editor.controller.replaceText(
+            0,
+            0,
+            '일반 본문',
+            const TextSelection.collapsed(offset: 5),
+          );
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.text('저장'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('저장'));
+          await tester.pumpAndSettle();
+          expect(find.text(title), findsOneWidget);
+        }
+
+        await createNote('새 일반 메모');
+        expect((await db.notesDao.getNote(1))!.content, '일반 본문');
+        expect((await db.notesDao.getNote(1))!.goalTargetAmount, isNull);
+        await createNote('컴퓨터 비상금 복구', goal: true);
+        expect((await db.notesDao.getNote(2))!.goalCurrentAmount, 1400000);
+        expect(find.text('52.2%'), findsOneWidget);
+        await tester.tap(find.text('컴퓨터 비상금 복구'));
+        await tester.pumpAndSettle();
+        expect(find.byType(RichNoteViewer), findsOneWidget);
+        expect(find.text('남은 금액 1,281,630원'), findsWidgets);
+        await tester.tap(find.byIcon(Icons.edit_outlined));
+        await tester.pumpAndSettle();
+        final draft = tester
+            .widget<NoteGoalForm>(find.byType(NoteGoalForm))
+            .draft;
+        expect(draft.target.text, '2,681,630');
+        draft.current.text = '3,000,000';
+        draft.addition.text = '123,456';
+        await tester.ensureVisible(find.text('금액 추가'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('금액 추가'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('저장'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('저장'));
+        await tester.pumpAndSettle();
+        expect((await db.notesDao.getNote(2))!.goalCurrentAmount, 3123456);
+        expect(find.text('100.0%'), findsWidgets);
+        expect(find.text('남은 금액 0원'), findsWidgets);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpAndSettle();
+      },
+    );
+  }
+
+  testWidgets('software keyboard converts hyphens and body defaults to 18', (
+    tester,
+  ) async {
+    final db = await pumpNotesScreen(tester, mobile: true);
+    addTearDown(db.close);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.tap(find.byTooltip('새 메모'));
+    await tester.pumpAndSettle();
+    final editor = tester.widget<RichNoteEditor>(find.byType(RichNoteEditor));
+    editor.focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '- \n',
+        selection: TextSelection.collapsed(offset: 2),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(editor.controller.document.toPlainText(), '\n');
+    expect(
+      editor.controller.document.toDelta().toList().last.attributes?['list'],
+      'bullet',
+    );
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '입금\n\n',
+        selection: TextSelection.collapsed(offset: 3),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(editor.controller.document.toPlainText(), '입금\n\n');
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '입금\n\n\n',
+        selection: TextSelection.collapsed(offset: 4),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      editor.controller.document.toDelta().toList().last.attributes?['list'],
+      isNull,
+    );
+    final quill = tester.widget<QuillEditor>(find.byType(QuillEditor));
+    expect(quill.config.customStyles!.paragraph!.style.fontSize, 18);
+    expect(quill.config.customStyles!.lists!.style.fontSize, 18);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
   });
 }

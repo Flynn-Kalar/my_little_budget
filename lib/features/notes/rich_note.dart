@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill/quill_delta.dart';
 
@@ -21,14 +22,52 @@ Document documentFromNote(Note note) {
 
 Document documentFromPlainText(String text) {
   final delta = Delta();
-  final value = text.trimRight();
-  if (value.isNotEmpty) delta.insert(value);
-  delta.insert('\n');
+  final lines = text.replaceAll('\r\n', '\n').split('\n');
+  for (final line in lines) {
+    final bullet = line.startsWith('- ');
+    final value = bullet ? line.substring(2) : line;
+    if (value.isNotEmpty) delta.insert(value);
+    delta.insert('\n', bullet ? {'list': 'bullet'} : null);
+  }
   return Document.fromDelta(delta);
+}
+
+String noteBodyPreview(Note note) {
+  final buffer = StringBuffer();
+  final line = StringBuffer();
+  for (final op in documentFromNote(note).toDelta().toList()) {
+    if (op.data is! String) continue;
+    for (final char in (op.data as String).split('')) {
+      if (char == '\n') {
+        if (op.attributes?['list'] == 'bullet') buffer.write('• ');
+        buffer.writeln(line);
+        line.clear();
+      } else {
+        line.write(char);
+      }
+    }
+  }
+  return buffer.toString().trimRight();
 }
 
 String encodeDocument(Document document) {
   return jsonEncode(document.toDelta().toJson());
+}
+
+/// Runs on controller changes so software keyboards support the same shortcut.
+void convertNoteBulletShortcut(QuillController controller) {
+  final selection = controller.selection;
+  if (!selection.isCollapsed) return;
+  final text = controller.document.toPlainText();
+  final offset = selection.baseOffset;
+  if (offset < 2 || offset > text.length - 1) return;
+  final start = text.lastIndexOf('\n', offset - 1) + 1;
+  if (offset != start + 2 || !text.startsWith('- ', start)) return;
+  // A checklist item remains a checklist even if its text starts with a hyphen.
+  final line = controller.document.querySegmentLeafNode(start).line;
+  if (line?.style.attributes.containsKey('list') ?? false) return;
+  controller.replaceText(start, 2, '', TextSelection.collapsed(offset: start));
+  controller.formatSelection(Attribute.ul);
 }
 
 String plainTextFromDocument(Document document) {
