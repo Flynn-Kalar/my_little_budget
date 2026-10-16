@@ -1,12 +1,22 @@
 import '../../core/date.dart';
 import '../../data/database.dart';
 import '../../features/notes/note_schedule.dart';
+import '../../features/calendar/calendar_schedule.dart';
 
 class CalendarOccurrence {
-  const CalendarOccurrence({required this.event, required this.start});
+  const CalendarOccurrence({
+    required this.event,
+    required this.start,
+    this.occurrenceKey,
+    this.titleOverride,
+  });
 
   final CalendarEvent event;
   final DateTime start;
+  final String? occurrenceKey;
+  final String? titleOverride;
+  String get originalDate => occurrenceKey ?? noteDateKey(start);
+  String get title => titleOverride ?? event.title;
 
   String get dateKey => toDateKey(start);
 }
@@ -20,29 +30,17 @@ Map<String, List<CalendarOccurrence>> calendarOccurrencesByDate(
   final end = DateTime(month.year, month.month + 1, 1);
   final result = <String, List<CalendarOccurrence>>{};
 
-  void add(CalendarEvent event, DateTime date) {
-    final local = date.toLocal();
-    if (local.isBefore(start) || !local.isBefore(end)) return;
-    (result[toDateKey(local)] ??= []).add(
-      CalendarOccurrence(event: event, start: local),
-    );
-  }
-
   for (final event in events) {
-    final type = NoteScheduleTypeStorage.parse(event.scheduleType);
-    final startAt = DateTime.parse(event.startAt).toLocal();
-    if (!type.isRepeating) {
-      add(event, startAt);
-      continue;
-    }
-
-    final schedule = calendarScheduleFromEvent(event);
-    var cursor = start.subtract(const Duration(minutes: 1));
-    for (var i = 0; i < 120; i++) {
-      final next = nextNoteResetAfter(schedule, cursor);
-      if (next == null || !next.isBefore(end)) break;
-      if (!next.isBefore(startAt)) add(event, next);
-      cursor = next.add(const Duration(minutes: 1));
+    for (final instance in calendarInstances(event, start, end)) {
+      final key = instance.dateKey;
+      (result[key] ??= []).add(
+        CalendarOccurrence(
+          event: event,
+          start: instance.start,
+          occurrenceKey: instance.originalDate,
+          titleOverride: instance.title,
+        ),
+      );
     }
   }
 
@@ -57,7 +55,7 @@ Map<String, List<CalendarOccurrence>> calendarOccurrencesByDate(
 }
 
 NoteScheduleDraft calendarScheduleFromEvent(CalendarEvent event) {
-  final start = DateTime.parse(event.startAt).toLocal();
+  final start = calendarEventStart(event);
   final type = NoteScheduleTypeStorage.parse(event.scheduleType);
   return NoteScheduleDraft(
     type: type,

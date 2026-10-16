@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,13 +9,21 @@ import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/calendar/korean_holidays.dart';
 import '../../../features/notes/note_schedule.dart';
+import '../../../features/calendar/calendar_schedule.dart';
+import '../../../features/notes/reminder_device_zone.dart';
+import '../../../features/notes/reminder_calendar.dart';
+import '../../shared/calendar_schedule_options.dart';
+import '../../shared/calendar_occurrence_actions.dart';
+import '../../shared/calendar_event_status.dart';
 import '../../shared/calendar_entries.dart';
 import 'package:my_little_budget/features/calendar/providers.dart';
 import '../../shared/notes_calendar.dart' as note_calendar;
 import 'package:my_little_budget/features/notes/providers.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
-  const CalendarScreen({super.key});
+  const CalendarScreen({super.key, this.openEventId, this.openRequest});
+  final int? openEventId;
+  final String? openRequest;
 
   @override
   ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
@@ -22,6 +31,18 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   String _month = currentMonthKey();
+  String? _openedRequest;
+  void _openRequestedEvent(List<CalendarEvent> events) {
+    if (widget.openEventId == null || widget.openRequest == _openedRequest) {
+      return;
+    }
+    final event = events.where((e) => e.id == widget.openEventId).firstOrNull;
+    if (event == null) return;
+    _openedRequest = widget.openRequest;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _CalendarEventDialog.show(context, event: event);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +85,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => Center(child: Text('캘린더를 불러오지 못했습니다. $error')),
             data: (value) {
+              _openRequestedEvent(value);
               final eventEntries = calendarOccurrencesByDate(value, _month);
               final holidays = koreanHolidaysForMonth(_month);
               return notes.when(
@@ -461,7 +483,7 @@ class _CalendarEntry {
   CalendarEvent? get event => eventEntry?.event;
   DateTime get start => eventEntry?.start ?? noteEntry?.date ?? holiday!.date;
   String get title =>
-      eventEntry?.event.title ?? noteEntry?.note.title ?? holiday!.name;
+      eventEntry?.title ?? noteEntry?.note.title ?? holiday!.name;
 
   String get shortLabel {
     final event = eventEntry?.event;
@@ -504,10 +526,13 @@ class _CalendarEntry {
     return noteEntry!.overdue ? context.appExpense : context.appIncome;
   }
 
-  void open(BuildContext context) {
+  Future<void> open(BuildContext context) async {
     final event = eventEntry?.event;
     if (event != null) {
-      _CalendarEventDialog.show(context, event: event);
+      if (await calendarOccurrenceActions(context, eventEntry!) &&
+          context.mounted) {
+        await _CalendarEventDialog.show(context, event: event);
+      }
       return;
     }
     if (holiday != null) return;
@@ -578,7 +603,7 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
   late final _link = TextEditingController(text: widget.event?.linkUrl ?? '');
   late DateTime _date = widget.event == null
       ? DateTime.now()
-      : DateTime.parse(widget.event!.startAt).toLocal();
+      : calendarEventStart(widget.event!);
   late TimeOfDay _startTime = TimeOfDay.fromDateTime(_date);
   late TimeOfDay _endTime = TimeOfDay.fromDateTime(
     widget.event?.endAt == null
@@ -594,7 +619,23 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
   late final Set<int> _leadMinutes = {
     ...parseNoteIntList(widget.event?.notificationLeadMinutes),
   };
+  late final _scheduleDraft = CalendarScheduleDraft(
+    widget.event == null
+        ? const CalendarScheduleSettings()
+        : CalendarScheduleSettings.fromEvent(widget.event!),
+  );
   bool _busy = false;
+  @override
+  void initState() {
+    super.initState();
+    if (_scheduleDraft.zone.text.isEmpty) {
+      reminderDeviceZone().then((zone) {
+        if (mounted && _scheduleDraft.zone.text.isEmpty) {
+          _scheduleDraft.zone.text = zone;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -602,6 +643,7 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
     _description.dispose();
     _location.dispose();
     _link.dispose();
+    _scheduleDraft.dispose();
     super.dispose();
   }
 
@@ -624,14 +666,30 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
           );
     setState(() => _busy = true);
     try {
+      final settings = _scheduleDraft.settings(start: start, allDay: _allDay);
+      if (settings.validationError != null) {
+        throw ArgumentError(settings.validationError);
+      }
+      final zone = calendarZone(settings.timeZone ?? 'UTC');
+      final resolvedStart = _allDay
+          ? start
+          : reminderWallTime(zone, start, start.hour, start.minute);
+      final resolvedEnd = end == null
+          ? null
+          : reminderWallTime(zone, end, end.hour, end.minute);
+      if (_notify) {
+        await ref.read(noteNotificationServiceProvider).requestPermissions();
+        if (!mounted) return;
+      }
       await ref
           .read(calendarEventsDaoProvider)
           .saveEvent(
             id: widget.event?.id,
             title: _title.text,
             description: _description.text,
-            startAt: start,
-            endAt: end,
+            startAt: resolvedStart,
+            settings: settings,
+            endAt: resolvedEnd,
             allDay: _allDay,
             color: _color,
             location: _location.text,
@@ -644,7 +702,8 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
           );
       if (!mounted) return;
       refreshCalendarEvents(ref);
-      Navigator.pop(context);
+      unawaited(rebuildNoteNotifications(ref));
+      if (mounted) Navigator.pop(context);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -661,7 +720,8 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
     await ref.read(calendarEventsDaoProvider).deleteEvent(id);
     if (!mounted) return;
     refreshCalendarEvents(ref);
-    Navigator.pop(context);
+    unawaited(rebuildNoteNotifications(ref));
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -756,6 +816,43 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
                     ? null
                     : (value) => setState(() => _repeat = value!),
               ),
+              CalendarScheduleOptions(
+                draft: _scheduleDraft,
+                repeating: _repeat.isRepeating,
+                busy: _busy,
+                onChanged: () => setState(() {}),
+              ),
+              CalendarRecurrencePreview(
+                draft: _scheduleDraft,
+                start: DateTime(
+                  _date.year,
+                  _date.month,
+                  _date.day,
+                  _allDay ? 9 : _startTime.hour,
+                  _allDay ? 0 : _startTime.minute,
+                ),
+                type: _repeat,
+                allDay: _allDay,
+              ),
+              if (_notify && _allDay)
+                const Text('종일 일정은 지정 시간대의 오전 9시에 알림을 보냅니다.'),
+              if (widget.event != null)
+                CalendarEventStatus(event: widget.event!),
+              if (widget.event != null)
+                CalendarExceptionList(
+                  event: widget.event!,
+                  onChanged: () async {
+                    final latest = await ref
+                        .read(calendarEventsDaoProvider)
+                        .getEvent(widget.event!.id);
+                    if (mounted && latest != null) {
+                      setState(
+                        () => _scheduleDraft.original =
+                            CalendarScheduleSettings.fromEvent(latest),
+                      );
+                    }
+                  },
+                ),
               SwitchListTile(
                 value: _notify,
                 onChanged: _busy

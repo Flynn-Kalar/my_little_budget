@@ -10,6 +10,7 @@ import 'checklist.dart';
 import 'note_alarm.dart';
 import 'note_schedule.dart';
 import 'reminder_calendar.dart';
+import '../calendar/calendar_reminder_store.dart';
 
 class ReminderOptions {
   const ReminderOptions({
@@ -474,7 +475,8 @@ class ReminderStore {
           ],
         )
         .get();
-    return jobs
+    final calendarJobs = await CalendarReminderStore(db).plan(now, deviceZone);
+    final result = jobs
         .map(
           (r) => {
             ...jsonDecode(r.read<String>('payload')) as Map<String, dynamic>,
@@ -486,5 +488,10 @@ class ReminderStore {
           },
         )
         .toList();
+    result.addAll(calendarJobs);
+    result.sort(
+      (a, b) => (a['triggerAt'] as int).compareTo(b['triggerAt'] as int),
+    );
+    return result.take(400).toList();
   });
 }

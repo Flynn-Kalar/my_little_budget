@@ -17,6 +17,9 @@ class CalendarEvents extends Table {
   TextColumn get location => text().nullable()();
   TextColumn get linkUrl => text().nullable()();
   TextColumn get scheduleType => text().withDefault(const Constant('none'))();
+
+  /// Portable recurrence settings and original-date exceptions (JSON).
+  TextColumn get scheduleData => text().withDefault(const Constant('{}'))();
   TextColumn get notificationLeadMinutes =>
       text().withDefault(const Constant(''))();
   BoolColumn get notificationEnabled =>

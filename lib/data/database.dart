@@ -14,6 +14,7 @@ import 'daos/transaction_presets_dao.dart';
 import 'daos/transactions_dao.dart';
 import 'seed.dart';
 import 'reminder_schema.dart';
+import 'calendar_reminder_schema.dart';
 import 'sync_metadata.dart';
 import 'tables/accounts.dart';
 import 'tables/budget_groups.dart';
@@ -68,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,6 +77,12 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
+      if (from >= 12 &&
+          from < 22 &&
+          await _tableExists('calendar_events') &&
+          !await _columnExists('calendar_events', 'schedule_data')) {
+        await m.addColumn(calendarEvents, calendarEvents.scheduleData);
+      }
       if (from >= 4 && from < 19 && await _tableExists('notes')) {
         await m.addColumn(notes, notes.goalTargetAmount);
         await m.addColumn(notes, notes.goalCurrentAmount);
@@ -170,6 +177,9 @@ WHERE reminder_at IS NOT NULL
       await customStatement('PRAGMA foreign_keys = ON');
       if (await _tableExists('notes')) {
         await transaction(() => createReminderSchema(this));
+      }
+      if (await _tableExists('calendar_events')) {
+        await transaction(() => createCalendarReminderSchema(this));
       }
       await _ensureSyncInfrastructure();
       await _repairRequiredTagFields();

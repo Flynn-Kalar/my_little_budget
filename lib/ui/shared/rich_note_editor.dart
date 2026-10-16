@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 
 import '../../features/notes/rich_note.dart';
+import 'note_goal_embed.dart';
 
 class RichNoteEditor extends StatefulWidget {
   const RichNoteEditor({
@@ -133,6 +134,7 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
         focusNode: widget.focusNode,
         scrollController: widget.scrollController,
         config: QuillEditorConfig(
+          embedBuilders: const [NoteGoalEmbedBuilder()],
           editorKey: widget.editorKey,
           scrollable: widget.scrollable,
           customStyles: DefaultStyles(
@@ -221,6 +223,11 @@ class _RichNoteToolbar extends StatelessWidget {
           options: _fontSizeOptions,
         ),
       QuillToolbarToggleCheckListButton(controller: controller),
+      IconButton(
+        tooltip: '금액 목표 삽입',
+        icon: const Icon(Icons.savings_outlined),
+        onPressed: () => editNoteGoalBlock(context, controller),
+      ),
       QuillToolbarToggleStyleButton(
         controller: controller,
         attribute: Attribute.ul,

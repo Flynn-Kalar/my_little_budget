@@ -31,6 +31,17 @@ class ReminderRepositoryTest {
         db.execSQL("""CREATE TABLE reminder_jobs(id INTEGER PRIMARY KEY,occurrence_id INTEGER,
             generation INTEGER,state TEXT,payload TEXT,fire_at INTEGER,snoozed_until INTEGER,
             delivered_at INTEGER,last_error TEXT)""")
+        db.execSQL("CREATE TABLE calendar_events(id INTEGER PRIMARY KEY,notification_enabled INTEGER,deleted_at TEXT)")
+        db.execSQL("CREATE TABLE calendar_occurrences(id INTEGER PRIMARY KEY,event_id INTEGER,status TEXT)")
+        db.execSQL("CREATE TABLE calendar_jobs AS SELECT * FROM reminder_jobs WHERE 0")
+        db.execSQL("""CREATE VIEW reminder_dispatch_jobs AS
+            SELECT j.id,j.generation,j.payload,COALESCE(j.snoozed_until,j.fire_at) AS trigger_at,j.state
+            FROM reminder_jobs j JOIN reminder_occurrences o ON o.id=j.occurrence_id JOIN notes n ON n.id=o.note_id
+            WHERE o.status='pending' AND n.notification_enabled=1 UNION ALL
+            SELECT -j.id,j.generation,j.payload,COALESCE(j.snoozed_until,j.fire_at),j.state
+            FROM calendar_jobs j JOIN calendar_occurrences o ON o.id=j.occurrence_id
+            JOIN calendar_events e ON e.id=o.event_id
+            WHERE o.status='pending' AND e.notification_enabled=1 AND e.deleted_at IS NULL""")
         val now=System.currentTimeMillis()
         db.execSQL("INSERT INTO notes VALUES(1,1,'once',0,NULL)")
         db.execSQL("INSERT INTO note_checklist_items VALUES(1,1,0,NULL)")
@@ -45,6 +56,44 @@ class ReminderRepositoryTest {
     }
 
     @After fun cleanup() { db.close(); SQLiteDatabase.deleteDatabase(file) }
+
+    private fun calendarJob(): JSONObject {
+        val now=System.currentTimeMillis()
+        db.execSQL("INSERT INTO calendar_events VALUES(1,1,NULL)")
+        db.execSQL("INSERT INTO calendar_occurrences VALUES(1,1,'pending')")
+        val payload=JSONObject().put("calendarEventId",1).put("occurrenceId",1)
+            .put("title","일정").put("triggerAt",now).put("alarmMode",false)
+        db.execSQL("INSERT INTO calendar_jobs VALUES(1,1,1,'scheduled',?,?,NULL,NULL,NULL)",arrayOf(payload.toString(),now))
+        return repository.pending().single { it.getInt("jobId")<0 }
+    }
+
+    @Test fun calendarAndNoteIdsDoNotCollideAndAcknowledgeIsIsolated() {
+        val calendar=calendarJob()
+        assertNotEquals(job.getInt("id"),calendar.getInt("id"))
+        assertNotNull(repository.claim(calendar))
+        assertTrue(repository.action(calendar,"complete"))
+        assertFalse(repository.action(calendar,"complete"))
+        assertEquals(1,repository.pending().size)
+        assertNotNull(repository.claim(job))
+        db.rawQuery("SELECT completed FROM notes WHERE id=1",null).use { c -> c.moveToFirst();assertEquals(0,c.getInt(0)) }
+    }
+
+    @Test fun calendarSnoozePersistsAndOldGenerationCannotAct() {
+        val calendar=calendarJob()
+        repository.claim(calendar)
+        assertTrue(repository.action(calendar,"snooze",10))
+        assertNull(repository.current(calendar))
+        val next=ReminderRepository(context).pending().single { it.getInt("jobId")<0 }
+        assertEquals(2,next.getInt("generation"))
+        assertTrue(next.getLong("triggerAt")>System.currentTimeMillis()+590_000)
+    }
+
+    @Test fun deletedCalendarCannotDeliverAnOldAlarm() {
+        val calendar=calendarJob()
+        db.execSQL("DELETE FROM calendar_events WHERE id=1")
+        assertNull(repository.claim(calendar))
+        assertEquals(1,repository.pending().size)
+    }
 
     @Test fun claimIsOnceAndOldGenerationIsRejected() {
         assertNotNull(repository.claim(job))

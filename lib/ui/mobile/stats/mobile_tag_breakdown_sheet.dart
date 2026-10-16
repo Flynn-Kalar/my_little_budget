@@ -6,6 +6,7 @@ import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import '../../../data/providers.dart';
+import 'mobile_tag_transactions_sheet.dart';
 
 // Keep the sheet's query tied to the tapped month and category, independently
 // of desktop selection state.
@@ -101,7 +102,15 @@ class _TagBreakdownSheet extends ConsumerWidget {
               ),
               data: (items) => items.isEmpty
                   ? const Center(child: Text('선택한 카테고리에 지출 내역이 없습니다.'))
-                  : _TagContent(rows: items),
+                  : _TagContent(
+                      rows: items,
+                      onTagTap: (tag) => showMobileTagTransactions(
+                        context,
+                        month: month,
+                        category: category,
+                        tag: tag,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -111,8 +120,9 @@ class _TagBreakdownSheet extends ConsumerWidget {
 }
 
 class _TagContent extends StatelessWidget {
-  const _TagContent({required this.rows});
+  const _TagContent({required this.rows, required this.onTagTap});
   final List<TagBreakdownRow> rows;
+  final ValueChanged<TagBreakdownRow> onTagTap;
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +141,16 @@ class _TagContent extends StatelessWidget {
                     centerSpaceRadius: 64,
                     sectionsSpace: 2,
                     startDegreeOffset: -90,
-                    pieTouchData: PieTouchData(enabled: false),
+                    pieTouchData: PieTouchData(
+                      touchCallback: (event, response) {
+                        if (event is! FlTapUpEvent) return;
+                        final index =
+                            response?.touchedSection?.touchedSectionIndex ?? -1;
+                        if (index >= 0 && index < rows.length) {
+                          onTagTap(rows[index]);
+                        }
+                      },
+                    ),
                     sections: [
                       for (final row in rows)
                         PieChartSectionData(
@@ -162,46 +181,52 @@ class _TagContent extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         for (final row in rows)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: _tagColor(context, row),
-                        shape: BoxShape.circle,
+          InkWell(
+            key: ValueKey('mobile-stats-tag-${row.tagId ?? 'untagged'}'),
+            onTap: () => onTagTap(row),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: _tagColor(context, row),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        row.isUntagged ? row.tagName : '#${row.tagName}',
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          row.isUntagged ? row.tagName : '#${row.tagName}',
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${total == 0 ? 0 : (row.total / total * 100).round()}%',
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      formatKRW(row.total),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: total == 0 ? 0 : row.total / total,
-                  minHeight: 5,
-                  color: _tagColor(context, row),
-                  backgroundColor: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
+                      const SizedBox(width: 8),
+                      Text(
+                        '${total == 0 ? 0 : (row.total / total * 100).round()}%',
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        formatKRW(row.total),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const Icon(Icons.chevron_right, size: 18),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: total == 0 ? 0 : row.total / total,
+                    minHeight: 5,
+                    color: _tagColor(context, row),
+                    backgroundColor: Theme.of(context).dividerColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ],
+              ),
             ),
           ),
       ],

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../features/notes/note_schedule.dart';
+import '../../features/calendar/calendar_schedule.dart';
 import '../database.dart';
 import '../sync_metadata.dart';
 import '../tables/calendar_events.dart';
@@ -39,6 +40,7 @@ class CalendarEventsDao extends DatabaseAccessor<AppDatabase>
     String? location,
     String? linkUrl,
     NoteScheduleDraft? schedule,
+    CalendarScheduleSettings? settings,
   }) async {
     final normalizedTitle = title.trim();
     if (normalizedTitle.isEmpty) {
@@ -53,7 +55,28 @@ class CalendarEventsDao extends DatabaseAccessor<AppDatabase>
     if (error != null) throw ArgumentError(error, 'schedule');
 
     final now = DateTime.now().toUtc().toIso8601String();
+    final previous = id == null ? null : await getEvent(id);
+    final config =
+        settings ??
+        (previous == null
+            ? const CalendarScheduleSettings()
+            : CalendarScheduleSettings.fromEvent(previous));
+    final effectiveConfig = CalendarScheduleSettings(
+      every: config.every,
+      until: config.until,
+      timeZone: config.timeZone,
+      allDayDate: allDay ? noteDateKey(startAt) : null,
+      exceptions: config.exceptions,
+    );
+    if (effectiveConfig.validationError != null) {
+      throw ArgumentError(effectiveConfig.validationError);
+    }
+    if (config.until != null &&
+        config.until!.compareTo(noteDateKey(startAt)) < 0) {
+      throw ArgumentError('반복 종료일은 시작일 이후로 선택하세요.');
+    }
     final companion = CalendarEventsCompanion(
+      scheduleData: Value(effectiveConfig.encode()),
       title: Value(normalizedTitle),
       description: Value(description.trim()),
       startAt: Value(startAt.toUtc().toIso8601String()),
@@ -84,6 +107,47 @@ class CalendarEventsDao extends DatabaseAccessor<AppDatabase>
 
   Future<int> deleteEvent(int id) {
     return (delete(calendarEvents)..where((event) => event.id.equals(id))).go();
+  }
+
+  Future<void> saveOccurrence(
+    int id,
+    String originalDate, {
+    bool skipped = false,
+    DateTime? startAt,
+    String? title,
+    bool restore = false,
+  }) async {
+    if (parseNoteDate(originalDate) == null) {
+      throw ArgumentError('올바른 회차 날짜가 아닙니다.');
+    }
+    if (title != null && title.trim().isEmpty) {
+      throw ArgumentError('제목을 입력하세요.');
+    }
+    await transaction(() async {
+      final event = await getEvent(id);
+      if (event == null) throw StateError('일정이 삭제되었습니다.');
+      final config = CalendarScheduleSettings.fromEvent(event);
+      final next = config.withException(
+        originalDate,
+        restore
+            ? null
+            : {
+                'skipped': skipped,
+                if (startAt != null)
+                  'start': event.allDay
+                      ? noteDateKey(startAt)
+                      : startAt.toUtc().toIso8601String(),
+                if (title != null) 'title': title.trim(),
+              },
+      );
+      await (update(calendarEvents)..where((e) => e.id.equals(id))).write(
+        CalendarEventsCompanion(
+          scheduleData: Value(next.encode()),
+          updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
+          syncStatus: const Value(syncStatusPending),
+        ),
+      );
+    });
   }
 }
 

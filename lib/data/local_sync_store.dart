@@ -368,6 +368,10 @@ WHERE uuid = ?
     final values = <String, Object?>{};
     for (final column in _payloadColumns[entity]!) {
       if (!payload.containsKey(column)) {
+        if (entity == 'calendar_events' && column == 'schedule_data') {
+          values[column] = '{}';
+          continue;
+        }
         throw FormatException('$entity payload에 $column 값이 없습니다.');
       }
       values[column] = payload[column];
@@ -775,6 +779,7 @@ const _payloadColumns = <String, List<String>>{
     'created_at',
   ],
   'calendar_events': [
+    'schedule_data',
     'title',
     'description',
     'start_at',

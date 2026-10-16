@@ -44,19 +44,26 @@ class NoteNotificationService {
   Future<void> _rebuildQueue = Future.value();
   bool _initialized = false;
   void Function(int noteId)? _onNoteTap;
+  void Function(int eventId)? _onCalendarEventTap;
 
   bool get isSupported =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   Future<void> initialize({
     required void Function(int noteId) onNoteTap,
+    void Function(int eventId)? onCalendarEventTap,
   }) async {
     _onNoteTap = onNoteTap;
+    _onCalendarEventTap = onCalendarEventTap;
     if (!isSupported) return;
     _alarmChannel.setMethodCallHandler((call) async {
       if (call.method == 'openNote') {
         final id = (call.arguments as num?)?.toInt();
         if (id != null) _onNoteTap?.call(id);
+      }
+      if (call.method == 'openCalendarEvent') {
+        final id = (call.arguments as num?)?.toInt();
+        if (id != null) _onCalendarEventTap?.call(id);
       }
     });
     if (_initialized) return;
@@ -89,6 +96,14 @@ class NoteNotificationService {
       launchId = null;
     }
     if (launchId != null) _onNoteTap?.call(launchId);
+    try {
+      final eventId = await _alarmChannel.invokeMethod<int>(
+        'getLaunchCalendarEventId',
+      );
+      if (eventId != null) _onCalendarEventTap?.call(eventId);
+    } on MissingPluginException {
+      /* Older native hosts have no calendar launch target. */
+    }
   }
 
   Future<NoteNotificationPermission> permissionStatus() async {

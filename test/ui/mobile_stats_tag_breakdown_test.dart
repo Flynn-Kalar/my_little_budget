@@ -42,6 +42,8 @@ void main() {
       await expense(10000, '2026-10-02', categories.first.id, []);
       await expense(90000, '2026-09-01', categories.first.id, ['다른 범위 태그']);
       await expense(20000, '2026-10-01', categories[1].id, ['다른 범위 태그']);
+      await expense(11111, '2026-09-03', categories.first.id, ['선택한 태그']);
+      await expense(22222, '2026-10-03', categories[1].id, ['선택한 태그']);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -66,6 +68,26 @@ void main() {
       expect(find.text('25%'), findsOneWidget);
       expect(find.text(formatKRW(30000)), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.tap(find.text('#선택한 태그'));
+      await tester.pumpAndSettle();
+      expect(find.text('#선택한 태그 거래내역'), findsOneWidget);
+      expect(find.text('1건'), findsOneWidget);
+      expect(find.text('2026-10-01 12:00'), findsOneWidget);
+      expect(find.text(formatKRW(30000)), findsWidgets);
+      expect(find.text(formatKRW(11111)), findsNothing);
+      expect(find.text(formatKRW(22222)), findsNothing);
+      expect(find.text('2026-10-02 12:00'), findsNothing);
+      await tester.tap(find.byTooltip('태그 비율로 돌아가기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('태그 없음'));
+      await tester.pumpAndSettle();
+      expect(find.text('태그 없음 거래내역'), findsOneWidget);
+      expect(find.text('1건'), findsOneWidget);
+      expect(find.text('2026-10-02 12:00'), findsOneWidget);
+      expect(find.text('2026-10-01 12:00'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byTooltip('태그 비율로 돌아가기'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('닫기'));
       await tester.pumpAndSettle();
       expect(find.text('태그 합계'), findsNothing);
@@ -76,8 +98,7 @@ void main() {
       await tester.tap(other);
       await tester.pumpAndSettle();
       expect(find.text('#다른 범위 태그'), findsOneWidget);
-      expect(find.text('#선택한 태그'), findsNothing);
-      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('#선택한 태그'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

@@ -70,9 +70,15 @@ class NoteGoalDraft extends ChangeNotifier {
 }
 
 class NoteGoalForm extends StatelessWidget {
-  const NoteGoalForm({super.key, required this.draft, this.busy = false});
+  const NoteGoalForm({
+    super.key,
+    required this.draft,
+    this.busy = false,
+    this.showType = true,
+  });
   final NoteGoalDraft draft;
   final bool busy;
+  final bool showType;
 
   Future<void> _pickDate(BuildContext context, {required bool due}) async {
     final value = await showDatePicker(
@@ -96,20 +102,24 @@ class NoteGoalForm extends StatelessWidget {
     builder: (context, _) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DropdownButtonFormField<bool>(
-          initialValue: draft.enabled,
-          decoration: const InputDecoration(labelText: '메모 유형'),
-          items: const [
-            DropdownMenuItem(value: false, child: Text('일반 메모')),
-            DropdownMenuItem(value: true, child: Text('금액 목표')),
-          ],
-          onChanged: busy
-              ? null
-              : (value) {
-                  draft.enabled = value ?? false;
-                  draft.refresh();
-                },
-        ),
+        if (showType)
+          DropdownButtonFormField<bool>(
+            initialValue: draft.enabled,
+            decoration: const InputDecoration(
+              labelText: '메모 유형',
+              helperText: '본문 중간의 금액 목표는 서식 도구 모음의 저금통 버튼으로 삽입하세요.',
+            ),
+            items: const [
+              DropdownMenuItem(value: false, child: Text('일반 메모')),
+              DropdownMenuItem(value: true, child: Text('금액 목표')),
+            ],
+            onChanged: busy
+                ? null
+                : (value) {
+                    draft.enabled = value ?? false;
+                    draft.refresh();
+                  },
+          ),
         if (draft.enabled) ...[
           TextField(
             controller: draft.target,

@@ -33,9 +33,23 @@ class StatsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '통계',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '통계',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: () => context.go('/stats/yearly'),
+                  icon: const Icon(
+                    Icons.calendar_view_month_outlined,
+                    size: 18,
+                  ),
+                  label: const Text('연간'),
+                ),
+              ],
             ),
             SizedBox(height: 20),
             StatsMonthNav(month: month),
@@ -94,8 +108,6 @@ class StatsScreen extends ConsumerWidget {
               ),
               error: (error, _) => _ErrorCard(message: error.toString()),
             ),
-            SizedBox(height: 16),
-            const _YearlyTodoCard(),
             SizedBox(height: 40),
           ],
         ),
@@ -1222,41 +1234,6 @@ class _MiniAmount extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _YearlyTodoCard extends StatelessWidget {
-  const _YearlyTodoCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return _StatsCard(
-      child: Row(
-        children: [
-          Icon(Icons.table_chart_outlined, color: context.desktopMuted),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('연간 통계', style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 2),
-                Text(
-                  '연도별 월간 수입/지출과 카테고리별 지출 흐름을 확인합니다.',
-                  style: TextStyle(color: context.desktopMuted),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: 12),
-          OutlinedButton.icon(
-            onPressed: () => context.go('/stats/yearly'),
-            icon: Icon(Icons.open_in_new, size: 18),
-            label: Text('연간 통계 열기'),
-          ),
-        ],
-      ),
     );
   }
 }

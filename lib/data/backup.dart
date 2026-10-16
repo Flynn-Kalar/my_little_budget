@@ -27,6 +27,7 @@ class Backup {
     this.calendarEvents = const [],
     this.reminderSeries = const [],
     this.reminderOccurrences = const [],
+    this.calendarOccurrences = const [],
   });
 
   final String exportedAt;
@@ -46,6 +47,7 @@ class Backup {
   final List<CalendarEvent> calendarEvents;
   final List<Map<String, dynamic>> reminderSeries;
   final List<Map<String, dynamic>> reminderOccurrences;
+  final List<Map<String, dynamic>> calendarOccurrences;
 
   Map<String, dynamic> toJson() => {
     'version': backupVersion,
@@ -72,6 +74,7 @@ class Backup {
       'calendarEvents': calendarEvents.map((e) => e.toJson()).toList(),
       'reminderSeries': reminderSeries,
       'reminderOccurrences': reminderOccurrences,
+      'calendarOccurrences': calendarOccurrences,
     },
   };
 
@@ -114,6 +117,7 @@ BackupParseResult parseBackup(String jsonString) {
         exportedAt: raw['exportedAt'] as String? ?? '',
         reminderSeries: _list(data['reminderSeries']),
         reminderOccurrences: _list(data['reminderOccurrences']),
+        calendarOccurrences: _list(data['calendarOccurrences']),
         accounts: _list(data['accounts'])
             .map(
               (j) => Account.fromJson(
@@ -250,6 +254,7 @@ Map<String, Object?> _noteBackupJson(Note note) {
 }
 
 Map<String, Object?> _calendarEventJson(Map<String, dynamic> m) {
+  m['scheduleData'] ??= '{}';
   m['scheduleType'] ??= 'none';
   m['notificationLeadMinutes'] ??= '';
   m['notificationEnabled'] ??= false;

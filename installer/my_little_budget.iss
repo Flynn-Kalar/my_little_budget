@@ -1,6 +1,6 @@
 #define MyAppName "나만의 작은 가계부"
 #define MyAppVersion "1.0.0-rc.1"
-#define MyAppNumericVersion "1.0.0.42"
+#define MyAppNumericVersion "1.0.0.53"
 #define MyAppPublisher "Flynn-Kalar"
 #define MyAppExeName "my_little_budget.exe"
 

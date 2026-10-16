@@ -63,6 +63,9 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
       reminderOccurrences: (await customSelect(
         'SELECT * FROM reminder_occurrences',
       ).get()).map((r) => r.data).toList(),
+      calendarOccurrences: (await customSelect(
+        'SELECT * FROM calendar_occurrences',
+      ).get()).map((r) => r.data).toList(),
     );
   }
 
@@ -135,6 +138,18 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
             row['status'],
             row['completed_at'],
             row['checklist_json'],
+          ],
+        );
+      }
+      for (final row in b.calendarOccurrences) {
+        await customStatement(
+          '''INSERT INTO calendar_occurrences(event_id,occurrence_key,scheduled_at,status)
+          VALUES(?,?,?,?)''',
+          [
+            row['event_id'],
+            row['occurrence_key'],
+            row['scheduled_at'],
+            row['status'],
           ],
         );
       }

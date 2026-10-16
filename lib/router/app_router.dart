@@ -103,9 +103,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/calendar',
-            builder: (context, state) => const ResponsivePage(
-              desktop: CalendarScreen(),
-              mobile: MobileCalendarScreen(),
+            builder: (context, state) => ResponsivePage(
+              desktop: CalendarScreen(
+                openEventId: int.tryParse(
+                  state.uri.queryParameters['open'] ?? '',
+                ),
+                openRequest: state.uri.queryParameters['tap'],
+              ),
+              mobile: MobileCalendarScreen(
+                openEventId: int.tryParse(
+                  state.uri.queryParameters['open'] ?? '',
+                ),
+                openRequest: state.uri.queryParameters['tap'],
+              ),
             ),
           ),
           GoRoute(

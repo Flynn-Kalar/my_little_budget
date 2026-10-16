@@ -28,6 +28,11 @@ class MainActivity : FlutterActivity() {
         ).also { bridge ->
             bridge.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "getLaunchCalendarEventId" -> {
+                        val id = intent?.getIntExtra("calendar_event_id", -1) ?: -1
+                        intent?.removeExtra("calendar_event_id")
+                        result.success(id.takeIf { it >= 0 })
+                    }
                     "getTimeZone" -> result.success(java.util.TimeZone.getDefault().id)
                     "configureDatabase" -> {
                         ReminderRepository(this).configure(call.arguments as String)
@@ -74,6 +79,11 @@ class MainActivity : FlutterActivity() {
         setIntent(intent)
         val id = intent.getIntExtra(NoteAlarmScheduler.EXTRA_NOTE_ID, -1)
         if (id >= 0) channel?.invokeMethod("openNote", id)
+        val eventId = intent.getIntExtra("calendar_event_id", -1)
+        if (eventId >= 0) {
+            channel?.invokeMethod("openCalendarEvent", eventId)
+            intent.removeExtra("calendar_event_id")
+        }
     }
 
     private fun pickSystemSound(result: MethodChannel.Result) {

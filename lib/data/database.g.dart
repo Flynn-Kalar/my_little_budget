@@ -9900,6 +9900,18 @@ class $CalendarEventsTable extends CalendarEvents
     requiredDuringInsert: false,
     defaultValue: const Constant('none'),
   );
+  static const VerificationMeta _scheduleDataMeta = const VerificationMeta(
+    'scheduleData',
+  );
+  @override
+  late final GeneratedColumn<String> scheduleData = GeneratedColumn<String>(
+    'schedule_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
   static const VerificationMeta _notificationLeadMinutesMeta =
       const VerificationMeta('notificationLeadMinutes');
   @override
@@ -9986,6 +9998,7 @@ class $CalendarEventsTable extends CalendarEvents
     location,
     linkUrl,
     scheduleType,
+    scheduleData,
     notificationLeadMinutes,
     notificationEnabled,
     createdAt,
@@ -10075,6 +10088,15 @@ class $CalendarEventsTable extends CalendarEvents
         scheduleType.isAcceptableOrUnknown(
           data['schedule_type']!,
           _scheduleTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('schedule_data')) {
+      context.handle(
+        _scheduleDataMeta,
+        scheduleData.isAcceptableOrUnknown(
+          data['schedule_data']!,
+          _scheduleDataMeta,
         ),
       );
     }
@@ -10173,6 +10195,10 @@ class $CalendarEventsTable extends CalendarEvents
         DriftSqlType.string,
         data['${effectivePrefix}schedule_type'],
       )!,
+      scheduleData: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schedule_data'],
+      )!,
       notificationLeadMinutes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notification_lead_minutes'],
@@ -10218,6 +10244,9 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
   final String? location;
   final String? linkUrl;
   final String scheduleType;
+
+  /// Portable recurrence settings and original-date exceptions (JSON).
+  final String scheduleData;
   final String notificationLeadMinutes;
   final bool notificationEnabled;
   final String createdAt;
@@ -10236,6 +10265,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     this.location,
     this.linkUrl,
     required this.scheduleType,
+    required this.scheduleData,
     required this.notificationLeadMinutes,
     required this.notificationEnabled,
     required this.createdAt,
@@ -10263,6 +10293,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
       map['link_url'] = Variable<String>(linkUrl);
     }
     map['schedule_type'] = Variable<String>(scheduleType);
+    map['schedule_data'] = Variable<String>(scheduleData);
     map['notification_lead_minutes'] = Variable<String>(
       notificationLeadMinutes,
     );
@@ -10295,6 +10326,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
           ? const Value.absent()
           : Value(linkUrl),
       scheduleType: Value(scheduleType),
+      scheduleData: Value(scheduleData),
       notificationLeadMinutes: Value(notificationLeadMinutes),
       notificationEnabled: Value(notificationEnabled),
       createdAt: Value(createdAt),
@@ -10323,6 +10355,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
       location: serializer.fromJson<String?>(json['location']),
       linkUrl: serializer.fromJson<String?>(json['linkUrl']),
       scheduleType: serializer.fromJson<String>(json['scheduleType']),
+      scheduleData: serializer.fromJson<String>(json['scheduleData']),
       notificationLeadMinutes: serializer.fromJson<String>(
         json['notificationLeadMinutes'],
       ),
@@ -10350,6 +10383,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
       'location': serializer.toJson<String?>(location),
       'linkUrl': serializer.toJson<String?>(linkUrl),
       'scheduleType': serializer.toJson<String>(scheduleType),
+      'scheduleData': serializer.toJson<String>(scheduleData),
       'notificationLeadMinutes': serializer.toJson<String>(
         notificationLeadMinutes,
       ),
@@ -10373,6 +10407,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     Value<String?> location = const Value.absent(),
     Value<String?> linkUrl = const Value.absent(),
     String? scheduleType,
+    String? scheduleData,
     String? notificationLeadMinutes,
     bool? notificationEnabled,
     String? createdAt,
@@ -10391,6 +10426,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     location: location.present ? location.value : this.location,
     linkUrl: linkUrl.present ? linkUrl.value : this.linkUrl,
     scheduleType: scheduleType ?? this.scheduleType,
+    scheduleData: scheduleData ?? this.scheduleData,
     notificationLeadMinutes:
         notificationLeadMinutes ?? this.notificationLeadMinutes,
     notificationEnabled: notificationEnabled ?? this.notificationEnabled,
@@ -10416,6 +10452,9 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
       scheduleType: data.scheduleType.present
           ? data.scheduleType.value
           : this.scheduleType,
+      scheduleData: data.scheduleData.present
+          ? data.scheduleData.value
+          : this.scheduleData,
       notificationLeadMinutes: data.notificationLeadMinutes.present
           ? data.notificationLeadMinutes.value
           : this.notificationLeadMinutes,
@@ -10445,6 +10484,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
           ..write('location: $location, ')
           ..write('linkUrl: $linkUrl, ')
           ..write('scheduleType: $scheduleType, ')
+          ..write('scheduleData: $scheduleData, ')
           ..write('notificationLeadMinutes: $notificationLeadMinutes, ')
           ..write('notificationEnabled: $notificationEnabled, ')
           ..write('createdAt: $createdAt, ')
@@ -10468,6 +10508,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
     location,
     linkUrl,
     scheduleType,
+    scheduleData,
     notificationLeadMinutes,
     notificationEnabled,
     createdAt,
@@ -10490,6 +10531,7 @@ class CalendarEvent extends DataClass implements Insertable<CalendarEvent> {
           other.location == this.location &&
           other.linkUrl == this.linkUrl &&
           other.scheduleType == this.scheduleType &&
+          other.scheduleData == this.scheduleData &&
           other.notificationLeadMinutes == this.notificationLeadMinutes &&
           other.notificationEnabled == this.notificationEnabled &&
           other.createdAt == this.createdAt &&
@@ -10510,6 +10552,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
   final Value<String?> location;
   final Value<String?> linkUrl;
   final Value<String> scheduleType;
+  final Value<String> scheduleData;
   final Value<String> notificationLeadMinutes;
   final Value<bool> notificationEnabled;
   final Value<String> createdAt;
@@ -10528,6 +10571,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     this.location = const Value.absent(),
     this.linkUrl = const Value.absent(),
     this.scheduleType = const Value.absent(),
+    this.scheduleData = const Value.absent(),
     this.notificationLeadMinutes = const Value.absent(),
     this.notificationEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -10547,6 +10591,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     this.location = const Value.absent(),
     this.linkUrl = const Value.absent(),
     this.scheduleType = const Value.absent(),
+    this.scheduleData = const Value.absent(),
     this.notificationLeadMinutes = const Value.absent(),
     this.notificationEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -10567,6 +10612,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     Expression<String>? location,
     Expression<String>? linkUrl,
     Expression<String>? scheduleType,
+    Expression<String>? scheduleData,
     Expression<String>? notificationLeadMinutes,
     Expression<bool>? notificationEnabled,
     Expression<String>? createdAt,
@@ -10586,6 +10632,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
       if (location != null) 'location': location,
       if (linkUrl != null) 'link_url': linkUrl,
       if (scheduleType != null) 'schedule_type': scheduleType,
+      if (scheduleData != null) 'schedule_data': scheduleData,
       if (notificationLeadMinutes != null)
         'notification_lead_minutes': notificationLeadMinutes,
       if (notificationEnabled != null)
@@ -10609,6 +10656,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     Value<String?>? location,
     Value<String?>? linkUrl,
     Value<String>? scheduleType,
+    Value<String>? scheduleData,
     Value<String>? notificationLeadMinutes,
     Value<bool>? notificationEnabled,
     Value<String>? createdAt,
@@ -10628,6 +10676,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
       location: location ?? this.location,
       linkUrl: linkUrl ?? this.linkUrl,
       scheduleType: scheduleType ?? this.scheduleType,
+      scheduleData: scheduleData ?? this.scheduleData,
       notificationLeadMinutes:
           notificationLeadMinutes ?? this.notificationLeadMinutes,
       notificationEnabled: notificationEnabled ?? this.notificationEnabled,
@@ -10674,6 +10723,9 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
     if (scheduleType.present) {
       map['schedule_type'] = Variable<String>(scheduleType.value);
     }
+    if (scheduleData.present) {
+      map['schedule_data'] = Variable<String>(scheduleData.value);
+    }
     if (notificationLeadMinutes.present) {
       map['notification_lead_minutes'] = Variable<String>(
         notificationLeadMinutes.value,
@@ -10711,6 +10763,7 @@ class CalendarEventsCompanion extends UpdateCompanion<CalendarEvent> {
           ..write('location: $location, ')
           ..write('linkUrl: $linkUrl, ')
           ..write('scheduleType: $scheduleType, ')
+          ..write('scheduleData: $scheduleData, ')
           ..write('notificationLeadMinutes: $notificationLeadMinutes, ')
           ..write('notificationEnabled: $notificationEnabled, ')
           ..write('createdAt: $createdAt, ')
@@ -20240,6 +20293,7 @@ typedef $$CalendarEventsTableCreateCompanionBuilder =
       Value<String?> location,
       Value<String?> linkUrl,
       Value<String> scheduleType,
+      Value<String> scheduleData,
       Value<String> notificationLeadMinutes,
       Value<bool> notificationEnabled,
       Value<String> createdAt,
@@ -20260,6 +20314,7 @@ typedef $$CalendarEventsTableUpdateCompanionBuilder =
       Value<String?> location,
       Value<String?> linkUrl,
       Value<String> scheduleType,
+      Value<String> scheduleData,
       Value<String> notificationLeadMinutes,
       Value<bool> notificationEnabled,
       Value<String> createdAt,
@@ -20329,6 +20384,11 @@ class $$CalendarEventsTableFilterComposer
 
   ColumnFilters<String> get scheduleType => $composableBuilder(
     column: $table.scheduleType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scheduleData => $composableBuilder(
+    column: $table.scheduleData,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -20427,6 +20487,11 @@ class $$CalendarEventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get scheduleData => $composableBuilder(
+    column: $table.scheduleData,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notificationLeadMinutes => $composableBuilder(
     column: $table.notificationLeadMinutes,
     builder: (column) => ColumnOrderings(column),
@@ -20504,6 +20569,11 @@ class $$CalendarEventsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get scheduleData => $composableBuilder(
+    column: $table.scheduleData,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get notificationLeadMinutes => $composableBuilder(
     column: $table.notificationLeadMinutes,
     builder: (column) => column,
@@ -20573,6 +20643,7 @@ class $$CalendarEventsTableTableManager
                 Value<String?> location = const Value.absent(),
                 Value<String?> linkUrl = const Value.absent(),
                 Value<String> scheduleType = const Value.absent(),
+                Value<String> scheduleData = const Value.absent(),
                 Value<String> notificationLeadMinutes = const Value.absent(),
                 Value<bool> notificationEnabled = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
@@ -20591,6 +20662,7 @@ class $$CalendarEventsTableTableManager
                 location: location,
                 linkUrl: linkUrl,
                 scheduleType: scheduleType,
+                scheduleData: scheduleData,
                 notificationLeadMinutes: notificationLeadMinutes,
                 notificationEnabled: notificationEnabled,
                 createdAt: createdAt,
@@ -20611,6 +20683,7 @@ class $$CalendarEventsTableTableManager
                 Value<String?> location = const Value.absent(),
                 Value<String?> linkUrl = const Value.absent(),
                 Value<String> scheduleType = const Value.absent(),
+                Value<String> scheduleData = const Value.absent(),
                 Value<String> notificationLeadMinutes = const Value.absent(),
                 Value<bool> notificationEnabled = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
@@ -20629,6 +20702,7 @@ class $$CalendarEventsTableTableManager
                 location: location,
                 linkUrl: linkUrl,
                 scheduleType: scheduleType,
+                scheduleData: scheduleData,
                 notificationLeadMinutes: notificationLeadMinutes,
                 notificationEnabled: notificationEnabled,
                 createdAt: createdAt,

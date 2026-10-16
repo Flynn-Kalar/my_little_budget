@@ -79,6 +79,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
   void _handleSyncResult(SyncRunResult result) {
     if (!mounted || !result.changedLocalData) return;
     invalidateSyncedData(ref);
+    unawaited(_syncNotes());
   }
 
   Future<void> _runRecurringBackfillAfterPull() async {
@@ -100,6 +101,11 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
     try {
       final service = ref.read(noteNotificationServiceProvider);
       await service.initialize(
+        onCalendarEventTap: (id) => ref
+            .read(appRouterProvider)
+            .go(
+              '/calendar?open=$id&tap=${DateTime.now().microsecondsSinceEpoch}',
+            ),
         onNoteTap: (noteId) {
           final tap = DateTime.now().microsecondsSinceEpoch;
           ref.read(appRouterProvider).go('/notes?open=$noteId&tap=$tap');
@@ -118,7 +124,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
         ref.invalidate(pendingReminderCountProvider);
       }
       _scheduleNextReset(await dao.earliestNextReset());
-    } catch(error) {
+    } catch (error) {
       debugPrint('Reminder reconciliation failed: $error');
     } finally {
       _notesSyncing = false;

@@ -6,6 +6,7 @@ import 'package:flutter_quill/quill_delta.dart';
 
 import '../../data/database.dart';
 import 'checklist.dart';
+import 'note_goal_block.dart';
 
 Document documentFromNote(Note note) {
   final rich = note.richContent;
@@ -36,6 +37,10 @@ String noteBodyPreview(Note note) {
   final buffer = StringBuffer();
   final line = StringBuffer();
   for (final op in documentFromNote(note).toDelta().toList()) {
+    if (op.data is Map) {
+      final block = NoteGoalBlock.decode((op.data as Map)[noteGoalBlockType]);
+      if (block != null) line.write(block.plainText);
+    }
     if (op.data is! String) continue;
     for (final char in (op.data as String).split('')) {
       if (char == '\n') {
@@ -71,7 +76,18 @@ void convertNoteBulletShortcut(QuillController controller) {
 }
 
 String plainTextFromDocument(Document document) {
-  return document.toPlainText().trim();
+  final text = StringBuffer();
+  for (final op in document.toDelta().toList()) {
+    if (op.data is String) {
+      text.write(op.data);
+    } else if (op.data is Map) {
+      text.write(
+        NoteGoalBlock.decode((op.data as Map)[noteGoalBlockType])?.plainText ??
+            '',
+      );
+    }
+  }
+  return text.toString().trim();
 }
 
 List<ChecklistItemDraft> checklistFromDocument(Document document) {

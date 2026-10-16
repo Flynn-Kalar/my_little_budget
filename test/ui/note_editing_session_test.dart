@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/features/notes/note_draft_store.dart';
+import 'package:my_little_budget/features/notes/rich_note.dart';
 import 'package:my_little_budget/ui/desktop/notes/notes_screen.dart';
 import 'package:my_little_budget/ui/mobile/notes/mobile_notes_screen.dart';
 import 'package:my_little_budget/ui/mobile/notes/mobile_note_detail_page.dart';
@@ -91,6 +92,87 @@ Future<void> tapVisible(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  for (final mobile in [false, true]) {
+    noteTest(
+      '${mobile ? 'mobile' : 'desktop'} inserts inline goals among text and checklists and saves edits',
+      (tester) async {
+        final db = await setup(tester, mobile);
+        await openNew(tester, mobile);
+        await tester.enterText(titleField, '본문 목표 테스트');
+        final editor = tester.widget<RichNoteEditor>(
+          find.byType(RichNoteEditor),
+        );
+        editor.controller.replaceText(
+          0,
+          0,
+          '앞 설명\n뒤 설명',
+          const TextSelection.collapsed(offset: 5),
+        );
+        Future<void> insert(String name, String amount) async {
+          await tapVisible(tester, find.byTooltip('금액 목표 삽입'));
+          final dialog = find.byType(AlertDialog);
+          Finder field(String label) => find.descendant(
+            of: dialog,
+            matching: find.byWidgetPredicate(
+              (w) => w is TextField && w.decoration?.labelText == label,
+            ),
+          );
+          await tester.enterText(field('목표 이름 (선택사항)'), name);
+          await tester.enterText(field('목표 금액'), amount);
+          await tester.enterText(field('현재 금액'), '1000000');
+          await tapVisible(tester, find.widgetWithText(FilledButton, '삽입'));
+        }
+
+        await insert('비상금', '2681630');
+        editor.controller.updateSelection(
+          TextSelection.collapsed(
+            offset: editor.controller.document.length - 1,
+          ),
+          ChangeSource.local,
+        );
+        await insert('여행', '2000000');
+        expect(find.byTooltip('금액 목표 수정'), findsNWidgets(2));
+        await tapVisible(tester, find.byTooltip('금액 목표 수정').first);
+        await tapVisible(tester, find.text('+400,000'));
+        await tapVisible(tester, find.widgetWithText(FilledButton, '적용'));
+        expect(
+          plainTextFromDocument(editor.controller.document),
+          contains('1,400,000 / 2,681,630원'),
+        );
+        final end = editor.controller.document.length - 1;
+        editor.controller.replaceText(
+          end,
+          0,
+          '\n점검',
+          TextSelection.collapsed(offset: end + 3),
+        );
+        editor.controller.formatText(end + 1, 2, Attribute.unchecked);
+        await tester.pumpAndSettle();
+        expect(
+          checklistFromDocument(editor.controller.document).single.text,
+          '점검',
+        );
+        await tapVisible(tester, find.text('저장'));
+        final saved = (await db.notesDao.listNotes()).single;
+        expect(saved.goalTargetAmount, isNull);
+        expect(saved.content, contains('뒤 설명'));
+        expect(saved.content, contains('여행'));
+        expect(saved.richContent, contains('budget-goal'));
+        await tester.tap(find.text('본문 목표 테스트'));
+        await tester.pumpAndSettle();
+        final viewer = tester.widget<RichNoteViewer>(
+          find.byType(RichNoteViewer),
+        );
+        expect(
+          plainTextFromDocument(viewer.document),
+          contains('1,400,000 / 2,681,630원'),
+        );
+        expect(checklistFromDocument(viewer.document).single.text, '점검');
+        expect(find.text('여행'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   noteTest(
     'mobile detail uses a full page with unboxed rich text, full titles and footer dates',
     (tester) async {
