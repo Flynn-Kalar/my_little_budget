@@ -40,6 +40,7 @@ android {
     }
 
     defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         applicationId = "com.my_little_budget"
         // flutter_secure_storage 10.x uses the modern Android keystore APIs.
         minSdk = flutter.minSdkVersion
@@ -60,6 +61,16 @@ android {
     }
 
     buildTypes {
+        create("reminderTest") {
+            // Flutter wires engine dependencies when a build type is created;
+            // keep this custom type in release mode for matching AOT assets.
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
+            applicationIdSuffix = ".remindertest"
+            matchingFallbacks += listOf("release")
+        }
         release {
             if (hasReleaseKeystore) {
                 signingConfig = signingConfigs.getByName("release")
@@ -72,11 +83,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    testBuildType = "reminderTest"
 }
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }
 
 flutter {

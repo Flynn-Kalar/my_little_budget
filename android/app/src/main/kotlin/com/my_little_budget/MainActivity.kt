@@ -28,6 +28,11 @@ class MainActivity : FlutterActivity() {
         ).also { bridge ->
             bridge.setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "getTimeZone" -> result.success(java.util.TimeZone.getDefault().id)
+                    "configureDatabase" -> {
+                        ReminderRepository(this).configure(call.arguments as String)
+                        result.success(null)
+                    }
                     "getLaunchNoteId" -> {
                         val id = intent?.getIntExtra(NoteAlarmScheduler.EXTRA_NOTE_ID, -1) ?: -1
                         intent?.removeExtra(NoteAlarmScheduler.EXTRA_NOTE_ID)
@@ -37,6 +42,8 @@ class MainActivity : FlutterActivity() {
                         @Suppress("UNCHECKED_CAST")
                         val jobs = call.arguments as? List<Map<String, Any?>> ?: emptyList()
                         NoteAlarmScheduler.replace(this, jobs)
+                        startService(Intent(this, NoteAlarmPlaybackService::class.java)
+                            .setAction(NoteAlarmPlaybackService.ACTION_RECONCILE))
                         result.success(null)
                     }
                     "pickSystemSound" -> pickSystemSound(result)

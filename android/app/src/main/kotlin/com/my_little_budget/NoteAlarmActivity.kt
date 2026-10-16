@@ -24,6 +24,7 @@ import android.widget.LinearLayout
 import android.widget.Space
 import android.widget.TextClock
 import android.widget.TextView
+import android.widget.Button
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -33,6 +34,7 @@ import kotlin.math.hypot
 class NoteAlarmActivity : Activity() {
     private lateinit var titleView: TextView
     private var receiverRegistered = false
+    private var currentJob: JSONObject? = null
 
     private val finishedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -142,13 +144,24 @@ class NoteAlarmActivity : Activity() {
         root.addView(date, LinearLayout.LayoutParams(-1, -2))
         root.addView(titleView, LinearLayout.LayoutParams(-1, -2))
         root.addView(spacer, LinearLayout.LayoutParams(1, 0, 1f))
-        root.addView(dismiss, LinearLayout.LayoutParams(-1, dp(320)))
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        actions.addView(Button(this).apply {
+            text = "완료"
+            setOnClickListener { act(NoteAlarmPlaybackService.ACTION_COMPLETE) }
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        actions.addView(Button(this).apply {
+            text = "다시 알림"
+            setOnClickListener { act(NoteAlarmPlaybackService.ACTION_SNOOZE) }
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(actions, LinearLayout.LayoutParams(-1,-2))
+        root.addView(dismiss, LinearLayout.LayoutParams(-1, dp(220)))
         root.addView(hint, LinearLayout.LayoutParams(-1, -2))
         return root
     }
 
     private fun updateJob(source: Intent?) {
         val raw = source?.getStringExtra(NoteAlarmScheduler.EXTRA_JOB)
+        currentJob = raw?.let { runCatching { JSONObject(it) }.getOrNull() }
         titleView.text = raw?.let {
             runCatching { JSONObject(it).optString("title", "메모 알람") }.getOrDefault("메모 알람")
         } ?: "메모 알람"
@@ -159,6 +172,13 @@ class NoteAlarmActivity : Activity() {
             Intent(this, NoteAlarmPlaybackService::class.java)
                 .setAction(NoteAlarmPlaybackService.ACTION_STOP),
         )
+        closeScreen()
+    }
+
+    private fun act(action: String) {
+        val job = currentJob ?: return
+        startService(Intent(this,NoteAlarmPlaybackService::class.java).setAction(action)
+            .putExtra(NoteAlarmScheduler.EXTRA_JOB,job.toString()))
         closeScreen()
     }
 

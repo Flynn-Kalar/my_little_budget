@@ -1,12 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../data/database.dart';
 import '../../data/daos/notes_dao.dart';
 import 'checklist.dart';
 import 'note_alarm.dart';
 import 'note_schedule.dart';
+import 'reminder_store.dart';
+import 'reminder_device_zone.dart';
 
 class NoteNotificationPermission {
   const NoteNotificationPermission({
@@ -27,6 +30,7 @@ class NoteNotificationService {
   NoteNotificationService({
     FlutterLocalNotificationsPlugin? plugin,
     MethodChannel? alarmChannel,
+    this.database,
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _alarmChannel = alarmChannel ?? const MethodChannel(_channelName);
 
@@ -36,6 +40,8 @@ class NoteNotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin;
   final MethodChannel _alarmChannel;
+  final AppDatabase? database;
+  Future<void> _rebuildQueue = Future.value();
   bool _initialized = false;
   void Function(int noteId)? _onNoteTap;
 
@@ -54,6 +60,18 @@ class NoteNotificationService {
       }
     });
     if (_initialized) return;
+    if (database != null) {
+      await database!.customSelect('SELECT 1').get();
+      final zone = await reminderDeviceZone();
+      await ReminderStore(
+        database!,
+      ).prepareSeries(await database!.notesDao.listNotes(), zone);
+      final directory = await getApplicationDocumentsDirectory();
+      await _alarmChannel.invokeMethod<void>(
+        'configureDatabase',
+        '${directory.path}/budget.sqlite',
+      );
+    }
     try {
       await _plugin.initialize(
         settings: const InitializationSettings(
@@ -97,7 +115,9 @@ class NoteNotificationService {
     );
   }
 
-  Future<NoteNotificationPermission> requestPermissions() async {
+  Future<NoteNotificationPermission> requestPermissions({
+    bool requestFullScreen = false,
+  }) async {
     if (!isSupported) return permissionStatus();
     final android = _android;
     await android?.requestNotificationsPermission();
@@ -105,8 +125,9 @@ class NoteNotificationService {
       await android?.requestExactAlarmsPermission();
     }
     try {
-      if (!(await _alarmChannel.invokeMethod<bool>('canUseFullScreenIntent') ??
-          false)) {
+      if (requestFullScreen &&
+          !(await _alarmChannel.invokeMethod<bool>('canUseFullScreenIntent') ??
+              false)) {
         await _alarmChannel.invokeMethod<void>(
           'requestFullScreenIntentPermission',
         );
@@ -117,8 +138,29 @@ class NoteNotificationService {
     return permissionStatus();
   }
 
-  Future<void> rebuild(List<NoteWithChecklist> entries, {DateTime? now}) async {
+  Future<void> rebuild(List<NoteWithChecklist> entries, {DateTime? now}) {
+    final next = _rebuildQueue
+        .catchError((Object _) {})
+        .then((_) => _rebuild(entries, now: now));
+    _rebuildQueue = next;
+    return next;
+  }
+
+  Future<void> _rebuild(
+    List<NoteWithChecklist> entries, {
+    DateTime? now,
+  }) async {
     if (!isSupported || !_initialized) return;
+    if (database != null) {
+      final zone = await reminderDeviceZone();
+      final payload = await ReminderStore(
+        database!,
+      ).plan(entries, now ?? DateTime.now(), zone);
+      // Native persists blocked/failed states too; cancellation must run even
+      // when notification or exact-alarm permission has been revoked.
+      await _alarmChannel.invokeMethod<void>('replaceAlarms', payload);
+      return;
+    }
     final permission = await permissionStatus();
     if (!permission.granted) return;
 

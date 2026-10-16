@@ -17,9 +17,11 @@ import '../../shared/note_amount_goal.dart';
 import '../../../features/notes/note_alarm.dart';
 import '../../../features/notes/note_format.dart';
 import '../../../features/notes/rich_note.dart';
+import '../../../features/notes/reminder_store.dart';
 import '../../../features/notes/note_schedule.dart';
 import 'package:my_little_budget/features/notes/providers.dart';
 import '../../shared/rich_note_editor.dart';
+import '../../shared/note_editing_session.dart';
 import '../../../shell/layout_policy.dart';
 
 enum _NoteFilter { all, inProgress, completed }
@@ -468,6 +470,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
 
   @override
   void dispose() {
+    unawaited(_editSession.currentState?.flushDraft() ?? Future<void>.value());
     _goalDraft.dispose();
     _title.dispose();
     _richController.dispose();
@@ -596,6 +599,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     if (entry == null) return;
     final note = entry.note;
     setState(() {
+      _restoredReminderOptions = null;
       _goalDraft.restore(note);
       _title.text = note.title;
       _richController.document = documentFromNote(note);
@@ -649,75 +653,89 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     );
   }
 
-  Future<void> _save() async {
-    final wasNew = _entry == null;
-    if (_title.text.trim().isEmpty) {
-      setState(() => _error = '제목을 입력하세요.');
-      return;
-    }
-    final goalError = _goalDraft.validationError;
-    if (goalError != null) {
-      setState(() => _error = goalError);
-      return;
-    }
-    final schedule = _schedule();
-    final scheduleError = validateNoteSchedule(schedule);
-    if (scheduleError != null) {
-      setState(() => _error = scheduleError);
-      return;
-    }
-    if (!_alarmSettings.hasValidClip) {
-      setState(() => _error = '알림 음원 구간은 1초 이상이어야 합니다.');
-      return;
-    }
-
-    final service = ref.read(noteNotificationServiceProvider);
-    final needsSystemNotification =
-        service.isSupported &&
-        ((schedule.type == NoteScheduleType.once &&
-                schedule.notificationEnabled) ||
-            (schedule.isRepeating && schedule.notificationEnabled));
-    if (needsSystemNotification) {
-      final permission = await service.requestPermissions();
-      if (!permission.granted) {
-        setState(() => _error = '알림과 정확한 알람 권한을 모두 허용하세요.');
-        return;
-      }
-      if (!permission.canShowAlarmScreen) {
-        setState(() => _error = '전체 화면 알람 권한을 허용하세요.');
-        return;
-      }
-    }
-
+  Future<void> _save({bool asCopy = false}) async {
+    final session = _editSession.currentState;
+    if (_busy || session == null) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final noteId = await ref
-          .read(notesDaoProvider)
-          .saveNote(
-            id: _note?.id,
-            title: _title.text,
-            content: plainTextFromDocument(_richController.document),
-            richContent: encodeDocument(_richController.document),
-            amountGoal: Value(_goalDraft.goal),
-            schedule: schedule,
-            checklistItems: [
-              for (final item in checklistFromDocument(
-                _richController.document,
-              ))
-                item,
-            ],
-            pinned: _pinned,
-            showOnCalendar: _showOnCalendar,
-            alarmSettings: _alarmSettings,
-          );
+      await session.prepareSave();
+      final document = Document.fromJson(
+        _richController.document.toDelta().toJson(),
+      );
+      final wasNew = _entry == null || asCopy;
+      if (_title.text.trim().isEmpty) {
+        setState(() => _error = '제목을 입력하세요.');
+        return;
+      }
+      final goalError = _goalDraft.validationError;
+      if (goalError != null) {
+        setState(() => _error = goalError);
+        return;
+      }
+      final schedule = _schedule();
+      final scheduleError = validateNoteSchedule(schedule);
+      if (scheduleError != null) {
+        setState(() => _error = scheduleError);
+        return;
+      }
+      if (!_alarmSettings.hasValidClip) {
+        setState(() => _error = '알림 음원 구간은 1초 이상이어야 합니다.');
+        return;
+      }
+
+      final service = ref.read(noteNotificationServiceProvider);
+      final needsSystemNotification =
+          service.isSupported &&
+          ((schedule.type == NoteScheduleType.once &&
+                  schedule.notificationEnabled) ||
+              (schedule.isRepeating && schedule.notificationEnabled));
+      if (needsSystemNotification) {
+        final permission = await service.requestPermissions();
+        if (!permission.granted) {
+          setState(() => _error = '알림과 정확한 알람 권한을 모두 허용하세요.');
+          return;
+        }
+        if (!permission.canShowAlarmScreen) {
+          setState(() => _error = '전체 화면 알람 권한을 허용하세요.');
+          return;
+        }
+      }
+
+      final noteId = await ref.read(appDatabaseProvider).transaction(() async {
+        await session.checkVersion(asCopy: asCopy);
+        final savedId = await ref
+            .read(notesDaoProvider)
+            .saveNote(
+              id: asCopy ? null : _note?.id,
+              title: _title.text,
+              content: plainTextFromDocument(document),
+              richContent: encodeDocument(document),
+              amountGoal: Value(_goalDraft.goal),
+              schedule: schedule,
+              checklistItems: [
+                for (final item in checklistFromDocument(document)) item,
+              ],
+              pinned: _pinned,
+              showOnCalendar: _showOnCalendar,
+              alarmSettings: _alarmSettings,
+            );
+        if (_restoredReminderOptions != null) {
+          await ReminderStore(
+            ref.read(appDatabaseProvider),
+          ).saveOptions(savedId, _restoredReminderOptions!);
+        }
+        await session.deleteSavedDraft();
+        return savedId;
+      });
       refreshReminderBadge(ref);
       if (!mounted) return;
+      session.saved();
       if (wasNew) {
         unawaited(rebuildNoteNotifications(ref));
-        Navigator.pop(context);
+        await session.closeRoute();
       } else {
         final updated = await ref
             .read(notesDaoProvider)
@@ -730,7 +748,10 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
         }
         unawaited(rebuildNoteNotifications(ref));
       }
+    } catch (error) {
+      if (mounted) setState(() => _error = session.saveError(error));
     } finally {
+      session.finishSave();
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -858,8 +879,155 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
     );
   }
 
+  ReminderOptions? _restoredReminderOptions;
+  final _editSession = GlobalKey<NoteEditingSessionState>();
+
+  Map<String, dynamic> _captureEditorDraft() => {
+    'version': 1,
+    'title': _title.text,
+    'rich': _richController.document.toDelta().toJson(),
+    'textFields': {
+      'day': _dayOfMonth.text,
+      'interval': _intervalDays.text,
+      'daysBefore': _notificationDaysBefore.text,
+      'extraDays': _notificationExtraDaysBefore.text,
+      'leadMinutes': _notificationLeadMinutes.text,
+      'snooze': _snoozeMinutes.text,
+    },
+    'goal': {
+      'enabled': _goalDraft.enabled,
+      'target': _goalDraft.target.text,
+      'current': _goalDraft.current.text,
+      'addition': _goalDraft.addition.text,
+      'start': _goalDraft.start.toIso8601String(),
+      'due': _goalDraft.due?.toIso8601String(),
+    },
+    'settings': {
+      'scheduleType': _scheduleType.name,
+      'oneTimeAt': _oneTimeAt?.toIso8601String(),
+      'resetTime': _resetTime,
+      'notificationTime': _notificationTime,
+      'notificationEnabled': _notificationEnabled,
+      'weekday': _weekday,
+      'weekdays': _weekdays.toList()..sort(),
+      'anchor': _anchorDate.toIso8601String(),
+      'pinned': _pinned,
+      'calendar': _showOnCalendar,
+      'soundKind': _alarmSettings.soundKind.name,
+      'soundUri': _alarmSettings.soundUri,
+      'soundName': _alarmSettings.soundName,
+      'clipStart': _alarmSettings.clipStartMs,
+      'clipEnd': _alarmSettings.clipEndMs,
+      'vibration': _alarmSettings.vibrationEnabled,
+      'alarmSnooze': _alarmSettings.snoozeMinutes,
+    },
+    'reminderOptions': _restoredReminderOptions == null
+        ? null
+        : {
+            'dueDate': _restoredReminderOptions!.dueDate,
+            'every': _restoredReminderOptions!.every,
+            'until': _restoredReminderOptions!.until,
+            'timeZone': _restoredReminderOptions!.timeZone,
+            'alarmMode': _restoredReminderOptions!.alarmMode,
+            'anchorDate': _restoredReminderOptions!.anchorDate,
+          },
+  };
+
+  void _applyEditorDraft(Map<String, dynamic> payload) {
+    final document = Document.fromJson(payload['rich'] as List);
+    final text = Map<String, String>.from(payload['textFields'] as Map);
+    final goal = Map<String, dynamic>.from(payload['goal'] as Map);
+    final settings = Map<String, dynamic>.from(payload['settings'] as Map);
+    final start = DateTime.parse(goal['start'] as String);
+    final due = goal['due'] == null
+        ? null
+        : DateTime.parse(goal['due'] as String);
+    final anchor = DateTime.parse(settings['anchor'] as String);
+    final oneTime = settings['oneTimeAt'] == null
+        ? null
+        : DateTime.parse(settings['oneTimeAt'] as String);
+    final weekdays = List<int>.from(settings['weekdays'] as List).toSet();
+    final alarm = NoteAlarmSettings(
+      soundKind: NoteAlarmSoundKind.values.byName(
+        settings['soundKind'] as String,
+      ),
+      soundUri: settings['soundUri'] as String?,
+      soundName: settings['soundName'] as String?,
+      clipStartMs: settings['clipStart'] as int,
+      clipEndMs: settings['clipEnd'] as int?,
+      vibrationEnabled: settings['vibration'] as bool,
+      snoozeMinutes: settings['alarmSnooze'] as int,
+    );
+    setState(() {
+      _title.text = payload['title'] as String;
+      _richController.document = document;
+      _dayOfMonth.text = text['day']!;
+      _intervalDays.text = text['interval']!;
+      _notificationDaysBefore.text = text['daysBefore']!;
+      _notificationExtraDaysBefore.text = text['extraDays']!;
+      _notificationLeadMinutes.text = text['leadMinutes']!;
+      _snoozeMinutes.text = text['snooze']!;
+      _goalDraft.enabled = goal['enabled'] as bool;
+      _goalDraft.target.text = goal['target'] as String;
+      _goalDraft.current.text = goal['current'] as String;
+      _goalDraft.addition.text = goal['addition'] as String;
+      _goalDraft.start = start;
+      _goalDraft.due = due;
+      _goalDraft.refresh();
+      _scheduleType = NoteScheduleTypeStorage.parse(
+        settings['scheduleType'] as String,
+      );
+      _oneTimeAt = oneTime;
+      _resetTime = settings['resetTime'] as String;
+      _notificationTime = settings['notificationTime'] as String;
+      _notificationEnabled = settings['notificationEnabled'] as bool;
+      _weekday = settings['weekday'] as int;
+      _weekdays = weekdays;
+      _anchorDate = anchor;
+      _pinned = settings['pinned'] as bool;
+      _showOnCalendar = settings['calendar'] as bool;
+      _alarmSettings = alarm;
+      final options = payload['reminderOptions'] as Map?;
+      _restoredReminderOptions = options == null
+          ? null
+          : ReminderOptions(
+              dueDate: options['dueDate'] as String?,
+              every: options['every'] as int,
+              until: options['until'] as String?,
+              timeZone: options['timeZone'] as String?,
+              alarmMode: options['alarmMode'] as bool,
+              anchorDate: options['anchorDate'] as String?,
+            );
+    });
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => NoteEditingSession(
+    key: _editSession,
+    database: ref.read(appDatabaseProvider),
+    note: _note,
+    editing: _editing,
+    busy: _busy,
+    snapshot: _captureEditorDraft,
+    restore: _applyEditorDraft,
+    changes: Listenable.merge([
+      _title,
+      _richController,
+      _goalDraft,
+      _goalDraft.addition,
+      _dayOfMonth,
+      _intervalDays,
+      _notificationDaysBefore,
+      _notificationExtraDaysBefore,
+      _notificationLeadMinutes,
+      _snoozeMinutes,
+    ]),
+    onSave: (asCopy) => _save(asCopy: asCopy),
+
+    builder: (session) => _buildContent(context, session),
+  );
+
+  Widget _buildContent(BuildContext context, NoteEditingSessionState session) {
     final notificationSupported = ref
         .watch(noteNotificationServiceProvider)
         .isSupported;
@@ -876,6 +1044,7 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              session.status(error: _error),
               TextField(
                 controller: _title,
                 autofocus: true,
@@ -892,218 +1061,227 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
                 maxHeight: 420,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<NoteScheduleType>(
-                initialValue: _scheduleType,
-                decoration: const InputDecoration(labelText: '일정 유형'),
-                items: [
-                  for (final type in NoteScheduleType.values)
-                    DropdownMenuItem(
-                      value: type,
-                      child: Text(noteScheduleLabel(type)),
-                    ),
-                ],
-                onChanged: _busy
-                    ? null
-                    : (value) => setState(
-                        () => _scheduleType = value ?? NoteScheduleType.none,
-                      ),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _showOnCalendar,
-                onChanged: _busy
-                    ? null
-                    : (value) => setState(() => _showOnCalendar = value),
-                title: const Text('캘린더에 표시'),
-                subtitle: const Text('꺼두면 알림이나 반복 설정이 있어도 캘린더에는 보이지 않습니다.'),
-              ),
-              if (_scheduleType == NoteScheduleType.once) ...[
-                const SizedBox(height: 8),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: Text(
-                    _oneTimeAt == null
-                        ? '알림 날짜와 시간 선택'
-                        : formatNoteReminder(_oneTimeAt!),
-                  ),
-                  onTap: _busy ? null : _pickOneTime,
-                  trailing: const Icon(Icons.chevron_right),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: notificationSupported && _notificationEnabled,
-                  onChanged: notificationSupported
-                      ? (value) => setState(() => _notificationEnabled = value)
-                      : null,
-                  title: const Text('Android 시스템 알림'),
-                  subtitle: Text(
-                    notificationSupported
-                        ? '꺼두면 날짜만 저장하고 알림은 울리지 않습니다.'
-                        : 'Android 기기에서만 지원합니다.',
-                  ),
-                ),
-                if (notificationSupported && _notificationEnabled) ...[
-                  TextField(
-                    controller: _notificationLeadMinutes,
-                    keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(
-                      labelText: '추가 사전 알림',
-                      helperText: '분 단위, 쉼표로 구분. 예: 10, 60, 1440',
-                    ),
-                  ),
-                  TextField(
-                    controller: _snoozeMinutes,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '스누즈',
-                      suffixText: '분',
-                    ),
-                  ),
-                ],
-              ],
-              if (_scheduleType.isRepeating) ...[
-                const SizedBox(height: 8),
-                _TimeTile(
-                  label: '리셋 시각',
-                  value: _resetTime,
-                  icon: Icons.restart_alt,
-                  onTap: () => _pickTime(notification: false),
-                ),
-                if (_scheduleType == NoteScheduleType.weekly)
-                  DropdownButtonFormField<int>(
-                    initialValue: _weekday,
-                    decoration: const InputDecoration(labelText: '리셋 요일'),
+              ExpansionTile(
+                title: const Text('추가 설정'),
+                subtitle: Text(noteScheduleLabel(_scheduleType)),
+                children: [
+                  DropdownButtonFormField<NoteScheduleType>(
+                    initialValue: _scheduleType,
+                    decoration: const InputDecoration(labelText: '일정 유형'),
                     items: [
-                      for (var day = 1; day <= 7; day++)
+                      for (final type in NoteScheduleType.values)
                         DropdownMenuItem(
-                          value: day,
-                          child: Text(noteWeekdayLabel(day)),
+                          value: type,
+                          child: Text(noteScheduleLabel(type)),
                         ),
                     ],
-                    onChanged: (value) =>
-                        setState(() => _weekday = value ?? DateTime.monday),
-                  ),
-                if (_scheduleType == NoteScheduleType.weekly) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        for (var day = 1; day <= 7; day++)
-                          FilterChip(
-                            selected: _weekdays.contains(day),
-                            onSelected: (selected) => setState(() {
-                              if (selected) {
-                                _weekdays.add(day);
-                              } else {
-                                _weekdays.remove(day);
-                              }
-                            }),
-                            label: Text(noteWeekdayLabel(day)),
+                    onChanged: _busy
+                        ? null
+                        : (value) => setState(
+                            () =>
+                                _scheduleType = value ?? NoteScheduleType.none,
                           ),
-                      ],
-                    ),
                   ),
-                ],
-                if (_scheduleType == NoteScheduleType.monthly)
-                  TextField(
-                    controller: _dayOfMonth,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '매월 리셋 날짜',
-                      suffixText: '일',
-                    ),
-                  ),
-                if (_scheduleType == NoteScheduleType.yearly) ...[
-                  TextField(
-                    controller: _dayOfMonth,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '매년 리셋 날짜',
-                      suffixText: '일',
-                    ),
-                  ),
-                  ListTile(
+                  SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('매년 기준 월'),
-                    subtitle: Text('${_anchorDate.month}월'),
-                    trailing: const Icon(Icons.calendar_month_outlined),
-                    onTap: _pickAnchorDate,
+                    value: _showOnCalendar,
+                    onChanged: _busy
+                        ? null
+                        : (value) => setState(() => _showOnCalendar = value),
+                    title: const Text('캘린더에 표시'),
+                    subtitle: const Text('꺼두면 알림이나 반복 설정이 있어도 캘린더에는 보이지 않습니다.'),
                   ),
+                  if (_scheduleType == NoteScheduleType.once) ...[
+                    const SizedBox(height: 8),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.notifications_outlined),
+                      title: Text(
+                        _oneTimeAt == null
+                            ? '알림 날짜와 시간 선택'
+                            : formatNoteReminder(_oneTimeAt!),
+                      ),
+                      onTap: _busy ? null : _pickOneTime,
+                      trailing: const Icon(Icons.chevron_right),
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: notificationSupported && _notificationEnabled,
+                      onChanged: notificationSupported
+                          ? (value) =>
+                                setState(() => _notificationEnabled = value)
+                          : null,
+                      title: const Text('Android 시스템 알림'),
+                      subtitle: Text(
+                        notificationSupported
+                            ? '꺼두면 날짜만 저장하고 알림은 울리지 않습니다.'
+                            : 'Android 기기에서만 지원합니다.',
+                      ),
+                    ),
+                    if (notificationSupported && _notificationEnabled) ...[
+                      TextField(
+                        controller: _notificationLeadMinutes,
+                        keyboardType: TextInputType.text,
+                        decoration: const InputDecoration(
+                          labelText: '추가 사전 알림',
+                          helperText: '분 단위, 쉼표로 구분. 예: 10, 60, 1440',
+                        ),
+                      ),
+                      TextField(
+                        controller: _snoozeMinutes,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '스누즈',
+                          suffixText: '분',
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (_scheduleType.isRepeating) ...[
+                    const SizedBox(height: 8),
+                    _TimeTile(
+                      label: '리셋 시각',
+                      value: _resetTime,
+                      icon: Icons.restart_alt,
+                      onTap: () => _pickTime(notification: false),
+                    ),
+                    if (_scheduleType == NoteScheduleType.weekly)
+                      DropdownButtonFormField<int>(
+                        initialValue: _weekday,
+                        decoration: const InputDecoration(labelText: '리셋 요일'),
+                        items: [
+                          for (var day = 1; day <= 7; day++)
+                            DropdownMenuItem(
+                              value: day,
+                              child: Text(noteWeekdayLabel(day)),
+                            ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _weekday = value ?? DateTime.monday),
+                      ),
+                    if (_scheduleType == NoteScheduleType.weekly) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Wrap(
+                          spacing: 8,
+                          children: [
+                            for (var day = 1; day <= 7; day++)
+                              FilterChip(
+                                selected: _weekdays.contains(day),
+                                onSelected: (selected) => setState(() {
+                                  if (selected) {
+                                    _weekdays.add(day);
+                                  } else {
+                                    _weekdays.remove(day);
+                                  }
+                                }),
+                                label: Text(noteWeekdayLabel(day)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (_scheduleType == NoteScheduleType.monthly)
+                      TextField(
+                        controller: _dayOfMonth,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '매월 리셋 날짜',
+                          suffixText: '일',
+                        ),
+                      ),
+                    if (_scheduleType == NoteScheduleType.yearly) ...[
+                      TextField(
+                        controller: _dayOfMonth,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '매년 리셋 날짜',
+                          suffixText: '일',
+                        ),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('매년 기준 월'),
+                        subtitle: Text('${_anchorDate.month}월'),
+                        trailing: const Icon(Icons.calendar_month_outlined),
+                        onTap: _pickAnchorDate,
+                      ),
+                    ],
+                    if (_scheduleType == NoteScheduleType.interval) ...[
+                      TextField(
+                        controller: _intervalDays,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '반복 간격',
+                          suffixText: '일',
+                        ),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('반복 기준일'),
+                        subtitle: Text(noteDateKey(_anchorDate)),
+                        trailing: const Icon(Icons.calendar_month_outlined),
+                        onTap: _pickAnchorDate,
+                      ),
+                    ],
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: notificationSupported && _notificationEnabled,
+                      onChanged: notificationSupported
+                          ? (value) =>
+                                setState(() => _notificationEnabled = value)
+                          : null,
+                      title: const Text('Android 시스템 알림'),
+                      subtitle: Text(
+                        notificationSupported
+                            ? '정확한 알람 권한이 필요합니다.'
+                            : 'Android 기기에서만 지원합니다.',
+                      ),
+                    ),
+                    if (notificationSupported &&
+                        _notificationEnabled &&
+                        _scheduleType != NoteScheduleType.daily)
+                      TextField(
+                        controller: _notificationDaysBefore,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '리셋 며칠 전 알림',
+                          suffixText: '일 전',
+                        ),
+                      ),
+                    if (notificationSupported && _notificationEnabled)
+                      _TimeTile(
+                        label: '알림 시각',
+                        value: _notificationTime,
+                        icon: Icons.notifications_active_outlined,
+                        onTap: () => _pickTime(notification: true),
+                      ),
+                    if (notificationSupported &&
+                        _notificationEnabled &&
+                        _scheduleType != NoteScheduleType.daily)
+                      TextField(
+                        controller: _notificationExtraDaysBefore,
+                        keyboardType: TextInputType.text,
+                        decoration: const InputDecoration(
+                          labelText: '추가 알림일',
+                          helperText: '리셋 며칠 전인지 쉼표로 구분. 예: 1, 3, 7',
+                        ),
+                      ),
+                    if (notificationSupported && _notificationEnabled)
+                      TextField(
+                        controller: _snoozeMinutes,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '스누즈',
+                          suffixText: '분',
+                        ),
+                      ),
+                  ],
+                  if (showAlarmControls) _alarmSoundControls(context),
+                  const SizedBox(height: 8),
                 ],
-                if (_scheduleType == NoteScheduleType.interval) ...[
-                  TextField(
-                    controller: _intervalDays,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '반복 간격',
-                      suffixText: '일',
-                    ),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('반복 기준일'),
-                    subtitle: Text(noteDateKey(_anchorDate)),
-                    trailing: const Icon(Icons.calendar_month_outlined),
-                    onTap: _pickAnchorDate,
-                  ),
-                ],
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: notificationSupported && _notificationEnabled,
-                  onChanged: notificationSupported
-                      ? (value) => setState(() => _notificationEnabled = value)
-                      : null,
-                  title: const Text('Android 시스템 알림'),
-                  subtitle: Text(
-                    notificationSupported
-                        ? '정확한 알람 권한이 필요합니다.'
-                        : 'Android 기기에서만 지원합니다.',
-                  ),
-                ),
-                if (notificationSupported &&
-                    _notificationEnabled &&
-                    _scheduleType != NoteScheduleType.daily)
-                  TextField(
-                    controller: _notificationDaysBefore,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '리셋 며칠 전 알림',
-                      suffixText: '일 전',
-                    ),
-                  ),
-                if (notificationSupported && _notificationEnabled)
-                  _TimeTile(
-                    label: '알림 시각',
-                    value: _notificationTime,
-                    icon: Icons.notifications_active_outlined,
-                    onTap: () => _pickTime(notification: true),
-                  ),
-                if (notificationSupported &&
-                    _notificationEnabled &&
-                    _scheduleType != NoteScheduleType.daily)
-                  TextField(
-                    controller: _notificationExtraDaysBefore,
-                    keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(
-                      labelText: '추가 알림일',
-                      helperText: '리셋 며칠 전인지 쉼표로 구분. 예: 1, 3, 7',
-                    ),
-                  ),
-                if (notificationSupported && _notificationEnabled)
-                  TextField(
-                    controller: _snoozeMinutes,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: '스누즈',
-                      suffixText: '분',
-                    ),
-                  ),
-              ],
-              if (showAlarmControls) _alarmSoundControls(context),
-              const SizedBox(height: 8),
+              ),
               Row(
                 children: [
                   FilterChip(
@@ -1122,12 +1300,14 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
         TextButton(
           onPressed: _busy
               ? null
-              : () => _entry == null
-                    ? Navigator.pop(context)
-                    : setState(() {
-                        _editing = false;
-                        _error = null;
-                      }),
+              : () => session.requestExit(
+                  onExit: _entry == null
+                      ? null
+                      : () => setState(() {
+                          _editing = false;
+                          _error = null;
+                        }),
+                ),
           child: const Text('취소'),
         ),
         FilledButton(onPressed: _busy ? null : _save, child: const Text('저장')),

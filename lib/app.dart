@@ -24,6 +24,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
     with WidgetsBindingObserver {
   Timer? _resetTimer;
   bool _notesSyncing = false;
+  bool _notesDirty = false;
   bool _initializing = false;
 
   @override
@@ -49,6 +50,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
     if (_initializing || !mounted) return;
     _initializing = true;
     try {
+      unawaited(_syncNotes());
       final coordinator = ref.read(supabaseSyncCoordinatorProvider);
       coordinator.start(onResult: _handleSyncResult);
       final syncResult = await coordinator.synchronizeNow();
@@ -64,6 +66,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
 
   Future<void> _resumeApp() async {
     if (!mounted) return;
+    unawaited(_syncNotes());
     final coordinator = ref.read(supabaseSyncCoordinatorProvider);
     final syncResult = await coordinator.synchronizeNow();
     if (syncResult.isOk) {
@@ -87,8 +90,13 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
   }
 
   Future<void> _syncNotes() async {
-    if (_notesSyncing || !mounted) return;
+    if (!mounted) return;
+    if (_notesSyncing) {
+      _notesDirty = true;
+      return;
+    }
     _notesSyncing = true;
+    _notesDirty = false;
     try {
       final service = ref.read(noteNotificationServiceProvider);
       await service.initialize(
@@ -98,15 +106,23 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
         },
       );
       final dao = ref.read(notesDaoProvider);
+      await dao.refreshNativeReminderChanges();
       final changed = await dao.reconcileRecurringNotes(DateTime.now());
       await service.rebuild(await dao.listNotificationEntries());
+      ref.invalidate(noteNotificationPermissionProvider);
+      ref.invalidate(reminderStatusProvider);
+      ref.invalidate(missedReminderCountProvider);
+      ref.invalidate(reminderOptionsProvider);
       if (changed > 0) {
         ref.invalidate(notesProvider);
         ref.invalidate(pendingReminderCountProvider);
       }
       _scheduleNextReset(await dao.earliestNextReset());
+    } catch(error) {
+      debugPrint('Reminder reconciliation failed: $error');
     } finally {
       _notesSyncing = false;
+      if (_notesDirty && mounted) unawaited(_syncNotes());
     }
   }
 

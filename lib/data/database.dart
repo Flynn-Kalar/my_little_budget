@@ -13,6 +13,7 @@ import 'daos/tags_dao.dart';
 import 'daos/transaction_presets_dao.dart';
 import 'daos/transactions_dao.dart';
 import 'seed.dart';
+import 'reminder_schema.dart';
 import 'sync_metadata.dart';
 import 'tables/accounts.dart';
 import 'tables/budget_groups.dart';
@@ -22,6 +23,7 @@ import 'tables/investments.dart';
 import 'tables/monthly_income.dart';
 import 'tables/note_checklist_items.dart';
 import 'tables/notes.dart';
+import 'tables/note_drafts.dart';
 import 'tables/recurring_transactions.dart';
 import 'tables/tags.dart';
 import 'tables/transaction_presets.dart';
@@ -42,6 +44,7 @@ part 'database.g.dart';
     Tags,
     TransactionTags,
     Notes,
+    NoteDrafts,
     NoteChecklistItems,
     CalendarEvents,
     TransactionPresets,
@@ -65,7 +68,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -158,10 +161,16 @@ WHERE reminder_at IS NOT NULL
           !await _columnExists('recurring_transactions', 'monthly_mode')) {
         await _upgradeRecurringTransactionsToV18(m);
       }
+      if (from < 21 && await _tableExists('notes')) {
+        await m.createTable(noteDrafts);
+      }
     },
     beforeOpen: (details) async {
       // SPEC §3 의 외래키 제약을 실제 SQLite 에서 강제하려면 PRAGMA 필요.
       await customStatement('PRAGMA foreign_keys = ON');
+      if (await _tableExists('notes')) {
+        await transaction(() => createReminderSchema(this));
+      }
       await _ensureSyncInfrastructure();
       await _repairRequiredTagFields();
       await _repairCategoryUpdatedAt();

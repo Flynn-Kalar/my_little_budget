@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import 'package:my_little_budget/features/stats/providers.dart';
 import '../mobile_widgets.dart';
+import 'mobile_tag_breakdown_sheet.dart';
 
 class MobileStatsScreen extends ConsumerWidget {
   const MobileStatsScreen({super.key});
@@ -40,8 +41,11 @@ class MobileStatsScreen extends ConsumerWidget {
         _MobileMonthlyInsights(breakdown: breakdown, trend: trend),
         MobileAsync(
           value: breakdown,
-          builder: (value) =>
-              _Breakdown(rows: value, netAmount: _netForMonth(trend, month)),
+          builder: (value) => _Breakdown(
+            rows: value,
+            netAmount: _netForMonth(trend, month),
+            month: month,
+          ),
         ),
         MobileAsync(
           value: trend,
@@ -215,10 +219,15 @@ class _InsightPill extends StatelessWidget {
 }
 
 class _Breakdown extends StatelessWidget {
-  const _Breakdown({required this.rows, required this.netAmount});
+  const _Breakdown({
+    required this.rows,
+    required this.netAmount,
+    required this.month,
+  });
 
   final List<CategoryBreakdownRow> rows;
   final int? netAmount;
+  final String month;
 
   @override
   Widget build(BuildContext context) {
@@ -237,25 +246,54 @@ class _Breakdown extends StatelessWidget {
           const SizedBox(height: 10),
           SizedBox(
             height: 190,
-            child: _MobileDonut(rows: rows, total: total, netAmount: netAmount),
+            child: _MobileDonut(
+              rows: rows,
+              total: total,
+              netAmount: netAmount,
+              onCategoryTap: (row) =>
+                  showMobileTagBreakdown(context, month: month, category: row),
+            ),
           ),
           const SizedBox(height: 10),
           for (final row in rows) ...[
-            AmountLine(
-              label:
-                  '${row.categoryName} · ${total == 0 ? 0 : (row.total / total * 100).round()}%',
-              value: formatKRW(row.total),
-              valueColor: expense,
-            ),
-            const SizedBox(height: 4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: maxCategoryTotal == 0 ? 0 : row.total / maxCategoryTotal,
-                minHeight: 5,
-                backgroundColor: Theme.of(context).dividerColor,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _parseColor(row.categoryColor, context.appAccent),
+            InkWell(
+              key: ValueKey('mobile-stats-category-${row.categoryId}'),
+              borderRadius: BorderRadius.circular(8),
+              onTap: () =>
+                  showMobileTagBreakdown(context, month: month, category: row),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AmountLine(
+                            label:
+                                '${row.categoryName} · ${total == 0 ? 0 : (row.total / total * 100).round()}%',
+                            value: formatKRW(row.total),
+                            valueColor: expense,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right, size: 18),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: maxCategoryTotal == 0
+                            ? 0
+                            : row.total / maxCategoryTotal,
+                        minHeight: 5,
+                        backgroundColor: Theme.of(context).dividerColor,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          _parseColor(row.categoryColor, context.appAccent),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -272,11 +310,13 @@ class _MobileDonut extends StatelessWidget {
     required this.rows,
     required this.total,
     required this.netAmount,
+    required this.onCategoryTap,
   });
 
   final List<CategoryBreakdownRow> rows;
   final int total;
   final int? netAmount;
+  final ValueChanged<CategoryBreakdownRow> onCategoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -288,8 +328,18 @@ class _MobileDonut extends StatelessWidget {
             centerSpaceRadius: 58,
             sectionsSpace: 2,
             startDegreeOffset: -90,
+            pieTouchData: PieTouchData(
+              touchCallback: (event, response) {
+                if (event is! FlTapUpEvent) return;
+                final index =
+                    response?.touchedSection?.touchedSectionIndex ?? -1;
+                if (index >= 0 && index < rows.length) {
+                  onCategoryTap(rows[index]);
+                }
+              },
+            ),
             sections: [
-              for (final row in rows.take(8))
+              for (final row in rows)
                 PieChartSectionData(
                   value: row.total.toDouble(),
                   color: _parseColor(row.categoryColor, context.appAccent),

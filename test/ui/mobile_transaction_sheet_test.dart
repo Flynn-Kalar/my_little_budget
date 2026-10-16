@@ -137,10 +137,11 @@ void main() {
     }
     expect(
       tester
-          .widget<Text>(
+          .widget<TextField>(
             find.byKey(const ValueKey('mobile-transaction-calculator-display')),
           )
-          .data,
+          .controller
+          ?.text,
       '1,000+2,000×3',
     );
 

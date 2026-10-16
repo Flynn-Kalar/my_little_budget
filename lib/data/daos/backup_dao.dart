@@ -57,6 +57,12 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
       notes: await select(notes).get(),
       noteChecklistItems: await select(noteChecklistItems).get(),
       calendarEvents: await select(calendarEvents).get(),
+      reminderSeries: (await customSelect(
+        'SELECT * FROM reminder_series',
+      ).get()).map((r) => r.data).toList(),
+      reminderOccurrences: (await customSelect(
+        'SELECT * FROM reminder_occurrences',
+      ).get()).map((r) => r.data).toList(),
     );
   }
 
@@ -102,6 +108,38 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
           batch.insertAll(calendarEvents, b.calendarEvents);
         }
       });
+      for (final row in b.reminderSeries) {
+        await customStatement(
+          '''INSERT INTO reminder_series(note_id,time_zone,anchor_date,due_date,repeat_every,until_date,alarm_mode)
+          VALUES(?,?,?,?,?,?,?)''',
+          [
+            row['note_id'],
+            row['time_zone'],
+            row['anchor_date'],
+            row['due_date'],
+            row['repeat_every'] ?? 1,
+            row['until_date'],
+            row['alarm_mode'] ?? 1,
+          ],
+        );
+      }
+      for (final row in b.reminderOccurrences) {
+        await customStatement(
+          '''INSERT INTO reminder_occurrences
+          (note_id,occurrence_key,scheduled_at,status,completed_at,checklist_json)
+          VALUES(?,?,?,?,?,?)''',
+          [
+            row['note_id'],
+            row['occurrence_key'],
+            row['scheduled_at'],
+            row['status'],
+            row['completed_at'],
+            row['checklist_json'],
+          ],
+        );
+      }
+      // OS reservations and notification IDs belong to this installation and
+      // are deliberately rebuilt, not restored from a different device.
       await db.enqueueAllRowsForSync();
     });
   }
@@ -173,6 +211,8 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
   }
 
   Future<void> _deleteUserData() async {
+    // A restore/reset must also remove drafts for unsaved (noteId == null) notes.
+    await delete(attachedDatabase.noteDrafts).go();
     await delete(noteChecklistItems).go();
     await delete(transactionTags).go();
     await delete(budgetGroupCategories).go();

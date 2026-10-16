@@ -14,6 +14,12 @@ class RichNoteEditor extends StatefulWidget {
     this.readOnly = false,
     this.minHeight = 160,
     this.maxHeight,
+    this.compactToolbar = false,
+    this.editorKey,
+    this.bordered = true,
+    this.scrollable = true,
+    this.contentPadding = const EdgeInsets.all(12),
+    this.lineHeight,
   });
 
   final QuillController controller;
@@ -22,6 +28,12 @@ class RichNoteEditor extends StatefulWidget {
   final bool readOnly;
   final double minHeight;
   final double? maxHeight;
+  final bool compactToolbar;
+  final GlobalKey<EditorState>? editorKey;
+  final bool bordered;
+  final bool scrollable;
+  final EdgeInsetsGeometry contentPadding;
+  final double? lineHeight;
 
   static const _fontSizeItems = <String, String>{
     '8 pt': '8',
@@ -76,7 +88,12 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
     final text = controller.document.toPlainText();
     final inserted = text.length > _previousText.length;
     _previousText = text;
-    if (!inserted || _bulletPending) return;
+    // History replay must not turn a restored '- ' back into a bullet.
+    if (!inserted ||
+        _bulletPending ||
+        controller.document.history.lastRecorded == 0) {
+      return;
+    }
     _bulletPending = true;
     // Quill can notify while composing an edit. Mutate only after it finishes,
     // with the final cursor position supplied by the software keyboard.
@@ -105,28 +122,38 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
     final styles = DefaultStyles.getInstance(context);
     final editor = Container(
       constraints: BoxConstraints(minHeight: minHeight),
-      decoration: BoxDecoration(
-        border: Border.all(color: theme.dividerColor),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: !widget.bordered
+          ? null
+          : BoxDecoration(
+              border: Border.all(color: theme.dividerColor),
+              borderRadius: BorderRadius.circular(8),
+            ),
       child: QuillEditor.basic(
         controller: controller,
         focusNode: widget.focusNode,
         scrollController: widget.scrollController,
         config: QuillEditorConfig(
+          editorKey: widget.editorKey,
+          scrollable: widget.scrollable,
           customStyles: DefaultStyles(
             paragraph: styles.paragraph!.copyWith(
-              style: styles.paragraph!.style.copyWith(fontSize: 18),
+              style: styles.paragraph!.style.copyWith(
+                fontSize: 18,
+                height: widget.lineHeight,
+              ),
             ),
             lists: styles.lists!.copyWith(
-              style: styles.lists!.style.copyWith(fontSize: 18),
+              style: styles.lists!.style.copyWith(
+                fontSize: 18,
+                height: widget.lineHeight,
+              ),
             ),
           ),
           readOnlyMouseCursor: SystemMouseCursors.text,
           placeholder: readOnly ? null : '메모를 입력하세요.',
           minHeight: minHeight,
           maxHeight: maxHeight,
-          padding: const EdgeInsets.all(12),
+          padding: widget.contentPadding,
           checkBoxReadOnly: false,
           enableInteractiveSelection: !readOnly,
           showCursor: !readOnly,
@@ -144,7 +171,10 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
             border: Border.all(color: theme.dividerColor),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: _RichNoteToolbar(controller: controller),
+          child: _RichNoteToolbar(
+            controller: controller,
+            compact: widget.compactToolbar,
+          ),
         ),
         const SizedBox(height: 8),
         editor,
@@ -154,9 +184,10 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
 }
 
 class _RichNoteToolbar extends StatelessWidget {
-  const _RichNoteToolbar({required this.controller});
+  const _RichNoteToolbar({required this.controller, required this.compact});
 
   final QuillController controller;
+  final bool compact;
 
   static const _fontSizeOptions = QuillToolbarFontSizeButtonOptions(
     items: RichNoteEditor._fontSizeItems,
@@ -168,29 +199,90 @@ class _RichNoteToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final buttons = <Widget>[
-      QuillToolbarFontSizeButton(
-        controller: controller,
-        options: _fontSizeOptions,
+      ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => IconButton(
+          tooltip: '실행 취소',
+          onPressed: controller.hasUndo ? controller.undo : null,
+          icon: const Icon(Icons.undo),
+        ),
       ),
+      ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => IconButton(
+          tooltip: '다시 실행',
+          onPressed: controller.hasRedo ? controller.redo : null,
+          icon: const Icon(Icons.redo),
+        ),
+      ),
+      if (!compact)
+        QuillToolbarFontSizeButton(
+          controller: controller,
+          options: _fontSizeOptions,
+        ),
       QuillToolbarToggleCheckListButton(controller: controller),
       QuillToolbarToggleStyleButton(
         controller: controller,
         attribute: Attribute.ul,
       ),
-      QuillToolbarToggleStyleButton(
-        controller: controller,
-        attribute: Attribute.bold,
-      ),
-      QuillToolbarToggleStyleButton(
-        controller: controller,
-        attribute: Attribute.underline,
-      ),
-      QuillToolbarToggleStyleButton(
-        controller: controller,
-        attribute: Attribute.strikeThrough,
-      ),
-      QuillToolbarColorButton(controller: controller, isBackground: false),
+      if (!compact)
+        QuillToolbarToggleStyleButton(
+          controller: controller,
+          attribute: Attribute.bold,
+        ),
+      if (!compact)
+        QuillToolbarToggleStyleButton(
+          controller: controller,
+          attribute: Attribute.underline,
+        ),
+      if (!compact)
+        QuillToolbarToggleStyleButton(
+          controller: controller,
+          attribute: Attribute.strikeThrough,
+        ),
+      if (!compact)
+        QuillToolbarColorButton(controller: controller, isBackground: false),
       QuillToolbarColorButton(controller: controller, isBackground: true),
+      if (compact)
+        IconButton(
+          tooltip: '글자·서식 더보기',
+          icon: const Icon(Icons.more_horiz),
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('글자·서식'),
+              content: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  QuillToolbarFontSizeButton(
+                    controller: controller,
+                    options: _fontSizeOptions,
+                  ),
+                  for (final attribute in [
+                    Attribute.bold,
+                    Attribute.underline,
+                    Attribute.strikeThrough,
+                  ])
+                    QuillToolbarToggleStyleButton(
+                      controller: controller,
+                      attribute: attribute,
+                    ),
+                  QuillToolbarColorButton(
+                    controller: controller,
+                    isBackground: false,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('닫기'),
+                ),
+              ],
+            ),
+          ),
+        ),
     ];
 
     return ColoredBox(
@@ -214,12 +306,20 @@ class RichNoteViewer extends StatefulWidget {
     this.maxHeight,
     this.onTap,
     this.onChecklistToggle,
+    this.bordered = true,
+    this.scrollable = true,
+    this.contentPadding = const EdgeInsets.all(12),
+    this.lineHeight,
   });
 
   final Document document;
   final double minHeight;
   final double? maxHeight;
   final VoidCallback? onTap;
+  final bool bordered;
+  final bool scrollable;
+  final EdgeInsetsGeometry contentPadding;
+  final double? lineHeight;
   final FutureOr<void> Function(int checklistIndex, bool isChecked)?
   onChecklistToggle;
 
@@ -290,6 +390,10 @@ class _RichNoteViewerState extends State<RichNoteViewer> {
       readOnly: true,
       minHeight: widget.minHeight,
       maxHeight: widget.maxHeight,
+      bordered: widget.bordered,
+      scrollable: widget.scrollable,
+      contentPadding: widget.contentPadding,
+      lineHeight: widget.lineHeight,
     );
 
     if (widget.onTap == null ||

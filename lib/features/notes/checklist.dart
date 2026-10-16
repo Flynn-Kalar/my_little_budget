@@ -23,6 +23,7 @@ class NoteWithChecklist {
   int get totalCount => items.length;
   bool get hasIncompleteItems => items.any((item) => !item.isChecked);
   bool get isChecklistComplete => items.isNotEmpty && !hasIncompleteItems;
+  bool get isComplete => hasChecklist ? isChecklistComplete : note.completed;
 }
 
 List<ChecklistItemDraft> normalizeChecklistItems(

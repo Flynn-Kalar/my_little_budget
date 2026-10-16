@@ -8935,6 +8935,384 @@ class NotesCompanion extends UpdateCompanion<Note> {
   }
 }
 
+class $NoteDraftsTable extends NoteDrafts
+    with TableInfo<$NoteDraftsTable, NoteDraftRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NoteDraftsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _draftKeyMeta = const VerificationMeta(
+    'draftKey',
+  );
+  @override
+  late final GeneratedColumn<String> draftKey = GeneratedColumn<String>(
+    'draft_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteIdMeta = const VerificationMeta('noteId');
+  @override
+  late final GeneratedColumn<int> noteId = GeneratedColumn<int>(
+    'note_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES notes (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _baseUpdatedAtMeta = const VerificationMeta(
+    'baseUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> baseUpdatedAt = GeneratedColumn<String>(
+    'base_updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    draftKey,
+    noteId,
+    baseUpdatedAt,
+    payload,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'note_drafts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NoteDraftRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('draft_key')) {
+      context.handle(
+        _draftKeyMeta,
+        draftKey.isAcceptableOrUnknown(data['draft_key']!, _draftKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_draftKeyMeta);
+    }
+    if (data.containsKey('note_id')) {
+      context.handle(
+        _noteIdMeta,
+        noteId.isAcceptableOrUnknown(data['note_id']!, _noteIdMeta),
+      );
+    }
+    if (data.containsKey('base_updated_at')) {
+      context.handle(
+        _baseUpdatedAtMeta,
+        baseUpdatedAt.isAcceptableOrUnknown(
+          data['base_updated_at']!,
+          _baseUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {draftKey};
+  @override
+  NoteDraftRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NoteDraftRecord(
+      draftKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}draft_key'],
+      )!,
+      noteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}note_id'],
+      ),
+      baseUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}base_updated_at'],
+      ),
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $NoteDraftsTable createAlias(String alias) {
+    return $NoteDraftsTable(attachedDatabase, alias);
+  }
+}
+
+class NoteDraftRecord extends DataClass implements Insertable<NoteDraftRecord> {
+  final String draftKey;
+  final int? noteId;
+  final String? baseUpdatedAt;
+  final String payload;
+  final String updatedAt;
+  const NoteDraftRecord({
+    required this.draftKey,
+    this.noteId,
+    this.baseUpdatedAt,
+    required this.payload,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['draft_key'] = Variable<String>(draftKey);
+    if (!nullToAbsent || noteId != null) {
+      map['note_id'] = Variable<int>(noteId);
+    }
+    if (!nullToAbsent || baseUpdatedAt != null) {
+      map['base_updated_at'] = Variable<String>(baseUpdatedAt);
+    }
+    map['payload'] = Variable<String>(payload);
+    map['updated_at'] = Variable<String>(updatedAt);
+    return map;
+  }
+
+  NoteDraftsCompanion toCompanion(bool nullToAbsent) {
+    return NoteDraftsCompanion(
+      draftKey: Value(draftKey),
+      noteId: noteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(noteId),
+      baseUpdatedAt: baseUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(baseUpdatedAt),
+      payload: Value(payload),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory NoteDraftRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NoteDraftRecord(
+      draftKey: serializer.fromJson<String>(json['draftKey']),
+      noteId: serializer.fromJson<int?>(json['noteId']),
+      baseUpdatedAt: serializer.fromJson<String?>(json['baseUpdatedAt']),
+      payload: serializer.fromJson<String>(json['payload']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'draftKey': serializer.toJson<String>(draftKey),
+      'noteId': serializer.toJson<int?>(noteId),
+      'baseUpdatedAt': serializer.toJson<String?>(baseUpdatedAt),
+      'payload': serializer.toJson<String>(payload),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+    };
+  }
+
+  NoteDraftRecord copyWith({
+    String? draftKey,
+    Value<int?> noteId = const Value.absent(),
+    Value<String?> baseUpdatedAt = const Value.absent(),
+    String? payload,
+    String? updatedAt,
+  }) => NoteDraftRecord(
+    draftKey: draftKey ?? this.draftKey,
+    noteId: noteId.present ? noteId.value : this.noteId,
+    baseUpdatedAt: baseUpdatedAt.present
+        ? baseUpdatedAt.value
+        : this.baseUpdatedAt,
+    payload: payload ?? this.payload,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  NoteDraftRecord copyWithCompanion(NoteDraftsCompanion data) {
+    return NoteDraftRecord(
+      draftKey: data.draftKey.present ? data.draftKey.value : this.draftKey,
+      noteId: data.noteId.present ? data.noteId.value : this.noteId,
+      baseUpdatedAt: data.baseUpdatedAt.present
+          ? data.baseUpdatedAt.value
+          : this.baseUpdatedAt,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteDraftRecord(')
+          ..write('draftKey: $draftKey, ')
+          ..write('noteId: $noteId, ')
+          ..write('baseUpdatedAt: $baseUpdatedAt, ')
+          ..write('payload: $payload, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(draftKey, noteId, baseUpdatedAt, payload, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NoteDraftRecord &&
+          other.draftKey == this.draftKey &&
+          other.noteId == this.noteId &&
+          other.baseUpdatedAt == this.baseUpdatedAt &&
+          other.payload == this.payload &&
+          other.updatedAt == this.updatedAt);
+}
+
+class NoteDraftsCompanion extends UpdateCompanion<NoteDraftRecord> {
+  final Value<String> draftKey;
+  final Value<int?> noteId;
+  final Value<String?> baseUpdatedAt;
+  final Value<String> payload;
+  final Value<String> updatedAt;
+  final Value<int> rowid;
+  const NoteDraftsCompanion({
+    this.draftKey = const Value.absent(),
+    this.noteId = const Value.absent(),
+    this.baseUpdatedAt = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NoteDraftsCompanion.insert({
+    required String draftKey,
+    this.noteId = const Value.absent(),
+    this.baseUpdatedAt = const Value.absent(),
+    required String payload,
+    required String updatedAt,
+    this.rowid = const Value.absent(),
+  }) : draftKey = Value(draftKey),
+       payload = Value(payload),
+       updatedAt = Value(updatedAt);
+  static Insertable<NoteDraftRecord> custom({
+    Expression<String>? draftKey,
+    Expression<int>? noteId,
+    Expression<String>? baseUpdatedAt,
+    Expression<String>? payload,
+    Expression<String>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (draftKey != null) 'draft_key': draftKey,
+      if (noteId != null) 'note_id': noteId,
+      if (baseUpdatedAt != null) 'base_updated_at': baseUpdatedAt,
+      if (payload != null) 'payload': payload,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NoteDraftsCompanion copyWith({
+    Value<String>? draftKey,
+    Value<int?>? noteId,
+    Value<String?>? baseUpdatedAt,
+    Value<String>? payload,
+    Value<String>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return NoteDraftsCompanion(
+      draftKey: draftKey ?? this.draftKey,
+      noteId: noteId ?? this.noteId,
+      baseUpdatedAt: baseUpdatedAt ?? this.baseUpdatedAt,
+      payload: payload ?? this.payload,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (draftKey.present) {
+      map['draft_key'] = Variable<String>(draftKey.value);
+    }
+    if (noteId.present) {
+      map['note_id'] = Variable<int>(noteId.value);
+    }
+    if (baseUpdatedAt.present) {
+      map['base_updated_at'] = Variable<String>(baseUpdatedAt.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NoteDraftsCompanion(')
+          ..write('draftKey: $draftKey, ')
+          ..write('noteId: $noteId, ')
+          ..write('baseUpdatedAt: $baseUpdatedAt, ')
+          ..write('payload: $payload, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $NoteChecklistItemsTable extends NoteChecklistItems
     with TableInfo<$NoteChecklistItemsTable, NoteChecklistItem> {
   @override
@@ -11219,6 +11597,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $NotesTable notes = $NotesTable(this);
+  late final $NoteDraftsTable noteDrafts = $NoteDraftsTable(this);
   late final $NoteChecklistItemsTable noteChecklistItems =
       $NoteChecklistItemsTable(this);
   late final $CalendarEventsTable calendarEvents = $CalendarEventsTable(this);
@@ -11338,6 +11717,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tags,
     transactionTags,
     notes,
+    noteDrafts,
     noteChecklistItems,
     calendarEvents,
     transactionPresets,
@@ -11433,6 +11813,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('transaction_tags', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'notes',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('note_drafts', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -18231,6 +18618,24 @@ final class $$NotesTableReferences
     extends BaseReferences<_$AppDatabase, $NotesTable, Note> {
   $$NotesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
+  static MultiTypedResultKey<$NoteDraftsTable, List<NoteDraftRecord>>
+  _noteDraftsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.noteDrafts,
+    aliasName: $_aliasNameGenerator(db.notes.id, db.noteDrafts.noteId),
+  );
+
+  $$NoteDraftsTableProcessedTableManager get noteDraftsRefs {
+    final manager = $$NoteDraftsTableTableManager(
+      $_db,
+      $_db.noteDrafts,
+    ).filter((f) => f.noteId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_noteDraftsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$NoteChecklistItemsTable, List<NoteChecklistItem>>
   _noteChecklistItemsRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
@@ -18433,6 +18838,31 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> noteDraftsRefs(
+    Expression<bool> Function($$NoteDraftsTableFilterComposer f) f,
+  ) {
+    final $$NoteDraftsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.noteDrafts,
+      getReferencedColumn: (t) => t.noteId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NoteDraftsTableFilterComposer(
+            $db: $db,
+            $table: $db.noteDrafts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> noteChecklistItemsRefs(
     Expression<bool> Function($$NoteChecklistItemsTableFilterComposer f) f,
@@ -18803,6 +19233,31 @@ class $$NotesTableAnnotationComposer
   GeneratedColumn<String> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  Expression<T> noteDraftsRefs<T extends Object>(
+    Expression<T> Function($$NoteDraftsTableAnnotationComposer a) f,
+  ) {
+    final $$NoteDraftsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.noteDrafts,
+      getReferencedColumn: (t) => t.noteId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NoteDraftsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.noteDrafts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> noteChecklistItemsRefs<T extends Object>(
     Expression<T> Function($$NoteChecklistItemsTableAnnotationComposer a) f,
   ) {
@@ -18843,7 +19298,10 @@ class $$NotesTableTableManager
           $$NotesTableUpdateCompanionBuilder,
           (Note, $$NotesTableReferences),
           Note,
-          PrefetchHooks Function({bool noteChecklistItemsRefs})
+          PrefetchHooks Function({
+            bool noteDraftsRefs,
+            bool noteChecklistItemsRefs,
+          })
         > {
   $$NotesTableTableManager(_$AppDatabase db, $NotesTable table)
     : super(
@@ -19008,37 +19466,63 @@ class $$NotesTableTableManager
                     (e.readTable(table), $$NotesTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({noteChecklistItemsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (noteChecklistItemsRefs) db.noteChecklistItems,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (noteChecklistItemsRefs)
-                    await $_getPrefetchedData<
-                      Note,
-                      $NotesTable,
-                      NoteChecklistItem
-                    >(
-                      currentTable: table,
-                      referencedTable: $$NotesTableReferences
-                          ._noteChecklistItemsRefsTable(db),
-                      managerFromTypedResult: (p0) => $$NotesTableReferences(
-                        db,
-                        table,
-                        p0,
-                      ).noteChecklistItemsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.noteId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({noteDraftsRefs = false, noteChecklistItemsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (noteDraftsRefs) db.noteDrafts,
+                    if (noteChecklistItemsRefs) db.noteChecklistItems,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (noteDraftsRefs)
+                        await $_getPrefetchedData<
+                          Note,
+                          $NotesTable,
+                          NoteDraftRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$NotesTableReferences
+                              ._noteDraftsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$NotesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).noteDraftsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.noteId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (noteChecklistItemsRefs)
+                        await $_getPrefetchedData<
+                          Note,
+                          $NotesTable,
+                          NoteChecklistItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$NotesTableReferences
+                              ._noteChecklistItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$NotesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).noteChecklistItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.noteId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -19055,7 +19539,327 @@ typedef $$NotesTableProcessedTableManager =
       $$NotesTableUpdateCompanionBuilder,
       (Note, $$NotesTableReferences),
       Note,
-      PrefetchHooks Function({bool noteChecklistItemsRefs})
+      PrefetchHooks Function({bool noteDraftsRefs, bool noteChecklistItemsRefs})
+    >;
+typedef $$NoteDraftsTableCreateCompanionBuilder =
+    NoteDraftsCompanion Function({
+      required String draftKey,
+      Value<int?> noteId,
+      Value<String?> baseUpdatedAt,
+      required String payload,
+      required String updatedAt,
+      Value<int> rowid,
+    });
+typedef $$NoteDraftsTableUpdateCompanionBuilder =
+    NoteDraftsCompanion Function({
+      Value<String> draftKey,
+      Value<int?> noteId,
+      Value<String?> baseUpdatedAt,
+      Value<String> payload,
+      Value<String> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$NoteDraftsTableReferences
+    extends BaseReferences<_$AppDatabase, $NoteDraftsTable, NoteDraftRecord> {
+  $$NoteDraftsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $NotesTable _noteIdTable(_$AppDatabase db) => db.notes.createAlias(
+    $_aliasNameGenerator(db.noteDrafts.noteId, db.notes.id),
+  );
+
+  $$NotesTableProcessedTableManager? get noteId {
+    final $_column = $_itemColumn<int>('note_id');
+    if ($_column == null) return null;
+    final manager = $$NotesTableTableManager(
+      $_db,
+      $_db.notes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_noteIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$NoteDraftsTableFilterComposer
+    extends Composer<_$AppDatabase, $NoteDraftsTable> {
+  $$NoteDraftsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get draftKey => $composableBuilder(
+    column: $table.draftKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get baseUpdatedAt => $composableBuilder(
+    column: $table.baseUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$NotesTableFilterComposer get noteId {
+    final $$NotesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.noteId,
+      referencedTable: $db.notes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotesTableFilterComposer(
+            $db: $db,
+            $table: $db.notes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$NoteDraftsTableOrderingComposer
+    extends Composer<_$AppDatabase, $NoteDraftsTable> {
+  $$NoteDraftsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get draftKey => $composableBuilder(
+    column: $table.draftKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get baseUpdatedAt => $composableBuilder(
+    column: $table.baseUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$NotesTableOrderingComposer get noteId {
+    final $$NotesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.noteId,
+      referencedTable: $db.notes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotesTableOrderingComposer(
+            $db: $db,
+            $table: $db.notes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$NoteDraftsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $NoteDraftsTable> {
+  $$NoteDraftsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get draftKey =>
+      $composableBuilder(column: $table.draftKey, builder: (column) => column);
+
+  GeneratedColumn<String> get baseUpdatedAt => $composableBuilder(
+    column: $table.baseUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$NotesTableAnnotationComposer get noteId {
+    final $$NotesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.noteId,
+      referencedTable: $db.notes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$NotesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.notes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$NoteDraftsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $NoteDraftsTable,
+          NoteDraftRecord,
+          $$NoteDraftsTableFilterComposer,
+          $$NoteDraftsTableOrderingComposer,
+          $$NoteDraftsTableAnnotationComposer,
+          $$NoteDraftsTableCreateCompanionBuilder,
+          $$NoteDraftsTableUpdateCompanionBuilder,
+          (NoteDraftRecord, $$NoteDraftsTableReferences),
+          NoteDraftRecord,
+          PrefetchHooks Function({bool noteId})
+        > {
+  $$NoteDraftsTableTableManager(_$AppDatabase db, $NoteDraftsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NoteDraftsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$NoteDraftsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$NoteDraftsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> draftKey = const Value.absent(),
+                Value<int?> noteId = const Value.absent(),
+                Value<String?> baseUpdatedAt = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NoteDraftsCompanion(
+                draftKey: draftKey,
+                noteId: noteId,
+                baseUpdatedAt: baseUpdatedAt,
+                payload: payload,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String draftKey,
+                Value<int?> noteId = const Value.absent(),
+                Value<String?> baseUpdatedAt = const Value.absent(),
+                required String payload,
+                required String updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => NoteDraftsCompanion.insert(
+                draftKey: draftKey,
+                noteId: noteId,
+                baseUpdatedAt: baseUpdatedAt,
+                payload: payload,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$NoteDraftsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({noteId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (noteId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.noteId,
+                                referencedTable: $$NoteDraftsTableReferences
+                                    ._noteIdTable(db),
+                                referencedColumn: $$NoteDraftsTableReferences
+                                    ._noteIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$NoteDraftsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $NoteDraftsTable,
+      NoteDraftRecord,
+      $$NoteDraftsTableFilterComposer,
+      $$NoteDraftsTableOrderingComposer,
+      $$NoteDraftsTableAnnotationComposer,
+      $$NoteDraftsTableCreateCompanionBuilder,
+      $$NoteDraftsTableUpdateCompanionBuilder,
+      (NoteDraftRecord, $$NoteDraftsTableReferences),
+      NoteDraftRecord,
+      PrefetchHooks Function({bool noteId})
     >;
 typedef $$NoteChecklistItemsTableCreateCompanionBuilder =
     NoteChecklistItemsCompanion Function({
@@ -20695,6 +21499,8 @@ class $AppDatabaseManager {
       $$TransactionTagsTableTableManager(_db, _db.transactionTags);
   $$NotesTableTableManager get notes =>
       $$NotesTableTableManager(_db, _db.notes);
+  $$NoteDraftsTableTableManager get noteDrafts =>
+      $$NoteDraftsTableTableManager(_db, _db.noteDrafts);
   $$NoteChecklistItemsTableTableManager get noteChecklistItems =>
       $$NoteChecklistItemsTableTableManager(_db, _db.noteChecklistItems);
   $$CalendarEventsTableTableManager get calendarEvents =>

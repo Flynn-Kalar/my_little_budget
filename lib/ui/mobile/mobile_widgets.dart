@@ -474,9 +474,20 @@ class _MobileAmountCalculatorPageState
   late final _controller = TextEditingController(
     text: formatAmountInput(widget.initialValue),
   );
+  final _expressionScrollController = ScrollController();
+  final _expressionScrollKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
+  }
 
   @override
   void dispose() {
+    _expressionScrollController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -495,7 +506,6 @@ class _MobileAmountCalculatorPageState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       key: const ValueKey('mobile-transaction-amount-calculator-page'),
       appBar: AppBar(
@@ -514,36 +524,131 @@ class _MobileAmountCalculatorPageState
             child: Column(
               children: [
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _controller,
-                      builder: (context, value, _) {
-                        final display = value.text.isEmpty ? '0' : value.text;
-                        return Text(
-                          display,
-                          key: const ValueKey(
-                            'mobile-transaction-calculator-display',
-                          ),
-                          textAlign: TextAlign.right,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.displayMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        );
-                      },
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) =>
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _controller,
+                          builder: (context, value, _) {
+                            final style = _expressionStyle(
+                              context,
+                              value.text.isEmpty ? '0' : value.text,
+                              constraints,
+                            );
+                            _revealExpressionCursorAfterLayout();
+                            return Align(
+                              alignment: Alignment.bottomRight,
+                              child: Scrollbar(
+                                key: _expressionScrollKey,
+                                controller: _expressionScrollController,
+                                child: TextField(
+                                  key: const ValueKey(
+                                    'mobile-transaction-calculator-display',
+                                  ),
+                                  controller: _controller,
+                                  scrollController: _expressionScrollController,
+                                  autofocus: true,
+                                  readOnly: true,
+                                  showCursor: true,
+                                  keyboardType: TextInputType.none,
+                                  maxLines: null,
+                                  textAlign: TextAlign.right,
+                                  style: style,
+                                  decoration: InputDecoration(
+                                    hintText: '0',
+                                    hintStyle: style,
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                _MobileAmountKeypad(controller: _controller, onDone: _complete),
+                ExcludeFocus(
+                  child: _MobileAmountKeypad(
+                    controller: _controller,
+                    onDone: _complete,
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  TextStyle _expressionStyle(
+    BuildContext context,
+    String text,
+    BoxConstraints constraints,
+  ) {
+    final baseStyle =
+        (Theme.of(context).textTheme.displayMedium ??
+                const TextStyle(fontSize: 45))
+            .copyWith(fontWeight: FontWeight.w700);
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+    );
+    bool fits(double size) {
+      final style = baseStyle.copyWith(fontSize: size);
+      painter.text = TextSpan(text: text, style: style);
+      // Match EditableText's line metrics, padding and cursor space.
+      painter.strutStyle = StrutStyle.fromTextStyle(
+        style,
+        forceStrutHeight: true,
+      );
+      painter.layout(
+        maxWidth: (constraints.maxWidth - 4 - 3).clamp(0, double.infinity),
+      );
+      return painter.height <= constraints.maxHeight;
+    }
+
+    // Wrap at the default size first. Only a shortage of height reduces the font.
+    // At 12 logical pixels, any remaining overflow scrolls inside the field.
+    var lower = 12.0;
+    var upper = baseStyle.fontSize ?? 45;
+    if (fits(upper)) {
+      painter.dispose();
+      return baseStyle;
+    }
+    while (upper - lower > 0.1) {
+      final middle = (lower + upper) / 2;
+      if (fits(middle)) {
+        lower = middle;
+      } else {
+        upper = middle;
+      }
+    }
+    painter.dispose();
+    return baseStyle.copyWith(fontSize: lower);
+  }
+
+  void _revealExpressionCursorAfterLayout() {
+    // Custom keypad edits on a read-only TextField do not request caret scrolling.
+    // Wait for wrapping and font changes before revealing the logical selection.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_controller.selection.isValid) return;
+      void reveal(Element element) {
+        if (element is StatefulElement && element.state is EditableTextState) {
+          (element.state as EditableTextState).bringIntoView(
+            _controller.selection.extent,
+          );
+          return;
+        }
+        element.visitChildElements(reveal);
+      }
+
+      _expressionScrollKey.currentContext?.visitChildElements(reveal);
+    });
   }
 }
 

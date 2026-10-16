@@ -83,7 +83,11 @@ void main() {
     expect(toggledEntry.items.single.isChecked, isTrue);
     final closeText = find.text('닫기');
     await tester.tap(
-      closeText.evaluate().isNotEmpty ? closeText : find.byIcon(Icons.close),
+      closeText.evaluate().isNotEmpty
+          ? closeText
+          : find.byType(BackButton).evaluate().isNotEmpty
+          ? find.byType(BackButton)
+          : find.byIcon(Icons.close),
     );
     await tester.pumpAndSettle();
     expect(find.text('1/1 완료'), findsOneWidget);
@@ -129,13 +133,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(RichNoteEditor), findsOneWidget);
+    expect(find.byTooltip('실행 취소'), findsOneWidget);
+    expect(find.byIcon(Icons.check_box), findsOneWidget);
+    await tester.tap(find.byTooltip('글자·서식 더보기'));
+    await tester.pumpAndSettle();
     expect(find.text('18 pt'), findsOneWidget);
-
-    final fontSizeX = tester.getCenter(find.text('18 pt')).dx;
-    final checklistX = tester.getCenter(find.byIcon(Icons.check_box).first).dx;
-    final boldX = tester.getCenter(find.byIcon(Icons.format_bold).first).dx;
-    expect(fontSizeX, lessThan(checklistX));
-    expect(checklistX, lessThan(boldX));
+    expect(find.byIcon(Icons.format_bold), findsOneWidget);
+    await tester.tap(find.text('닫기'));
+    await tester.pumpAndSettle();
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));

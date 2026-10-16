@@ -196,7 +196,7 @@ Future<_AndroidHarness> _startAndroidHarness() async {
   int? openedNoteId;
   final service = NoteNotificationService();
   await service.initialize(onNoteTap: (id) => openedNoteId = id);
-  final permission = await service.requestPermissions();
+  final permission = await service.requestPermissions(requestFullScreen: true);
   return _AndroidHarness(
     service: service,
     permission: permission,

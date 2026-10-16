@@ -8,6 +8,7 @@ import '../../features/notes/note_amount_goal.dart';
 import '../../features/notes/note_alarm.dart';
 import '../../features/notes/note_schedule.dart';
 import '../../features/notes/rich_note.dart';
+import '../../features/notes/reminder_store.dart';
 import '../database.dart';
 import '../tables/note_checklist_items.dart';
 import '../tables/notes.dart';
@@ -116,6 +117,22 @@ AND EXISTS (
       );
       if (normalizedItems != null) {
         await _saveChecklistItems(noteId, normalizedItems);
+      }
+      final entry = await getNoteWithChecklist(noteId);
+      if (entry != null) {
+        await ReminderStore(attachedDatabase).captureCurrent(
+          entry,
+          DateTime.now(),
+          completed: normalizedItems == null ? null : entry.isChecklistComplete,
+        );
+        if (noteScheduleFromNote(entry.note).isRepeating) {
+          final next = await ReminderStore(
+            attachedDatabase,
+          ).nextReset(entry.note, DateTime.now());
+          await (update(notes)..where((n) => n.id.equals(noteId))).write(
+            NotesCompanion(nextResetAt: Value(next?.toUtc().toIso8601String())),
+          );
+        }
       }
       return noteId;
     });
@@ -325,6 +342,14 @@ AND EXISTS (
       await (update(notes)..where((note) => note.id.equals(item.noteId))).write(
         NotesCompanion(richContent: Value(rich), updatedAt: Value(now)),
       );
+      final entry = await getNoteWithChecklist(item.noteId);
+      if (entry != null) {
+        await ReminderStore(attachedDatabase).captureCurrent(
+          entry,
+          DateTime.now(),
+          completed: entry.isChecklistComplete,
+        );
+      }
     });
   }
 
@@ -354,6 +379,56 @@ AND EXISTS (
         updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
       ),
     );
+  }
+
+  Future<void> setOccurrenceCompleted(int id, bool completed) =>
+      transaction(() async {
+        final entry = await getNoteWithChecklist(id);
+        if (entry == null) return;
+        var rich = entry.note.richContent;
+        for (var i = 0; i < entry.items.length; i++) {
+          rich = setChecklistStateInRichContent(
+            rich,
+            checklistIndex: i,
+            isChecked: completed,
+          );
+        }
+        await (update(noteChecklistItems)..where((i) => i.noteId.equals(id)))
+            .write(NoteChecklistItemsCompanion(isChecked: Value(completed)));
+        await (update(notes)..where((n) => n.id.equals(id))).write(
+          NotesCompanion(
+            completed: Value(completed),
+            richContent: Value(rich),
+            updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
+          ),
+        );
+        await ReminderStore(
+          attachedDatabase,
+        ).captureCurrent(entry, DateTime.now(), completed: completed);
+      });
+
+  /// Native background writes cannot notify Drift's stream cache.
+  Future<void> refreshNativeReminderChanges() async {
+    final entries = await listNotificationEntries();
+    for (final entry in entries) {
+      var rich = entry.note.richContent;
+      for (var i = 0; i < entry.items.length; i++) {
+        rich = setChecklistStateInRichContent(
+          rich,
+          checklistIndex: i,
+          isChecked: entry.items[i].isChecked,
+        );
+      }
+      if (rich != entry.note.richContent) {
+        await (update(notes)..where((n) => n.id.equals(entry.note.id))).write(
+          NotesCompanion(richContent: Value(rich)),
+        );
+      }
+    }
+    attachedDatabase.notifyUpdates({
+      TableUpdate.onTable(notes),
+      TableUpdate.onTable(noteChecklistItems),
+    });
   }
 
   Future<void> setPinned(int id, bool pinned) async {
@@ -427,7 +502,16 @@ AND EXISTS (
 
     await transaction(() async {
       for (final note in due) {
-        final next = nextNoteResetAfter(noteScheduleFromNote(note), now);
+        final entry = await getNoteWithChecklist(note.id);
+        // Snapshot the outgoing cycle before resetting the visible checklist.
+        final boundary = DateTime.tryParse(note.nextResetAt!);
+        if (entry != null && boundary != null) {
+          await ReminderStore(attachedDatabase).captureCurrent(
+            entry,
+            boundary.subtract(const Duration(milliseconds: 1)),
+          );
+        }
+        final next = await ReminderStore(attachedDatabase).nextReset(note, now);
         await (update(
           noteChecklistItems,
         )..where((item) => item.noteId.equals(note.id))).write(
@@ -439,6 +523,7 @@ AND EXISTS (
         await (update(notes)..where((n) => n.id.equals(note.id))).write(
           NotesCompanion(
             richContent: Value(uncheckedChecklistRichContent(note.richContent)),
+            completed: const Value(false),
             nextResetAt: Value(next?.toUtc().toIso8601String()),
             updatedAt: Value(now.toUtc().toIso8601String()),
           ),
