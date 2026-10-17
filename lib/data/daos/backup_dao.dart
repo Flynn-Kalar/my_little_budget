@@ -41,31 +41,33 @@ class BackupDao extends DatabaseAccessor<AppDatabase> with _$BackupDaoMixin {
   BackupDao(super.db);
 
   Future<Backup> exportBackup() async {
-    return Backup(
-      exportedAt: DateTime.now().toUtc().toIso8601String(),
-      accounts: await select(accounts).get(),
-      categories: await select(categories).get(),
-      budgetGroups: await select(budgetGroups).get(),
-      budgetGroupCategories: await select(budgetGroupCategories).get(),
-      transactions: await select(transactions).get(),
-      investments: await select(investments).get(),
-      tags: await select(tags).get(),
-      transactionTags: await select(transactionTags).get(),
-      monthlyIncome: await select(monthlyIncome).get(),
-      recurringTransactions: await select(recurringTransactions).get(),
-      transactionPresets: await select(transactionPresets).get(),
-      notes: await select(notes).get(),
-      noteChecklistItems: await select(noteChecklistItems).get(),
-      calendarEvents: await select(calendarEvents).get(),
-      reminderSeries: (await customSelect(
-        'SELECT * FROM reminder_series',
-      ).get()).map((r) => r.data).toList(),
-      reminderOccurrences: (await customSelect(
-        'SELECT * FROM reminder_occurrences',
-      ).get()).map((r) => r.data).toList(),
-      calendarOccurrences: (await customSelect(
-        'SELECT * FROM calendar_occurrences',
-      ).get()).map((r) => r.data).toList(),
+    return transaction(
+      () async => Backup(
+        exportedAt: DateTime.now().toUtc().toIso8601String(),
+        accounts: await select(accounts).get(),
+        categories: await select(categories).get(),
+        budgetGroups: await select(budgetGroups).get(),
+        budgetGroupCategories: await select(budgetGroupCategories).get(),
+        transactions: await select(transactions).get(),
+        investments: await select(investments).get(),
+        tags: await select(tags).get(),
+        transactionTags: await select(transactionTags).get(),
+        monthlyIncome: await select(monthlyIncome).get(),
+        recurringTransactions: await select(recurringTransactions).get(),
+        transactionPresets: await select(transactionPresets).get(),
+        notes: await select(notes).get(),
+        noteChecklistItems: await select(noteChecklistItems).get(),
+        calendarEvents: await select(calendarEvents).get(),
+        reminderSeries: (await customSelect(
+          'SELECT * FROM reminder_series',
+        ).get()).map((r) => r.data).toList(),
+        reminderOccurrences: (await customSelect(
+          'SELECT * FROM reminder_occurrences',
+        ).get()).map((r) => r.data).toList(),
+        calendarOccurrences: (await customSelect(
+          'SELECT * FROM calendar_occurrences',
+        ).get()).map((r) => r.data).toList(),
+      ),
     );
   }
 

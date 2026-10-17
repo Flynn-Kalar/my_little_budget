@@ -2,9 +2,9 @@
 
 ## Windows 버전 설치
 
-**[Windows Setup 바로 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.1/MyLittleBudget-Setup-1.0.0-rc.1.exe)**
+**[Windows Setup 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.2/MyLittleBudget-Setup-1.0.0-rc.2.exe)** · **[Windows Update 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.2/MyLittleBudget-Update-1.0.0-rc.2.exe)**
 
-1. 위 링크에서 `MyLittleBudget-Setup-1.0.0-rc.1.exe`를 내려받습니다.
+1. 처음 설치할 때는 `MyLittleBudget-Setup-1.0.0-rc.2.exe`, 기존 앱을 업데이트할 때는 `MyLittleBudget-Update-1.0.0-rc.2.exe`를 내려받습니다.
 2. Setup 파일을 실행하고 설치 안내를 따릅니다.
 3. 설치가 끝나면 시작 메뉴의 `나만의 작은 가계부`를 실행합니다.
 
@@ -12,7 +12,7 @@
 
 Flutter로 만든 한국어 개인 가계부 앱입니다. 데이터는 로컬 SQLite에 저장되며 Windows 데스크톱과 Android 모바일에 각각 최적화된 UI를 제공합니다. 필요하면 JSON 파일이나 Supabase를 이용해 데이터를 백업하고 동기화할 수 있습니다.
 
-- 현재 버전: `1.0.0-rc.1+43`
+- 현재 버전: `1.0.0-rc.2+54`
 - 지원 UI: Windows 데스크톱/태블릿, Android 모바일
 - 저장소: [Flynn-Kalar/my_little_budget](https://github.com/Flynn-Kalar/my_little_budget)
 
@@ -33,6 +33,17 @@ Flutter로 만든 한국어 개인 가계부 앱입니다. 데이터는 로컬 S
 - Supabase Storage 기반 JSON 백업/복원
 - Supabase Auth와 RLS로 보호되는 DB 증분 동기화
 - 설정 화면에서 GitHub Releases 기반 최신 버전 수동 확인
+
+## 입력과 데이터 관리 편의 기능
+
+- 최근 입력 추천: PC의 메모 자동완성 또는 모바일의 최근 입력 제안을 선택하면 같은 유형의 거래에서 계좌·카테고리·태그를 불러옵니다. 입력 중인 금액·날짜·시간은 유지하며, 보관된 계좌나 카테고리는 추천하지 않습니다.
+- 일괄 수정: 내역 화면의 체크리스트 버튼에서 현재 조회 결과의 거래를 선택해 카테고리와 태그를 함께 수정합니다. 카테고리는 같은 유형의 수입 또는 지출끼리만 변경할 수 있고, 태그 교체에서 입력을 비우면 선택한 거래의 태그를 제거합니다.
+- 하루 예산: 예산 화면에서 그룹별 남은 예산을 오늘 포함 남은 날짜로 나누어 표시합니다. 등록된 예정 지출도 차감하며, 중복 계산을 피하기 위해 그룹별 하루 금액은 합산하지 않습니다.
+- 좁은 PC 핵심 요약: 내역 화면에서 오른쪽 패널이 들어가지 않으면 월말 예상·남은 예정 지출을 접이식 카드로 표시합니다. 펼치면 오늘 지출과 가까운 예정 거래 3건을 확인할 수 있습니다. 상단 정보가 많아지면 상단 영역만 스크롤하며 거래 목록은 계속 볼 수 있습니다. 월말 예상은 등록된 수입·지출을 한 번씩 반영하며 계좌 간 이체는 제외합니다.
+- 통계에서 내역 정리: PC와 모바일의 월간 통계 및 카테고리·태그 상세에서 `내역 정리`를 누르면 해당 월·지출 유형·카테고리·태그 조건을 적용한 내역 화면으로 이동합니다. 기존 거래 편집과 일괄 수정으로 분류를 정리할 수 있으며, `예산 조정`은 통계에서 보고 있던 월의 예산 화면을 엽니다.
+- 거래 CSV: `설정 > 데이터 백업/복원 > 로컬`에서 전체 거래를 UTF-8 CSV로 내보내거나 CSV 열을 연결해 가져옵니다. 계좌·카테고리는 기존 활성 항목 이름과 일치해야 하며, 유형은 `수입/지출/이체/조정` 또는 `income/expense/transfer/adjustment`를 사용합니다. 태그는 세미콜론 구분 또는 내보낸 파일의 JSON 배열을 지원합니다. 미리보기에서 오류가 있으면 가져오기를 막고, 기존 데이터와 파일 안의 완전히 같은 거래는 건너뜁니다. 한 파일은 최대 10MB·10,000건이며 CSV는 전체 백업을 대신하지 않습니다.
+- 자동 로컬 백업: 설치형 앱에서 기본으로 활성화됩니다. 앱 시작과 사용 중 데이터 변경 후 하루 한 번 저장하고, 최근 7개 복구 지점을 앱 내부 폴더에 보관합니다. 로컬 파일 탭에서 설정 변경·즉시 생성·파일 내보내기·복원을 할 수 있습니다. 앱 삭제나 기기 고장에 대비하려면 별도 파일도 내보내세요.
+- 복원 미리보기: JSON·원격 백업·로컬 복구 지점 모두 백업 날짜와 데이터 건수를 확인한 뒤 전체 교체합니다. 설치형 앱은 복원 직전 현재 데이터의 안전 백업을 생성하며, 안전 백업이 실패하면 복원하지 않습니다.
 
 ## 기술 스택
 
@@ -133,7 +144,7 @@ release 빌드와 Setup 생성을 한 번에 실행:
 Setup 산출물:
 
 ```text
-installer\output\MyLittleBudget-Setup-1.0.0-rc.1.exe
+installer\output\MyLittleBudget-Setup-1.0.0-rc.2.exe
 ```
 
 설치 경로는 사용자별 `%LOCALAPPDATA%\Programs\MyLittleBudget`이며 관리자 권한이 필요하지 않습니다. 시작 메뉴 바로가기가 생성되고, 바탕 화면 바로가기는 설치 과정에서 선택할 수 있습니다.
@@ -176,13 +187,21 @@ keyPassword=<upload-key-password>
 
 ## 최신 버전 확인
 
+Windows 릴리스에는 항상 `MyLittleBudget-Setup-<version>.exe`, `MyLittleBudget-Update-<version>.exe`, `SHA256SUMS.txt`를 함께 첨부합니다. 두 EXE는 같은 전체 패키지이며 기존 설치를 유지하며 업그레이드할 수 있습니다. 앱은 Update 파일을 우선 사용하고, 이전 릴리스의 Setup도 지원합니다.
+
+소스 변경을 커밋한 뒤 다음 명령으로 Windows 빌드, 소스·태그 푸시, 두 EXE 업로드 및 검증, 릴리스 공개까지 진행합니다. 인증은 기존 GitHub 로그인 또는 `GH_TOKEN`/`GITHUB_TOKEN` 환경변수를 사용하며 비밀값을 파일이나 로그에 저장하지 않습니다.
+
+```powershell
+.\scripts\publish_windows_release.ps1 -NotesFile .scratch/windows-auto-update/RELEASE_NOTES.md
+```
+
 업데이트 확인은 앱 시작 시 자동으로 실행하지 않습니다. 사용자가 설정 메인 화면의 `최신 버전 확인`을 눌렀을 때만 GitHub Releases API를 조회합니다.
 
 - Windows: 새 버전이 있으면 사용자에게 한 번 확인한 뒤 Setup을 직접 다운로드합니다. GitHub가 제공하는 SHA-256 검증에 성공한 경우에만 자동 설치하고 앱을 다시 실행합니다.
 - Android: 새 버전이 있으면 Google Play 앱 페이지를 열고, Play 스토어 앱을 열 수 없으면 웹 주소를 사용합니다.
 - draft release는 제외하며 prerelease를 포함해 semantic version 기준으로 비교합니다.
 
-새 버전을 배포하려면 앱 버전보다 높은 버전 태그(예: `v1.0.0-rc.2`)로 GitHub Release를 생성해야 합니다. Git 태그만 만들고 Release를 생성하지 않으면 앱에서 감지하지 않습니다.
+새 버전을 배포하려면 앱 버전보다 높은 버전 태그(예: `v1.0.0-rc.3`)로 GitHub Release를 생성해야 합니다. Git 태그만 만들고 Release를 생성하지 않으면 앱에서 감지하지 않습니다.
 
 ## 백업과 복원
 
@@ -266,5 +285,5 @@ RLS, 사용자 이전, tombstone 삭제와 revision 처리에 대한 자세한 �
 - JSON 복원은 전체 교체 방식이며 부분 병합은 지원하지 않습니다.
 - Supabase DB 동기화는 Realtime 및 여러 기기의 동시 편집을 지원하지 않습니다.
 - Google Play release 빌드는 로컬 release keystore 설정이 필요합니다.
-- 업데이트 확인은 새 버전을 내려받거나 자동 설치하지 않고 배포 페이지로만 이동합니다.
+- Windows 업데이트는 확인 후 설치 파일을 내려받아 검증하고 실행합니다. Android는 Play 스토어로 이동합니다.
 - 모바일과 데스크톱 화면은 별도 구현으로 유지합니다.

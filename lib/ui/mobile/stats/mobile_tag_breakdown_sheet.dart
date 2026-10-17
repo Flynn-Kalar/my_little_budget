@@ -6,6 +6,7 @@ import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import '../../../data/providers.dart';
+import '../../shared/stats_detail_actions.dart';
 import 'mobile_tag_transactions_sheet.dart';
 
 // Keep the sheet's query tied to the tapped month and category, independently
@@ -79,6 +80,10 @@ class _TagBreakdownSheet extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: StatsDetailActions(month: month, category: category),
           ),
           Expanded(
             child: rows.when(

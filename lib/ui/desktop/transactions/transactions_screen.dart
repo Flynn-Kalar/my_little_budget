@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shell/layout_policy.dart';
+import '../../shared/bulk_transaction_editor.dart';
 import '../desktop_section.dart';
 import 'widgets/filter_panel.dart';
 import 'widgets/inline_entry.dart';
@@ -56,7 +57,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           final showSidePanel =
               constraints.maxWidth >=
               spec.mainWidth + _contentGap + spec.sideWidth;
-          if (!showSidePanel) return _buildMainColumn(expanded: true);
+          if (!showSidePanel) {
+            return _buildMainColumn(
+              expanded: true,
+              availableHeight: constraints.maxHeight,
+            );
+          }
           final contentWidth = spec.mainWidth + _contentGap + spec.sideWidth;
           return Align(
             alignment: Alignment.topCenter,
@@ -70,6 +76,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     width: spec.mainWidth,
                     child: _buildMainColumn(
                       expanded: false,
+                      availableHeight: constraints.maxHeight,
                       width: spec.mainWidth,
                     ),
                   ),
@@ -100,115 +107,158 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  Widget _buildMainColumn({required bool expanded, double? width}) {
+  Widget _buildMainColumn({
+    required bool expanded,
+    required double availableHeight,
+    double? width,
+  }) {
     final compact = isCompactDesktop(context);
     final column = Column(
       key: _mainColumnKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!_isHeaderCollapsed) ...[
-          const Text(
-            '내역',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: (availableHeight - 160).clamp(100.0, double.infinity),
           ),
-          const SizedBox(height: 14),
-        ],
-        Row(
-          children: [
-            const Expanded(child: MonthNav()),
-            if (compact)
-              IconButton.filledTonal(
-                key: const ValueKey('desktop-transactions-budget-button'),
-                tooltip: '예산 보기',
-                onPressed: () => context.go('/budget'),
-                icon: const Icon(Icons.savings_outlined, size: 18),
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 36,
+          child: SingleChildScrollView(
+            primary: false,
+            key: const ValueKey('desktop-transactions-header-scroll'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (!_isHeaderCollapsed) ...[
+                  const Text(
+                    '내역',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                Row(
+                  children: [
+                    const Expanded(child: MonthNav()),
+                    if (compact)
+                      IconButton.filledTonal(
+                        key: const ValueKey(
+                          'desktop-transactions-budget-button',
+                        ),
+                        tooltip: '예산 보기',
+                        onPressed: () => context.go('/budget'),
+                        icon: const Icon(Icons.savings_outlined, size: 18),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 32,
+                          height: 36,
+                        ),
+                        padding: EdgeInsets.zero,
+                      )
+                    else
+                      FilledButton.tonalIcon(
+                        key: const ValueKey(
+                          'desktop-transactions-budget-button',
+                        ),
+                        onPressed: () => context.go('/budget'),
+                        icon: const Icon(Icons.savings_outlined, size: 18),
+                        label: const Text('예산 보기'),
+                      ),
+                    const SizedBox(width: 8),
+                    if (compact)
+                      IconButton.filledTonal(
+                        key: const ValueKey(
+                          'desktop-transactions-investments-button',
+                        ),
+                        tooltip: '투자 보기',
+                        onPressed: () => context.go('/investments'),
+                        icon: const Icon(Icons.trending_up, size: 18),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 32,
+                          height: 36,
+                        ),
+                        padding: EdgeInsets.zero,
+                      )
+                    else
+                      FilledButton.tonalIcon(
+                        key: const ValueKey(
+                          'desktop-transactions-investments-button',
+                        ),
+                        onPressed: () => context.go('/investments'),
+                        icon: const Icon(Icons.trending_up, size: 18),
+                        label: const Text('투자 보기'),
+                      ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      key: const ValueKey(
+                        'desktop-transactions-collapse-button',
+                      ),
+                      constraints: compact
+                          ? const BoxConstraints.tightFor(width: 32, height: 36)
+                          : null,
+                      padding: compact ? EdgeInsets.zero : null,
+                      tooltip: _isHeaderCollapsed ? '상단 펼치기' : '상단 접기',
+                      onPressed: () => setState(
+                        () => _isHeaderCollapsed = !_isHeaderCollapsed,
+                      ),
+                      icon: Icon(
+                        _isHeaderCollapsed
+                            ? Icons.keyboard_arrow_down
+                            : Icons.keyboard_arrow_up,
+                      ),
+                    ),
+                  ],
                 ),
-                padding: EdgeInsets.zero,
-              )
-            else
-              FilledButton.tonalIcon(
-                key: const ValueKey('desktop-transactions-budget-button'),
-                onPressed: () => context.go('/budget'),
-                icon: const Icon(Icons.savings_outlined, size: 18),
-                label: const Text('예산 보기'),
-              ),
-            const SizedBox(width: 8),
-            if (compact)
-              IconButton.filledTonal(
-                key: const ValueKey('desktop-transactions-investments-button'),
-                tooltip: '투자 보기',
-                onPressed: () => context.go('/investments'),
-                icon: const Icon(Icons.trending_up, size: 18),
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 36,
-                ),
-                padding: EdgeInsets.zero,
-              )
-            else
-              FilledButton.tonalIcon(
-                key: const ValueKey('desktop-transactions-investments-button'),
-                onPressed: () => context.go('/investments'),
-                icon: const Icon(Icons.trending_up, size: 18),
-                label: const Text('투자 보기'),
-              ),
-            const SizedBox(width: 8),
-            IconButton(
-              key: const ValueKey('desktop-transactions-collapse-button'),
-              constraints: compact
-                  ? const BoxConstraints.tightFor(width: 32, height: 36)
-                  : null,
-              padding: compact ? EdgeInsets.zero : null,
-              tooltip: _isHeaderCollapsed ? '상단 펼치기' : '상단 접기',
-              onPressed: () =>
-                  setState(() => _isHeaderCollapsed = !_isHeaderCollapsed),
-              icon: Icon(
-                _isHeaderCollapsed
-                    ? Icons.keyboard_arrow_down
-                    : Icons.keyboard_arrow_up,
-              ),
-            ),
-          ],
-        ),
-        if (!_isHeaderCollapsed) ...[
-          const SizedBox(height: 10),
-          const SummaryBar(),
-          const SizedBox(height: 12),
-          Row(
-            key: const ValueKey('desktop-transactions-filter-row'),
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!_isFilterExpanded) Flexible(child: _buildFilterPanel()),
-              if (!_isFilterExpanded) ...[
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: _pickPreset,
-                  icon: const Icon(Icons.bookmarks_outlined, size: 18),
-                  label: const Text('프리셋'),
-                ),
+                if (!_isHeaderCollapsed) ...[
+                  const SizedBox(height: 10),
+                  const SummaryBar(),
+                  if (expanded) ...[
+                    const SizedBox(height: 8),
+                    const CompactTransactionsOverview(),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    key: const ValueKey('desktop-transactions-filter-row'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!_isFilterExpanded)
+                        Flexible(child: _buildFilterPanel()),
+                      if (!_isFilterExpanded) ...[
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _pickPreset,
+                          icon: const Icon(Icons.bookmarks_outlined, size: 18),
+                          label: const Text('프리셋'),
+                        ),
+                      ],
+                      if (!_isFilterExpanded)
+                        IconButton(
+                          tooltip: '거래 일괄 수정',
+                          onPressed: () =>
+                              showBulkTransactionEditor(context, ref),
+                          icon: const Icon(Icons.checklist),
+                        ),
+                    ],
+                  ),
+                  if (_isFilterExpanded) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      key: const ValueKey(
+                        'desktop-transactions-expanded-filter',
+                      ),
+                      width: double.infinity,
+                      child: _buildFilterPanel(),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  DesktopSection(
+                    minWidth: 720,
+                    child: InlineEntry(
+                      preset: _selectedPreset,
+                      presetRevision: _presetRevision,
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-          if (_isFilterExpanded) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              key: const ValueKey('desktop-transactions-expanded-filter'),
-              width: double.infinity,
-              child: _buildFilterPanel(),
-            ),
-          ],
-          const SizedBox(height: 10),
-          DesktopSection(
-            minWidth: 720,
-            child: InlineEntry(
-              preset: _selectedPreset,
-              presetRevision: _presetRevision,
             ),
           ),
-        ],
+        ),
         const SizedBox(height: 8),
         const Expanded(
           child: DesktopSection(minWidth: 720, child: TransactionList()),

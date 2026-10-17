@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 
 import '../mobile_widgets.dart';
+import '../../shared/bulk_transaction_editor.dart';
 import 'sheets/mobile_transaction_advanced_filter_sheet.dart';
 import 'sheets/mobile_transaction_sheet.dart';
 import 'widgets/mobile_transaction_list.dart';
@@ -22,6 +23,11 @@ class MobileTransactionsScreen extends ConsumerWidget {
     return MobilePageScaffold(
       title: '내역',
       actions: [
+        IconButton(
+          tooltip: '거래 일괄 수정',
+          onPressed: () => showBulkTransactionEditor(context, ref),
+          icon: const Icon(Icons.checklist),
+        ),
         FilledButton.tonalIcon(
           key: const ValueKey('mobile-transactions-budget-button'),
           onPressed: () {

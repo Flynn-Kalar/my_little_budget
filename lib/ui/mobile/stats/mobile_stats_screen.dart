@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import 'package:my_little_budget/features/stats/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/stats_detail_actions.dart';
 import 'mobile_tag_breakdown_sheet.dart';
 
 class MobileStatsScreen extends ConsumerWidget {
@@ -39,6 +40,7 @@ class MobileStatsScreen extends ConsumerWidget {
               ref.read(statsMonthProvider.notifier).state = value,
         ),
         _MobileMonthlyInsights(breakdown: breakdown, trend: trend),
+        StatsDetailActions(month: month),
         MobileAsync(
           value: breakdown,
           builder: (value) => _Breakdown(

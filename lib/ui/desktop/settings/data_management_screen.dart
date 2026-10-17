@@ -10,6 +10,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/backup.dart';
+import '../../../data/local_backup_service.dart';
+import '../../shared/local_backup_panel.dart';
+import '../../shared/transaction_csv_panel.dart';
+import '../../../features/sync/invalidate_synced_data.dart';
 import '../../../data/providers.dart';
 import '../../../data/supabase_backup_service.dart';
 import '../../../data/supabase_backup_settings.dart';
@@ -157,9 +161,10 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       }
 
       if (!mounted) return;
-      final confirmed = await showImportConfirmationDialog(context);
+      final confirmed = await showBackupRestorePreview(context, parsed.backup!);
       if (confirmed != true) return;
 
+      await ref.read(localBackupServiceProvider).captureFresh();
       await ref.read(backupDaoProvider).importBackup(parsed.backup!);
       _invalidateAfterImport(ref);
       await rebuildNoteNotifications(ref);
@@ -464,9 +469,10 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
       }
 
       if (!mounted) return;
-      final confirmed = await showImportConfirmationDialog(context);
+      final confirmed = await showBackupRestorePreview(context, parsed.backup!);
       if (confirmed != true) return;
 
+      await ref.read(localBackupServiceProvider).captureFresh();
       await ref.read(backupDaoProvider).importBackup(parsed.backup!);
       _invalidateAfterImport(ref);
       await rebuildNoteNotifications(ref);
@@ -532,6 +538,9 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
                   busy: _busy,
                   onExport: _exportBackup,
                   onImport: _importBackup,
+                  onBusyChanged: (value) {
+                    if (mounted) setState(() => _busy = value);
+                  },
                 ),
                 _SyncMode.auto => _SupabaseSettingsCard(
                   key: const ValueKey('settings-auto-sync-panel'),
@@ -705,11 +714,13 @@ class _LocalBackupPanel extends StatelessWidget {
     required this.busy,
     required this.onExport,
     required this.onImport,
+    required this.onBusyChanged,
   });
 
   final bool busy;
   final VoidCallback onExport;
   final VoidCallback onImport;
+  final ValueChanged<bool> onBusyChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -734,6 +745,9 @@ class _LocalBackupPanel extends StatelessWidget {
           danger: true,
           onPressed: busy ? null : onImport,
         ),
+        const SizedBox(height: 12),
+        LocalBackupPanel(enabled: !busy, onBusyChanged: onBusyChanged),
+        TransactionCsvPanel(enabled: !busy, onBusyChanged: onBusyChanged),
       ],
     );
   }
@@ -1676,6 +1690,7 @@ class _ActionCard extends StatelessWidget {
 }
 
 void _invalidateAfterImport(WidgetRef ref) {
+  invalidateSyncedData(ref);
   ref.invalidate(notesProvider);
   ref.invalidate(pendingReminderCountProvider);
   ref.invalidate(accounts_providers.accountBalancesProvider);

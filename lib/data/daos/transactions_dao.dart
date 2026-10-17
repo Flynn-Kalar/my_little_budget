@@ -823,6 +823,80 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     await (delete(transactions)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Only offer reusable entries whose account and category are still active.
+  Future<List<TransactionRow>> recentInputEntries() async {
+    final rows = await customSelect(
+      '''
+      SELECT t.*, a.name AS account_name, c.name AS category_name,
+        c.color AS category_color, fa.name AS from_account_name,
+        ta.name AS to_account_name
+      FROM transactions t
+      LEFT JOIN accounts a ON a.id = t.account_id
+      LEFT JOIN categories c ON c.id = t.category_id
+      LEFT JOIN accounts fa ON fa.id = t.from_account_id
+      LEFT JOIN accounts ta ON ta.id = t.to_account_id
+      WHERE t.deleted_at IS NULL AND t.memo IS NOT NULL
+        AND ((t.type IN ('income','expense') AND a.archived_at IS NULL
+          AND a.id IS NOT NULL AND c.id IS NOT NULL
+          AND a.deleted_at IS NULL AND c.deleted_at IS NULL
+          AND c.archived_at IS NULL AND c.type = t.type)
+        OR (t.type = 'transfer' AND fa.id IS NOT NULL AND ta.id IS NOT NULL
+          AND fa.archived_at IS NULL AND ta.archived_at IS NULL
+          AND fa.deleted_at IS NULL AND ta.deleted_at IS NULL))
+      ORDER BY t.id DESC LIMIT 300
+      ''',
+      readsFrom: {transactions, accounts, categories},
+    ).get();
+    final tagMap = await _tagsFor(rows.map((r) => r.read<int>('id')).toList());
+    return rows.map((r) => _rowFromQuery(r, tagMap)).toList();
+  }
+
+  /// Validate the entire selection before writing; failures roll back all rows.
+  Future<void> bulkEditTransactions({
+    required Set<int> ids,
+    int? categoryId,
+    List<String>? tagNames,
+  }) async {
+    if (ids.isEmpty || (categoryId == null && tagNames == null)) {
+      throw ArgumentError('거래와 변경할 항목을 선택해주세요.');
+    }
+    if (tagNames != null &&
+        tagNames.any((n) => n.trim().isEmpty || n.trim().length > 20)) {
+      throw ArgumentError('태그는 1~20자로 입력해주세요.');
+    }
+    await transaction(() async {
+      final rows = await (select(
+        transactions,
+      )..where((t) => t.id.isIn(ids))).get();
+      if (rows.length != ids.length || rows.any((r) => r.deletedAt != null)) {
+        throw StateError('일부 거래가 변경되었습니다. 목록을 다시 확인해주세요.');
+      }
+      if (categoryId != null) {
+        final category = await (select(
+          categories,
+        )..where((c) => c.id.equals(categoryId))).getSingleOrNull();
+        if (category == null ||
+            category.archivedAt != null ||
+            category.deletedAt != null ||
+            rows.any((r) => r.type != category.type)) {
+          throw StateError('카테고리는 같은 유형의 수입 또는 지출 거래에만 적용할 수 있습니다.');
+        }
+      }
+      for (final row in rows) {
+        await (update(transactions)..where((t) => t.id.equals(row.id))).write(
+          TransactionsCompanion(
+            categoryId: categoryId == null
+                ? const Value.absent()
+                : Value(categoryId),
+            updatedAt: Value(sqlNow()),
+            syncStatus: const Value(syncStatusPending),
+          ),
+        );
+        if (tagNames != null) await _setTagsByName(row.id, tagNames);
+      }
+    });
+  }
+
   /// SPEC §4.1 — 메모 자동완성용. 최근 거래의 distinct(trim) memo, limit 개까지.
   Future<List<String>> getRecentMemos({int limit = 300}) async {
     final rows =

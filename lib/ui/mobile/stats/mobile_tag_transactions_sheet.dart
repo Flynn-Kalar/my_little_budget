@@ -6,6 +6,7 @@ import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import '../../../data/providers.dart';
+import '../../shared/stats_detail_actions.dart';
 
 final mobileStatsTagTransactionsProvider = FutureProvider.autoDispose
     .family<List<TransactionRow>, ({String month, int categoryId, int? tagId})>(
@@ -89,6 +90,15 @@ class _TagTransactionsSheet extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: StatsDetailActions(
+              month: month,
+              category: category,
+              tag: tag,
+              showBudget: false,
             ),
           ),
           Expanded(

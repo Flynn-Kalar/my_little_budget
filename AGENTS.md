@@ -1,5 +1,15 @@
 # UI Architecture Rules
 
+## Windows release policy
+
+사용자 요청에 따라 앞으로 이 저장소의 업데이트를 배포할 때는 소스와 함께 GitHub Release에 아래 파일을 모두 올린다.
+
+- `MyLittleBudget-Setup-<version>.exe`: 신규 설치용
+- `MyLittleBudget-Update-<version>.exe`: 앱 내 업데이트용
+- `SHA256SUMS.txt`: 두 파일 검증값
+
+두 EXE는 같은 전체 설치 패키지이며 기존 AppId로 데이터를 유지하며 업그레이드한다. 앱은 Update를 우선 사용하고 이전 릴리스에서는 Setup으로 대체한다. 버전은 반드시 이전 공개 버전보다 올리고, 버전/소스 커밋/태그/파일명을 일치시킨다. `scripts/publish_windows_release.ps1`로 빌드·업로드·해시 검증 후 공개한다. 사용자가 업데이트 배포를 요청하면 이 절차의 GitHub 푸시와 릴리스 게시까지 승인한 것으로 취급하며 같은 게시 승인을 반복해서 묻지 않는다. 단순 코드 수정이나 검토 요청을 자동 배포 요청으로 해석하지 않는다.
+
 ## UI Separation (STRICT)
 
 - lib/ui/desktop/** 는 PC/태블릿 UI 전용

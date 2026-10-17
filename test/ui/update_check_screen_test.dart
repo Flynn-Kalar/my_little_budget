@@ -48,9 +48,52 @@ void main() {
     await tester.tap(find.text('확인'));
     await tester.pumpAndSettle();
   });
+
+  testWidgets('PC 설치 파일 검증 정보가 없으면 업데이트 실행 버튼을 비활성화한다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final installer = _FakeWindowsUpdateInstaller();
+    await tester.pumpWidget(
+      _app(
+        const SettingsPage(),
+        installer: installer,
+        service: _FakeUpdateCheckService(digest: null),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('최신 버전 확인'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('설치 파일 검증 정보가 준비되지 않았습니다.'), findsOneWidget);
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '다운로드 후 업데이트'),
+    );
+    expect(button.onPressed, isNull);
+    expect(installer.installCalled, isFalse);
+  });
+
+  testWidgets('예상하지 못한 버전 확인 오류도 안내하고 다시 확인할 수 있다', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        const SettingsPage(),
+        service: _FakeUpdateCheckService(failCheck: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('최신 버전 확인'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('업데이트 정보를 확인하지 못했습니다.'), findsOneWidget);
+    expect(find.text('새 버전이 있습니다'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
-Widget _app(Widget home, {WindowsUpdateInstaller? installer}) {
+Widget _app(
+  Widget home, {
+  WindowsUpdateInstaller? installer,
+  UpdateCheckService? service,
+}) {
   return ProviderScope(
     overrides: [
       appPackageInfoProvider.overrideWith(
@@ -61,7 +104,9 @@ Widget _app(Widget home, {WindowsUpdateInstaller? installer}) {
           buildNumber: '42',
         ),
       ),
-      updateCheckServiceProvider.overrideWithValue(_FakeUpdateCheckService()),
+      updateCheckServiceProvider.overrideWithValue(
+        service ?? _FakeUpdateCheckService(),
+      ),
       if (installer != null)
         windowsUpdateInstallerProvider.overrideWithValue(installer),
     ],
@@ -83,8 +128,16 @@ class _FakeWindowsUpdateInstaller extends WindowsUpdateInstaller {
 }
 
 class _FakeUpdateCheckService extends UpdateCheckService {
+  _FakeUpdateCheckService({
+    this.digest =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    this.failCheck = false,
+  });
+  final String? digest;
+  final bool failCheck;
   @override
   Future<UpdateCheckResult> check({required String currentVersion}) async {
+    if (failCheck) throw StateError('unexpected update response');
     return UpdateCheckResult(
       status: UpdateCheckStatus.updateAvailable,
       currentVersion: Version.parse(currentVersion),
@@ -102,8 +155,7 @@ class _FakeUpdateCheckService extends UpdateCheckService {
             'https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.2/MyLittleBudget-Setup-1.0.0-rc.2.exe',
           ),
           size: 1234,
-          sha256:
-              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          sha256: digest,
         ),
       ),
     );

@@ -121,6 +121,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('업데이트 정보를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.')),
+      );
     } finally {
       if (mounted) setState(() => _checkingForUpdate = false);
     }
@@ -157,6 +162,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('업데이트를 시작하지 못했습니다. 앱은 종료하지 않았습니다. 다시 시도해주세요.'),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _installingUpdate = false);
     }
@@ -295,8 +307,8 @@ class _UpdateCheckCard extends StatelessWidget {
                       checking
                           ? 'GitHub Releases를 확인하고 있습니다.'
                           : installing
-                          ? '업데이트를 다운로드하고 있습니다. ${(updateProgress * 100).round()}%'
-                          : '$versionLabel · 누르면 GitHub Releases에서 새 버전을 확인합니다.',
+                          ? '업데이트 파일 다운로드·검증 중 ${(updateProgress * 100).round()}%'
+                          : '$versionLabel · 새 버전이 있으면 설치 파일을 받아 업데이트합니다.',
                       style: TextStyle(
                         fontSize: 12,
                         color: context.desktopMuted,
@@ -318,6 +330,7 @@ Future<bool?> _showUpdateResult(
   UpdateCheckResult result,
 ) async {
   final release = result.latestRelease;
+  final canInstall = hasVerifiedWindowsInstaller(release?.windowsInstaller);
   final title = switch (result.status) {
     UpdateCheckStatus.updateAvailable => '새 버전이 있습니다',
     UpdateCheckStatus.upToDate => '최신 버전입니다',
@@ -328,7 +341,7 @@ Future<bool?> _showUpdateResult(
       '현재 ${result.currentVersion}\n'
           '최신 ${release!.tagName}${release.prerelease ? ' (시험판)' : ''}\n'
           '${_installerSizeLabel(release.windowsInstaller)}\n\n'
-          '허용하면 Setup을 다운로드하고 검증한 뒤 앱을 종료하여 업데이트합니다.',
+          '${canInstall ? '허용하면 Setup을 다운로드하고 검증한 뒤 앱을 종료하여 업데이트합니다.' : '업데이트 설치 파일이 준비되지 않았습니다. 나중에 다시 확인해주세요.'}',
     UpdateCheckStatus.upToDate =>
       '현재 ${result.currentVersion}\nGitHub 최신 ${release!.tagName}',
     UpdateCheckStatus.noRelease => 'GitHub Releases에 아직 배포된 버전이 없습니다.',
@@ -347,7 +360,7 @@ Future<bool?> _showUpdateResult(
         ),
         if (result.status == UpdateCheckStatus.updateAvailable)
           FilledButton.icon(
-            onPressed: release?.windowsInstaller == null
+            onPressed: !canInstall
                 ? null
                 : () => Navigator.pop(dialogContext, true),
             icon: const Icon(Icons.download_outlined, size: 18),
@@ -360,6 +373,9 @@ Future<bool?> _showUpdateResult(
 
 String _installerSizeLabel(GitHubReleaseAsset? installer) {
   if (installer == null) return 'Windows Setup 파일이 없습니다.';
+  if (!hasVerifiedWindowsInstaller(installer)) {
+    return '설치 파일 검증 정보가 준비되지 않았습니다.';
+  }
   if (installer.size <= 0) return '다운로드 용량을 확인할 수 없습니다.';
   final megabytes = installer.size / (1024 * 1024);
   return '다운로드 ${megabytes.toStringAsFixed(1)}MB';

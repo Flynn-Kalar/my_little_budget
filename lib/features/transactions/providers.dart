@@ -108,8 +108,22 @@ final recentMemosProvider = FutureProvider<List<String>>(
   (ref) => ref.watch(transactionsDaoProvider).getRecentMemos(),
 );
 
+final recentInputEntriesProvider = FutureProvider<List<TransactionRow>>((
+  ref,
+) async {
+  final dao = ref.watch(transactionsDaoProvider);
+  final metadata = [
+    ref.watch(activeAccountsProvider.future),
+    ref.watch(activeCategoriesProvider.future),
+    ref.watch(allTagsProvider.future),
+  ];
+  await Future.wait(metadata);
+  return dao.recentInputEntries();
+});
+
 /// 嫄곕옒 蹂寃???紐⑸줉쨌?붿빟 媛깆떊.
 void refreshTransactions(WidgetRef ref) {
+  ref.invalidate(recentInputEntriesProvider);
   ref.invalidate(transactionsListProvider);
   ref.invalidate(transactionsMonthRowsProvider);
   ref.invalidate(monthlySummaryProvider);
@@ -118,9 +132,13 @@ void refreshTransactions(WidgetRef ref) {
   ref.invalidate(allTagsProvider);
   ref.invalidate(recentMemosProvider);
   ref.invalidate(accounts_providers.accountBalancesProvider);
+  ref.invalidate(accounts_providers.accountTransactionsProvider);
   budget_providers.refreshBudget(ref);
   ref.invalidate(stats_providers.statsExpenseBreakdownProvider);
   ref.invalidate(stats_providers.statsMonthlyTrendProvider);
+  ref.invalidate(stats_providers.statsCategoryTransactionsProvider);
+  ref.invalidate(stats_providers.statsTagBreakdownProvider);
+  ref.invalidate(stats_providers.statsTagTransactionsProvider);
   ref.invalidate(stats_providers.availableStatsYearsProvider);
   ref.invalidate(stats_providers.yearlyMonthlyTrendProvider);
   ref.invalidate(stats_providers.yearlyExpenseByCategoryProvider);

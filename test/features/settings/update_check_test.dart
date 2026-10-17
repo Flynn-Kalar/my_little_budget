@@ -111,6 +111,116 @@ void main() {
       ),
     );
   });
+
+  test('빌드 번호가 올라간 태그와 기본 버전명 설치본을 함께 인식한다', () async {
+    final service = UpdateCheckService(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              ..._release('v1.0.0-rc.1+54'),
+              'assets': [
+                {
+                  'name': 'MyLittleBudget-Setup-1.0.0-rc.1.exe',
+                  'browser_download_url':
+                      'https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.1%2B54/MyLittleBudget-Setup-1.0.0-rc.1.exe',
+                  'size': 100,
+                  'digest': 'sha256:${'a' * 64}',
+                },
+              ],
+            },
+          ]),
+          200,
+        ),
+      ),
+    );
+    final result = await service.check(currentVersion: '1.0.0-rc.1+53');
+    expect(result.status, UpdateCheckStatus.updateAvailable);
+    expect(
+      result.latestRelease!.windowsInstaller!.name,
+      'MyLittleBudget-Setup-1.0.0-rc.1.exe',
+    );
+    expect(
+      hasVerifiedWindowsInstaller(result.latestRelease!.windowsInstaller),
+      isTrue,
+    );
+  });
+
+  for (final updateVerified in [true, false]) {
+    test('Update 우선 선택, 검증 정보가 없으면 기존 Setup 사용: $updateVerified', () async {
+      Map<String, Object?> asset(String kind, bool verified) => {
+        'name': 'MyLittleBudget-$kind-1.0.0-rc.2.exe',
+        'browser_download_url':
+            'https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.2/MyLittleBudget-$kind-1.0.0-rc.2.exe',
+        'size': 100,
+        'digest': verified ? 'sha256:${'a' * 64}' : null,
+      };
+      final service = UpdateCheckService(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode([
+              {
+                ..._release('v1.0.0-rc.2'),
+                'assets': [
+                  asset('Setup', true),
+                  asset('Update', updateVerified),
+                ],
+              },
+            ]),
+            200,
+          ),
+        ),
+      );
+      final release = (await service.check(
+        currentVersion: '1.0.0-rc.1+53',
+      )).latestRelease!;
+      expect(
+        release.windowsInstaller!.name,
+        'MyLittleBudget-${updateVerified ? 'Update' : 'Setup'}-1.0.0-rc.2.exe',
+      );
+    });
+  }
+
+  test('다른 저장소의 설치 파일 URL과 없는 검증 정보는 자동 설치 대상으로 보지 않는다', () async {
+    final service = UpdateCheckService(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              ..._release('v1.0.0-rc.2'),
+              'assets': [
+                {
+                  'name': 'MyLittleBudget-Setup-1.0.0-rc.2.exe',
+                  'browser_download_url':
+                      'https://github.com/elsewhere/app/releases/download/v1.0.0-rc.2/MyLittleBudget-Setup-1.0.0-rc.2.exe',
+                  'size': 100,
+                  'digest': 'sha256:${'a' * 64}',
+                },
+              ],
+            },
+          ]),
+          200,
+        ),
+      ),
+    );
+    expect(
+      (await service.check(
+        currentVersion: '1.0.0-rc.1+53',
+      )).latestRelease!.windowsInstaller,
+      isNull,
+    );
+    expect(
+      hasVerifiedWindowsInstaller(
+        GitHubReleaseAsset(
+          name: 'file.exe',
+          downloadUrl: Uri(),
+          size: 10,
+          sha256: null,
+        ),
+      ),
+      isFalse,
+    );
+  });
 }
 
 Map<String, Object> _release(String tag) => {

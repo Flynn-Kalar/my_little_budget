@@ -352,12 +352,16 @@ class MemoAutocompleteField extends StatefulWidget {
     required this.suggestions,
     this.focusNode,
     this.onSubmitted,
+    this.onSelected,
+    this.describeSuggestion,
   });
 
   final TextEditingController controller;
   final List<String> suggestions;
   final FocusNode? focusNode;
   final FieldSubmitted? onSubmitted;
+  final ValueChanged<String>? onSelected;
+  final String? Function(String)? describeSuggestion;
 
   @override
   State<MemoAutocompleteField> createState() => _MemoAutocompleteFieldState();
@@ -400,6 +404,7 @@ class _MemoAutocompleteFieldState extends State<MemoAutocompleteField> {
         );
         _navigatedOptions = false;
         _focusNode.requestFocus();
+        widget.onSelected?.call(memo);
       },
       fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
         return Focus(
@@ -439,6 +444,7 @@ class _MemoAutocompleteFieldState extends State<MemoAutocompleteField> {
           onSelected: onSelected,
           itemBuilder: (context, memo, highlighted) => _OptionTile(
             label: memo,
+            subtitle: widget.describeSuggestion?.call(memo),
             highlighted: highlighted,
             overflow: TextOverflow.ellipsis,
           ),
@@ -500,12 +506,14 @@ class _OptionTile extends StatelessWidget {
     required this.highlighted,
     this.leading,
     this.overflow,
+    this.subtitle,
   });
 
   final String label;
   final bool highlighted;
   final Widget? leading;
   final TextOverflow? overflow;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -514,6 +522,9 @@ class _OptionTile extends StatelessWidget {
       color: highlighted ? scheme.primaryContainer : Colors.transparent,
       child: ListTile(
         dense: true,
+        subtitle: subtitle == null
+            ? null
+            : Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
         leading: leading,
         title: Text(
           label,

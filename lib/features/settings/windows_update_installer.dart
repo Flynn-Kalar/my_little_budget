@@ -56,6 +56,18 @@ class WindowsUpdateInstaller {
     if (!_isWindows) {
       throw const WindowsUpdateException('Windows에서만 자동 업데이트할 수 있습니다.');
     }
+    if (!RegExp(
+          r'^MyLittleBudget-(?:Setup|Update)-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\.exe$',
+          caseSensitive: false,
+        ).hasMatch(asset.name) ||
+        asset.downloadUrl.scheme != 'https' ||
+        asset.downloadUrl.host != 'github.com' ||
+        !asset.downloadUrl.path.startsWith(
+          '/Flynn-Kalar/my_little_budget/releases/download/',
+        ) ||
+        asset.downloadUrl.pathSegments.last != asset.name) {
+      throw const WindowsUpdateException('공식 Windows 설치 파일을 확인할 수 없습니다.');
+    }
     final expectedDigest = asset.sha256;
     if (expectedDigest == null ||
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(expectedDigest)) {
@@ -72,8 +84,8 @@ class WindowsUpdateInstaller {
         tempRoot.uri.resolve('my_little_budget_updates/'),
       );
       await updateDir.create(recursive: true);
-      installer = File.fromUri(updateDir.uri.resolve(asset.name));
-      if (await installer.exists()) await installer.delete();
+      final sessionDir = await updateDir.createTemp('install-');
+      installer = File.fromUri(sessionDir.uri.resolve(asset.name));
 
       final request = http.Request('GET', asset.downloadUrl)
         ..headers.addAll(const {

@@ -10,6 +10,7 @@ import '../../../data/providers.dart';
 import '../../../features/budget/validation.dart';
 import 'package:my_little_budget/features/budget/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/daily_budget_guidance.dart';
 
 class MobileBudgetScreen extends ConsumerWidget {
   const MobileBudgetScreen({super.key});
@@ -58,6 +59,7 @@ class MobileBudgetScreen extends ConsumerWidget {
             return Column(
               children: [
                 _BudgetTotal(rows: value),
+                DailyBudgetGuidance(month: month, rows: value),
                 if (value.isEmpty)
                   const EmptyMobileCard('이번 달 예산 그룹이 없습니다.')
                 else

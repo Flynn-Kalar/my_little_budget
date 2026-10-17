@@ -6,6 +6,7 @@ import '../../../../core/date.dart';
 import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
+import '../../../../features/transactions/overview.dart';
 import '../../color_hex.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 
@@ -14,35 +15,18 @@ class TransactionsSidePanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final summary = ref.watch(monthlySummaryProvider).asData?.value;
-    final rows = ref.watch(transactionsMonthRowsProvider).asData?.value;
+    final result = ref.watch(transactionsMonthRowsProvider);
+    final rows = result.asData?.value;
+    if (rows == null) return _OverviewUnavailable(result: result);
     final categories =
         ref.watch(transactionsCategoryBreakdownProvider).asData?.value ??
         const <CategoryBreakdownRow>[];
 
-    final today = currentDateKey();
-    final todayExpense =
-        rows
-            ?.where((row) => row.type == 'expense' && row.occurredOn == today)
-            .fold<int>(0, (sum, row) => sum + row.amount) ??
-        0;
-    final plannedRows =
-        (rows ?? const <TransactionRow>[])
-            .where((row) => row.occurredOn.compareTo(today) > 0)
-            .toList()
-          ..sort((a, b) {
-            final date = a.occurredOn.compareTo(b.occurredOn);
-            if (date != 0) return date;
-            return a.occurredTime.compareTo(b.occurredTime);
-          });
-    final plannedTotal = plannedRows.fold<int>(
-      0,
-      (sum, row) => sum + (row.type == 'income' ? row.amount : -row.amount),
-    );
-    final plannedExpense = plannedRows
-        .where((row) => row.type == 'expense')
-        .fold<int>(0, (sum, row) => sum + row.amount);
-    final expectedMonthEnd = (summary?.net ?? 0) + plannedTotal;
+    final overview = TransactionOverview(rows, today: currentDateKey());
+    final todayExpense = overview.todayExpense;
+    final plannedRows = overview.plannedRows;
+    final plannedExpense = overview.plannedExpense;
+    final expectedMonthEnd = overview.projectedNet;
 
     return SingleChildScrollView(
       key: const ValueKey('desktop-transactions-side-panel'),
@@ -74,6 +58,7 @@ class TransactionsSidePanel extends ConsumerWidget {
                       ? context.desktopAccent
                       : context.desktopExpense,
                 ),
+                const Text('등록된 거래 기준 · 이체 제외', style: TextStyle(fontSize: 11)),
               ],
             ),
           ),
@@ -108,6 +93,138 @@ class TransactionsSidePanel extends ConsumerWidget {
       ),
     );
   }
+}
+
+class CompactTransactionsOverview extends ConsumerStatefulWidget {
+  const CompactTransactionsOverview({super.key});
+  @override
+  ConsumerState<CompactTransactionsOverview> createState() =>
+      _CompactTransactionsOverviewState();
+}
+
+class _CompactTransactionsOverviewState
+    extends ConsumerState<CompactTransactionsOverview> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final result = ref.watch(transactionsMonthRowsProvider);
+    final rows = result.asData?.value;
+    if (rows == null) return _OverviewUnavailable(result: result);
+    final overview = TransactionOverview(rows, today: currentDateKey());
+    return Container(
+      key: const ValueKey('desktop-transactions-compact-overview'),
+      decoration: BoxDecoration(
+        color: context.desktopSurface,
+        border: Border.all(color: context.desktopBorder),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            key: const ValueKey('desktop-transactions-overview-toggle'),
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(8),
+            child: Semantics(
+              button: true,
+              expanded: _expanded,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '월말 예상 ${_signedMoney(overview.projectedNet)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '남은 예정 지출 ${formatKRW(overview.plannedExpense)} · 예정 ${overview.plannedRows.length}건',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: context.desktopMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Tooltip(
+                      message: _expanded ? '핵심 요약 접기' : '핵심 요약 펼치기',
+                      child: Icon(
+                        _expanded ? Icons.expand_less : Icons.expand_more,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    '등록된 거래 기준 · 이체는 월말 예상에서 제외',
+                    style: TextStyle(fontSize: 11),
+                  ),
+                  _MetricRow(
+                    label: '오늘 지출',
+                    value: formatKRW(overview.todayExpense),
+                    color: context.desktopExpense,
+                  ),
+                  const Text(
+                    '다가오는 예정 거래',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  if (overview.plannedRows.isEmpty)
+                    const _EmptyPanelText('예정 거래가 없습니다.')
+                  else
+                    for (final row in overview.plannedRows.take(3))
+                      _PlannedRow(row: row),
+                  if (overview.plannedRows.length > 3)
+                    Text(
+                      '가까운 3건 표시 · 전체 ${overview.plannedRows.length}건',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OverviewUnavailable extends ConsumerWidget {
+  const _OverviewUnavailable({required this.result});
+  final AsyncValue<List<TransactionRow>> result;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+    padding: const EdgeInsets.all(8),
+    child: result.hasError
+        ? Row(
+            children: [
+              const Expanded(child: Text('핵심 요약을 불러오지 못했습니다.')),
+              TextButton(
+                onPressed: () => ref.invalidate(transactionsMonthRowsProvider),
+                child: const Text('다시 시도'),
+              ),
+            ],
+          )
+        : const Text('핵심 요약을 불러오는 중입니다.'),
+  );
 }
 
 class _PanelCard extends StatelessWidget {

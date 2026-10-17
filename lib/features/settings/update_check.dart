@@ -168,32 +168,49 @@ GitHubReleaseAsset? _windowsInstallerFromJson(
 ) {
   if (rawAssets is! List) return null;
   final versionLabel = tagName.replaceFirst(RegExp(r'^[vV]'), '');
-  final expectedName = 'MyLittleBudget-Setup-$versionLabel.exe';
-  for (final rawAsset in rawAssets.whereType<Map<String, dynamic>>()) {
-    final name = rawAsset['name'] as String?;
-    final downloadUrl = Uri.tryParse(
-      rawAsset['browser_download_url'] as String? ?? '',
-    );
-    if (name == null ||
-        name.toLowerCase() != expectedName.toLowerCase() ||
-        downloadUrl == null ||
-        downloadUrl.scheme != 'https' ||
-        downloadUrl.host != 'github.com') {
-      continue;
+  final expectedNames = [
+    for (final kind in ['Update', 'Setup']) ...{
+      'MyLittleBudget-$kind-$versionLabel.exe'.toLowerCase(),
+      'MyLittleBudget-$kind-${versionLabel.split('+').first}.exe'.toLowerCase(),
+    },
+  ];
+  GitHubReleaseAsset? unverified;
+  for (final expectedName in expectedNames) {
+    for (final rawAsset in rawAssets.whereType<Map<String, dynamic>>()) {
+      final name = rawAsset['name'] as String?;
+      final downloadUrl = Uri.tryParse(
+        rawAsset['browser_download_url'] as String? ?? '',
+      );
+      if (name == null ||
+          expectedName != name.toLowerCase() ||
+          downloadUrl == null ||
+          downloadUrl.scheme != 'https' ||
+          downloadUrl.host != 'github.com' ||
+          !downloadUrl.path.startsWith(
+            '/Flynn-Kalar/my_little_budget/releases/download/',
+          ) ||
+          downloadUrl.pathSegments.last != name) {
+        continue;
+      }
+      final digest = rawAsset['digest'] as String?;
+      final sha256 = digest?.startsWith('sha256:') == true
+          ? digest!.substring('sha256:'.length).toLowerCase()
+          : null;
+      final asset = GitHubReleaseAsset(
+        name: name,
+        downloadUrl: downloadUrl,
+        size: (rawAsset['size'] as num?)?.toInt() ?? 0,
+        sha256: sha256,
+      );
+      if (hasVerifiedWindowsInstaller(asset)) return asset;
+      unverified ??= asset;
     }
-    final digest = rawAsset['digest'] as String?;
-    final sha256 = digest?.startsWith('sha256:') == true
-        ? digest!.substring('sha256:'.length).toLowerCase()
-        : null;
-    return GitHubReleaseAsset(
-      name: name,
-      downloadUrl: downloadUrl,
-      size: (rawAsset['size'] as num?)?.toInt() ?? 0,
-      sha256: sha256,
-    );
   }
-  return null;
+  return unverified;
 }
+
+bool hasVerifiedWindowsInstaller(GitHubReleaseAsset? asset) =>
+    asset != null && RegExp(r'^[0-9a-f]{64}$').hasMatch(asset.sha256 ?? '');
 
 Version? _parseVersion(String? raw) {
   if (raw == null) return null;

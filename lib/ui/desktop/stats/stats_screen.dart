@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
 import '../desktop_section.dart';
+import '../../shared/stats_detail_actions.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
@@ -55,6 +56,7 @@ class StatsScreen extends ConsumerWidget {
             StatsMonthNav(month: month),
             SizedBox(height: 16),
             MonthlyInsightCard(breakdown: breakdown, trend: trend),
+            SizedBox(width: 360, child: StatsDetailActions(month: month)),
             SizedBox(height: 16),
             breakdown.when(
               data: (rows) {
@@ -218,6 +220,7 @@ class _CategoryBreakdownPane extends ConsumerWidget {
         SizedBox(height: 10),
         for (final row in rows)
           _BreakdownRow(
+            key: ValueKey('desktop-stats-category-${row.categoryId}'),
             row: row,
             total: total,
             maxTotal: maxCategoryTotal,
@@ -268,6 +271,9 @@ class _TagBreakdownPane extends ConsumerWidget {
           SizedBox(height: 10),
           for (final row in rows)
             _TagBreakdownRow(
+              key: ValueKey(
+                'desktop-stats-tag-${row.isUntagged ? 'untagged' : row.tagId}',
+              ),
               row: row,
               total: total,
               maxTotal: maxTotal,
@@ -438,6 +444,7 @@ class _TagDonutChart extends StatelessWidget {
 
 class _BreakdownRow extends StatelessWidget {
   const _BreakdownRow({
+    super.key,
     required this.row,
     required this.total,
     required this.maxTotal,
@@ -505,6 +512,7 @@ class _BreakdownRow extends StatelessWidget {
 
 class _TagBreakdownRow extends StatelessWidget {
   const _TagBreakdownRow({
+    super.key,
     required this.row,
     required this.total,
     required this.maxTotal,
@@ -687,6 +695,7 @@ class _CategoryAndTagDetailCard extends ConsumerWidget {
                     context.desktopMuted,
                   ),
                   rows: categoryRows,
+                  actions: StatsDetailActions(month: month, category: category),
                   emptyMessage: '선택한 카테고리의 지출 내역이 없습니다.',
                 ),
               ),
@@ -701,6 +710,14 @@ class _CategoryAndTagDetailCard extends ConsumerWidget {
                     context.desktopMuted,
                   ),
                   rows: tagRows,
+                  actions: effectiveTag == null
+                      ? null
+                      : StatsDetailActions(
+                          month: month,
+                          category: category,
+                          tag: effectiveTag,
+                          showBudget: false,
+                        ),
                   emptyMessage: '선택한 태그의 지출 내역이 없습니다.',
                 ),
               ),
@@ -718,12 +735,14 @@ class _DetailPane extends StatelessWidget {
     required this.leadingColor,
     required this.rows,
     required this.emptyMessage,
+    this.actions,
   });
 
   final String title;
   final Color leadingColor;
   final AsyncValue<List<TransactionRow>> rows;
   final String emptyMessage;
+  final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -745,6 +764,7 @@ class _DetailPane extends StatelessWidget {
             ],
           ),
           SizedBox(height: 12),
+          ?actions,
           if (rows.isEmpty)
             _EmptyState(message: emptyMessage)
           else

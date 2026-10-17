@@ -349,8 +349,13 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
         (ref.watch(allTagsProvider).asData?.value ?? const [])
             .map((t) => t.name)
             .toList();
-    final memoSuggestions =
-        ref.watch(recentMemosProvider).asData?.value ?? const [];
+    final recentEntries =
+        ref.watch(recentInputEntriesProvider).asData?.value ?? const [];
+    final memoSuggestions = recentEntries
+        .where((row) => row.type == _type)
+        .map((row) => row.memo!)
+        .toSet()
+        .toList();
     final visibleCats = categories
         .where((c) => c.type == (_type == 'income' ? 'income' : 'expense'))
         .toList();
@@ -594,6 +599,33 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                       controller: _memoCtrl,
                       suggestions: memoSuggestions,
                       focusNode: _memoFocus,
+                      describeSuggestion: (memo) {
+                        final row = recentEntries
+                            .where((r) => r.type == _type && r.memo == memo)
+                            .firstOrNull;
+                        if (row == null) return null;
+                        return '${row.accountName ?? '${row.fromAccountName} → ${row.toAccountName}'}'
+                            '${row.categoryName == null ? '' : ' · ${row.categoryName}'}'
+                            '${row.tags.isEmpty ? '' : ' · ${row.tags.map((t) => '#${t.name}').join(' ')}'}';
+                      },
+                      onSelected: (memo) {
+                        final row = ref
+                            .read(recentInputEntriesProvider)
+                            .asData
+                            ?.value
+                            .where(
+                              (row) => row.type == _type && row.memo == memo,
+                            )
+                            .firstOrNull;
+                        if (row == null) return;
+                        setState(() {
+                          _accountId = row.accountId;
+                          _categoryId = row.categoryId;
+                          _fromAccountId = row.fromAccountId;
+                          _toAccountId = row.toAccountId;
+                          _tags = row.tags.map((tag) => tag.name).toList();
+                        });
+                      },
                       onSubmitted: (committedSuggestion) {
                         if (!committedSuggestion) _save();
                       },

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_notifier.dart';
 import 'data/providers.dart';
+import 'data/local_backup_service.dart';
 import 'data/sync_models.dart';
 import 'router/app_router.dart';
 import 'features/notes/providers.dart';
@@ -50,6 +51,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
     if (_initializing || !mounted) return;
     _initializing = true;
     try {
+      ref.read(localBackupServiceProvider).start();
       unawaited(_syncNotes());
       final coordinator = ref.read(supabaseSyncCoordinatorProvider);
       coordinator.start(onResult: _handleSyncResult);
@@ -66,6 +68,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
 
   Future<void> _resumeApp() async {
     if (!mounted) return;
+    unawaited(ref.read(localBackupServiceProvider).captureIfDue());
     unawaited(_syncNotes());
     final coordinator = ref.read(supabaseSyncCoordinatorProvider);
     final syncResult = await coordinator.synchronizeNow();

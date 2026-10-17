@@ -31,6 +31,7 @@ void invalidateSyncedData(WidgetRef ref) {
   ref.invalidate(transactions.activeCategoriesProvider);
   ref.invalidate(transactions.allTagsProvider);
   ref.invalidate(transactions.recentMemosProvider);
+  ref.invalidate(transactions.recentInputEntriesProvider);
 
   ref.invalidate(investments.investmentRowsProvider);
   ref.invalidate(investments.investmentMonthlySummaryProvider);

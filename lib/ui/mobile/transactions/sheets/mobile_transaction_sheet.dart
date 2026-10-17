@@ -12,6 +12,7 @@ import '../../../../features/transactions/providers.dart';
 import '../../../../features/transactions/validation.dart';
 import '../../../../features/settings/providers.dart';
 import '../../../shared/spending_limit_warning.dart';
+import '../../../shared/recent_transaction_suggestions.dart';
 import '../../mobile_widgets.dart';
 
 final _quickInputTagsProvider = FutureProvider.autoDispose<List<Tag>>(
@@ -372,6 +373,22 @@ class _MobileTransactionSheetState
               ),
             ),
             const SizedBox(height: 12),
+            if (!_isEdit)
+              RecentTransactionSuggestions(
+                controller: _memo,
+                type: _type,
+                enabled: !_busy,
+                onSelected: (row) => setState(() {
+                  _memo.text = row.memo ?? '';
+                  _accountId = row.accountId;
+                  _categoryId = row.categoryId;
+                  _fromAccountId = row.fromAccountId;
+                  _toAccountId = row.toAccountId;
+                  _tagNames
+                    ..clear()
+                    ..addAll(row.tags.map((t) => t.name));
+                }),
+              ),
             _TagNameSelector(
               tags: tags,
               quickTags: quickTags,
