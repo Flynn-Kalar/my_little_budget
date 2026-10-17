@@ -17,3 +17,5 @@ Status: ready-for-human
 
 ## 구현 상태
 버전·설치 파일 처리와 오류 안내 보강 및 Windows 설치본 생성 완료. 사용자가 소스 푸시와 공개 배포를 승인했으며, 앞으로 모든 Windows 업데이트 릴리스에 Setup/Update EXE를 함께 게시하도록 요청했다. `scripts/publish_windows_release.ps1`과 AGENTS.md에 해당 절차를 반영했다. 상세 결과는 `IMPLEMENTATION.md` 참고.
+
+`v1.0.0-rc.2` 공개 배포 완료. 두 EXE와 SHA256SUMS의 공개 다운로드 및 검증값을 확인했고 실제 앱 업데이트 검사도 통과했다.

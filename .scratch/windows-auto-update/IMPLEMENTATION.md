@@ -30,7 +30,7 @@ Status: ready-for-human
 - 정적 분석 문제 없음.
 - 사용자의 앱을 실제 종료하거나 설치 프로그램을 실행해 교체하지 않았다. 다운로드/검증/실행 호출과 실패 경로는 테스트에서 확인했다.
 
-## 남은 배포 작업
+## 배포 절차
 - 소스 변경사항을 버전 태그에 대응하는 커밋으로 보존하고 `v1.0.0-rc.2` 릴리스를 게시.
 - 위 설치본을 정확한 이름으로 첨부하고 GitHub API가 제공하는 SHA-256이 위 값과 일치하는지 확인.
 - 기존 rc.1에서 버전 확인 시 updateAvailable 및 설치 파일을 찾는지 확인.
@@ -38,3 +38,13 @@ Status: ready-for-human
 - 사용자 승인 완료. 앞으로 Windows 업데이트 배포 시 Setup/Update/SHA256SUMS를 함께 게시한다.
 - `scripts/publish_windows_release.ps1`: 소스 커밋 확인 → 빌드 → 소스/태그 푸시 → 임시 릴리스에 두 EXE와 검증값 업로드 → GitHub 검증값 일치 확인 → 공개. 기존 공개 릴리스 파일은 덮어쓰지 않는다.
 - 앱은 Update를 우선 선택하고, 이전 앱 및 릴리스 호환을 위해 Setup도 유지한다.
+
+## 배포 완료
+- `main` 소스 푸시 및 `v1.0.0-rc.2` 공개 릴리스 게시 완료.
+- 소스/태그 커밋: `ed00e8f3ec260de863c9b478d4a109bfb871d05c`.
+- 공개 릴리스: https://github.com/Flynn-Kalar/my_little_budget/releases/tag/v1.0.0-rc.2
+- Setup.exe, Update.exe, SHA256SUMS.txt 세 파일 모두 공개 및 GitHub 검증값 일치 확인.
+- 최종 Setup/Update SHA-256: `a65cef87db21cfb0a6d35e68d8a02c2b050105081d5640252a494e4c7fd1a914`.
+- 로그인 없이 Update 파일을 실제 내려받아 같은 SHA-256임을 재확인했다.
+- 실제 앱의 UpdateCheckService로 공개 API를 조회한 통합 검증 통과: rc.1+53은 새 버전으로 감지하고 Update.exe를 선택하며, rc.2+54는 최신 상태로 판정한다.
+- 전체 테스트 445개, 정적 분석, 실제 공개 릴리스 통합 검증 1개 통과.
