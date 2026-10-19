@@ -11,7 +11,6 @@ import '../../../features/budget/logic.dart';
 import '../../../features/budget/validation.dart';
 import 'package:my_little_budget/features/budget/providers.dart';
 import '../../shared/amount_input_formatter.dart';
-import '../../shared/daily_budget_guidance.dart';
 import '../page_back_button.dart';
 import 'widgets/budget_read_only_content.dart';
 
@@ -64,10 +63,9 @@ class BudgetScreen extends ConsumerWidget {
               error: (error, _) => BudgetErrorCard(message: error.toString()),
             ),
             SizedBox(height: 12),
-            if (rows.asData != null)
-              DailyBudgetGuidance(month: month, rows: rows.asData!.value),
             rows.when(
               data: (value) => BudgetReadOnlyContent(
+                month: month,
                 rows: value,
                 onEditGroup: (row) =>
                     _BudgetGroupModeEditDialog.show(context, row),

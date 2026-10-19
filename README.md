@@ -2,9 +2,9 @@
 
 ## Windows 버전 설치
 
-**[Windows Setup 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.4/MyLittleBudget-Setup-1.0.0-rc.4.exe)** · **[Windows Update 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.4/MyLittleBudget-Update-1.0.0-rc.4.exe)** · **[Android AAB 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.4/MyLittleBudget-Android-1.0.0-rc.4.aab)**
+**[Windows Setup 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.5/MyLittleBudget-Setup-1.0.0-rc.5.exe)** · **[Windows Update 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.5/MyLittleBudget-Update-1.0.0-rc.5.exe)** · **[Android AAB 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.5/MyLittleBudget-Android-1.0.0-rc.5.aab)**
 
-1. 처음 설치할 때는 `MyLittleBudget-Setup-1.0.0-rc.4.exe`, 기존 앱을 업데이트할 때는 `MyLittleBudget-Update-1.0.0-rc.4.exe`를 내려받습니다.
+1. 처음 설치할 때는 `MyLittleBudget-Setup-1.0.0-rc.5.exe`, 기존 앱을 업데이트할 때는 `MyLittleBudget-Update-1.0.0-rc.5.exe`를 내려받습니다.
 2. Setup 파일을 실행하고 설치 안내를 따릅니다.
 3. 설치가 끝나면 시작 메뉴의 `나만의 작은 가계부`를 실행합니다.
 
@@ -12,7 +12,7 @@
 
 Flutter로 만든 한국어 개인 가계부 앱입니다. 데이터는 로컬 SQLite에 저장되며 Windows 데스크톱과 Android 모바일에 각각 최적화된 UI를 제공합니다. 필요하면 JSON 파일이나 Supabase를 이용해 데이터를 백업하고 동기화할 수 있습니다.
 
-- 현재 버전: `1.0.0-rc.4+55`
+- 현재 버전: `1.0.0-rc.5+55`
 - 지원 UI: Windows 데스크톱/태블릿, Android 모바일
 - 저장소: [Flynn-Kalar/my_little_budget](https://github.com/Flynn-Kalar/my_little_budget)
 
@@ -144,7 +144,7 @@ release 빌드와 Setup 생성을 한 번에 실행:
 Setup 산출물:
 
 ```text
-installer\output\MyLittleBudget-Setup-1.0.0-rc.4.exe
+installer\output\MyLittleBudget-Setup-1.0.0-rc.5.exe
 ```
 
 설치 경로는 사용자별 `%LOCALAPPDATA%\Programs\MyLittleBudget`이며 관리자 권한이 필요하지 않습니다. 시작 메뉴 바로가기가 생성되고, 바탕 화면 바로가기는 설치 과정에서 선택할 수 있습니다.
@@ -192,7 +192,7 @@ Windows 릴리스에는 항상 `MyLittleBudget-Setup-<version>.exe`, `MyLittleBu
 소스 변경을 커밋한 뒤 다음 명령으로 Windows 빌드, 소스·태그 푸시, 두 EXE 업로드 및 검증, 릴리스 공개까지 진행합니다. 인증은 기존 GitHub 로그인 또는 `GH_TOKEN`/`GITHUB_TOKEN` 환경변수를 사용하며 비밀값을 파일이나 로그에 저장하지 않습니다.
 
 ```powershell
-.\scripts\publish_windows_release.ps1 -NotesFile .scratch/release-rc4/RELEASE_NOTES.md
+.\scripts\publish_windows_release.ps1 -NotesFile .scratch/release-rc5/RELEASE_NOTES.md
 ```
 
 같은 버전으로 빌드하고 서명을 확인한 Android AAB를 함께 올릴 때는 `-AndroidBundle build/app/outputs/bundle/release/app-release.aab`를 추가합니다. 릴리스에 버전이 붙은 AAB와 검증값이 함께 게시됩니다.
@@ -203,7 +203,7 @@ Windows 릴리스에는 항상 `MyLittleBudget-Setup-<version>.exe`, `MyLittleBu
 - Android: 새 버전이 있으면 Google Play 앱 페이지를 열고, Play 스토어 앱을 열 수 없으면 웹 주소를 사용합니다.
 - draft release는 제외하며 prerelease를 포함해 semantic version 기준으로 비교합니다.
 
-새 버전을 배포하려면 앱 버전보다 높은 버전 태그(예: `v1.0.0-rc.4`)로 GitHub Release를 생성해야 합니다. Git 태그만 만들고 Release를 생성하지 않으면 앱에서 감지하지 않습니다.
+새 버전을 배포하려면 앱 버전보다 높은 버전 태그(예: `v1.0.0-rc.5`)로 GitHub Release를 생성해야 합니다. Git 태그만 만들고 Release를 생성하지 않으면 앱에서 감지하지 않습니다.
 
 ## 백업과 복원
 

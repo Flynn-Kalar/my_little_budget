@@ -9,9 +9,13 @@ class DailyBudgetGuidance extends StatelessWidget {
     super.key,
     required this.month,
     required this.rows,
+    this.singlePeriodLabel = false,
+    this.margin,
   });
   final String month;
   final List<BudgetVsActual> rows;
+  final bool singlePeriodLabel;
+  final EdgeInsetsGeometry? margin;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +36,7 @@ class DailyBudgetGuidance extends StatelessWidget {
     if (allowances.isEmpty) return const SizedBox.shrink();
     final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
     return Card(
+      margin: margin,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -44,12 +49,19 @@ class DailyBudgetGuidance extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
+            if (singlePeriodLabel) ...[
+              Text(
+                '${allowances.first.$2!.days}일 기준',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 6),
+            ],
             for (final entry in allowances)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Text(
                   '${entry.$1.groupName} · ${entry.$2!.remaining < 0 ? '${formatKRW(-entry.$2!.remaining)} 초과' : '하루 ${formatKRW(entry.$2!.daily)}'}'
-                  ' (${entry.$2!.days}일 기준)',
+                  '${singlePeriodLabel ? '' : ' (${entry.$2!.days}일 기준)'}',
                 ),
               ),
             const SizedBox(height: 4),

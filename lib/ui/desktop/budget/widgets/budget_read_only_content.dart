@@ -1,35 +1,31 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/money.dart';
+import '../../../../core/date.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/budget_dao.dart';
+import '../../../shared/daily_budget_guidance.dart';
 
 class BudgetReadOnlyContent extends StatelessWidget {
   const BudgetReadOnlyContent({
     super.key,
     required this.rows,
+    required this.month,
     required this.onEditGroup,
     required this.onDeleteGroup,
   });
 
   final List<BudgetVsActual> rows;
+  final String month;
   final ValueChanged<BudgetVsActual> onEditGroup;
   final ValueChanged<BudgetVsActual> onDeleteGroup;
 
   @override
   Widget build(BuildContext context) {
-    final totalBudget = rows.fold<int>(0, (sum, row) => sum + row.budgetAmount);
-    final totalSpent = rows.fold<int>(0, (sum, row) => sum + row.spentAmount);
-    final remaining = totalBudget - totalSpent;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BudgetSummary(
-          totalBudget: totalBudget,
-          totalSpent: totalSpent,
-          remaining: remaining,
-        ),
+        DesktopBudgetOverview(month: month, rows: rows),
         const SizedBox(height: 16),
         if (rows.isEmpty)
           const EmptyBudgetGroups()
@@ -63,50 +59,109 @@ class BudgetReadOnlyContent extends StatelessWidget {
   }
 }
 
+class DesktopBudgetOverview extends StatelessWidget {
+  const DesktopBudgetOverview({
+    super.key,
+    required this.month,
+    required this.rows,
+  });
+
+  final String month;
+  final List<BudgetVsActual> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalBudget = rows.fold<int>(0, (sum, row) => sum + row.budgetAmount);
+    final totalSpent = rows.fold<int>(0, (sum, row) => sum + row.spentAmount);
+    final hasGuidance =
+        rows.isNotEmpty && month.compareTo(currentMonthKey()) >= 0;
+    Widget summary({bool stretch = false}) => BudgetSummary(
+      key: const ValueKey('desktop-budget-summary'),
+      totalBudget: totalBudget,
+      totalSpent: totalSpent,
+      remaining: totalBudget - totalSpent,
+      stretch: stretch,
+    );
+    final guidance = DailyBudgetGuidance(
+      key: const ValueKey('desktop-budget-daily-guidance'),
+      month: month,
+      rows: rows,
+      singlePeriodLabel: true,
+      margin: EdgeInsets.zero,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // A local density choice for the desktop overview, independent of shell.
+        if (hasGuidance && constraints.maxWidth >= 820) {
+          return IntrinsicHeight(
+            child: Row(
+              key: const ValueKey('desktop-budget-overview-columns'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: summary(stretch: true)),
+                const SizedBox(width: 12),
+                Expanded(child: guidance),
+              ],
+            ),
+          );
+        }
+        return Column(
+          key: const ValueKey('desktop-budget-overview-stacked'),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            summary(),
+            if (hasGuidance) ...[const SizedBox(height: 12), guidance],
+          ],
+        );
+      },
+    );
+  }
+}
+
 class BudgetSummary extends StatelessWidget {
   const BudgetSummary({
     super.key,
     required this.totalBudget,
     required this.totalSpent,
     required this.remaining,
+    this.stretch = false,
   });
 
   final int totalBudget;
   final int totalSpent;
   final int remaining;
+  final bool stretch;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final tiles = [
+      _SummaryTile(
+        label: '총 예산',
+        amount: totalBudget,
+        icon: Icons.flag_outlined,
+        color: context.desktopIncome,
+      ),
+      _SummaryTile(
+        label: '총 사용액',
+        amount: totalSpent,
+        icon: Icons.receipt_long_outlined,
+        color: context.desktopExpense,
+      ),
+      _SummaryTile(
+        label: '남은 금액',
+        amount: remaining,
+        icon: Icons.savings_outlined,
+        color: remaining < 0 ? context.desktopExpense : context.desktopAccent,
+      ),
+    ];
+    return Column(
+      mainAxisSize: stretch ? MainAxisSize.max : MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: _SummaryTile(
-            label: '총 예산',
-            amount: totalBudget,
-            icon: Icons.flag_outlined,
-            color: context.desktopIncome,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _SummaryTile(
-            label: '총 사용액',
-            amount: totalSpent,
-            icon: Icons.receipt_long_outlined,
-            color: context.desktopExpense,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _SummaryTile(
-            label: '남은 금액',
-            amount: remaining,
-            icon: Icons.savings_outlined,
-            color: remaining < 0
-                ? context.desktopExpense
-                : context.desktopAccent,
-          ),
-        ),
+        for (var i = 0; i < tiles.length; i++) ...[
+          if (i > 0) const SizedBox(height: 8),
+          if (stretch) Expanded(child: tiles[i]) else tiles[i],
+        ],
       ],
     );
   }
