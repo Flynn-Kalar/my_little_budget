@@ -144,68 +144,74 @@ class _MobileNoteDetailPageState extends ConsumerState<MobileNoteDetailPage> {
       ),
       body: SafeArea(
         top: false,
-        child: Offstage(
-          offstage: _editing,
-          child: SingleChildScrollView(
-            key: const ValueKey('mobile-note-detail-scroll'),
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  note.title,
-                  key: const ValueKey('mobile-note-detail-title'),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontSize: 26,
-                    height: 1.25,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                if (note.goalTargetAmount != null)
-                  NoteGoalSummary(goal: NoteAmountGoal.fromNote(note)!),
-                RichNoteViewer(
-                  document: documentFromNote(note),
-                  onTap: _edit,
-                  onChecklistToggle: _toggleChecklist,
-                  minHeight: 0,
-                  bordered: false,
-                  scrollable: false,
-                  contentPadding: EdgeInsets.zero,
-                  lineHeight: 1.5,
-                ),
-                if (note.scheduleType != 'none') ...[
-                  const Divider(height: 32),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.schedule),
-                    title: Text(
-                      dday == null
-                          ? noteScheduleSummary(note)
-                          : '${formatNoteDday(dday)} · ${noteScheduleSummary(note)}',
-                    ),
-                    subtitle: note.notificationEnabled
-                        ? Text(
-                            '${noteNotificationSummary(note)} · ${note.alarmSoundName ?? '기본 알람음'} · ${note.alarmVibrationEnabled ? '진동 켜짐' : '진동 꺼짐'}',
-                          )
-                        : null,
-                  ),
-                ],
-                if (created != null || updated != null) ...[
-                  const Divider(height: 32),
-                  if (created != null)
+        child: SizedBox.expand(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _edit,
+            child: Offstage(
+              offstage: _editing,
+              child: SingleChildScrollView(
+                key: const ValueKey('mobile-note-detail-scroll'),
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Text(
-                      '작성 ${formatNoteReminder(created)}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      note.title,
+                      key: const ValueKey('mobile-note-detail-title'),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 26,
+                        height: 1.25,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  if (updated != null)
-                    Text(
-                      '수정 ${formatNoteReminder(updated)}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    const SizedBox(height: 20),
+                    if (note.goalTargetAmount != null)
+                      NoteGoalSummary(goal: NoteAmountGoal.fromNote(note)!),
+                    RichNoteViewer(
+                      document: documentFromNote(note),
+                      onTap: _edit,
+                      onChecklistToggle: _toggleChecklist,
+                      minHeight: 0,
+                      bordered: false,
+                      scrollable: false,
+                      contentPadding: EdgeInsets.zero,
+                      lineHeight: 1.5,
                     ),
-                ],
-              ],
+                    if (note.scheduleType != 'none') ...[
+                      const Divider(height: 32),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.schedule),
+                        title: Text(
+                          dday == null
+                              ? noteScheduleSummary(note)
+                              : '${formatNoteDday(dday)} · ${noteScheduleSummary(note)}',
+                        ),
+                        subtitle: note.notificationEnabled
+                            ? Text(
+                                '${noteNotificationSummary(note)} · ${note.alarmSoundName ?? '기본 알람음'} · ${note.alarmVibrationEnabled ? '진동 켜짐' : '진동 꺼짐'}',
+                              )
+                            : null,
+                      ),
+                    ],
+                    if (created != null || updated != null) ...[
+                      const Divider(height: 32),
+                      if (created != null)
+                        Text(
+                          '작성 ${formatNoteReminder(created)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      if (updated != null)
+                        Text(
+                          '수정 ${formatNoteReminder(updated)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ),

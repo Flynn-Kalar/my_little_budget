@@ -7,6 +7,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/providers.dart';
+import '../../../../features/transactions/selection.dart';
+import '../../../shared/bulk_transaction_editor.dart';
 import '../../mobile_widgets.dart';
 import '../../settings/sheets/mobile_transaction_preset_sheet.dart';
 
@@ -16,11 +18,13 @@ class MobileGroupedTransactions extends StatefulWidget {
     required this.rows,
     required this.onEdit,
     required this.onDuplicate,
+    required this.queryKey,
   });
 
   final List<TransactionRow> rows;
   final ValueChanged<TransactionRow> onEdit;
   final ValueChanged<TransactionRow> onDuplicate;
+  final Object queryKey;
 
   @override
   State<MobileGroupedTransactions> createState() =>
@@ -40,31 +44,37 @@ class _MobileGroupedTransactionsState extends State<MobileGroupedTransactions> {
         .where((row) => row.occurredOn.compareTo(today) <= 0)
         .toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (planned.isNotEmpty)
-          _TransactionSection(
-            title: '예정 거래',
-            rows: planned,
-            planned: true,
-            collapsible: true,
-            expanded: _plannedExpanded,
-            onToggle: () =>
-                setState(() => _plannedExpanded = !_plannedExpanded),
-            onEdit: widget.onEdit,
-            onDuplicate: widget.onDuplicate,
-          ),
-        if (planned.isNotEmpty && completed.isNotEmpty)
-          const SizedBox(height: 6),
-        if (completed.isNotEmpty)
-          _TransactionSection(
-            title: '완료 거래',
-            rows: completed,
-            onEdit: widget.onEdit,
-            onDuplicate: widget.onDuplicate,
-          ),
-      ],
+    return TransactionSelectionArea(
+      rows: widget.rows,
+      queryKey: widget.queryKey,
+      builder: (selection) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (planned.isNotEmpty)
+            _TransactionSection(
+              title: '예정 거래',
+              rows: planned,
+              selection: selection,
+              planned: true,
+              collapsible: true,
+              expanded: _plannedExpanded,
+              onToggle: () =>
+                  setState(() => _plannedExpanded = !_plannedExpanded),
+              onEdit: widget.onEdit,
+              onDuplicate: widget.onDuplicate,
+            ),
+          if (planned.isNotEmpty && completed.isNotEmpty)
+            const SizedBox(height: 6),
+          if (completed.isNotEmpty)
+            _TransactionSection(
+              title: '완료 거래',
+              rows: completed,
+              selection: selection,
+              onEdit: widget.onEdit,
+              onDuplicate: widget.onDuplicate,
+            ),
+        ],
+      ),
     );
   }
 }
@@ -111,6 +121,7 @@ class _TransactionSection extends StatelessWidget {
     required this.rows,
     required this.onEdit,
     required this.onDuplicate,
+    required this.selection,
     this.planned = false,
     this.collapsible = false,
     this.expanded = true,
@@ -121,6 +132,7 @@ class _TransactionSection extends StatelessWidget {
   final List<TransactionRow> rows;
   final ValueChanged<TransactionRow> onEdit;
   final ValueChanged<TransactionRow> onDuplicate;
+  final TransactionSelection selection;
   final bool planned;
   final bool collapsible;
   final bool expanded;
@@ -159,6 +171,7 @@ class _TransactionSection extends StatelessWidget {
             for (final row in entry.value)
               _TransactionCard(
                 row: row,
+                selection: selection,
                 planned: planned,
                 onEdit: onEdit,
                 onDuplicate: onDuplicate,
@@ -365,12 +378,14 @@ class _TransactionCard extends ConsumerWidget {
     required this.row,
     required this.onEdit,
     required this.onDuplicate,
+    required this.selection,
     this.planned = false,
   });
 
   final TransactionRow row;
   final ValueChanged<TransactionRow> onEdit;
   final ValueChanged<TransactionRow> onDuplicate;
+  final TransactionSelection selection;
   final bool planned;
 
   Future<void> _confirmAndDelete(BuildContext context, WidgetRef ref) async {
@@ -434,25 +449,40 @@ class _TransactionCard extends ConsumerWidget {
     return MobileCard(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       child: InkWell(
-        onTap: () => onEdit(row),
+        key: ValueKey('mobile-transaction-row-${row.id}'),
+        onLongPress: selection.busy ? null : () => selection.enter(row.id),
+        onTap: selection.busy
+            ? null
+            : selection.active
+            ? () => selection.toggle(row.id)
+            : () => onEdit(row),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 24,
-              child: Center(
-                child: isTransfer
-                    ? Icon(Icons.swap_horiz, size: 18, color: color)
-                    : Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _categoryColor(row.categoryColor, color),
+            if (selection.active)
+              Checkbox(
+                key: ValueKey('mobile-transaction-checkbox-${row.id}'),
+                value: selection.contains(row.id),
+                onChanged: selection.busy
+                    ? null
+                    : (_) => selection.toggle(row.id),
+              )
+            else
+              SizedBox(
+                width: 24,
+                child: Center(
+                  child: isTransfer
+                      ? Icon(Icons.swap_horiz, size: 18, color: color)
+                      : Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _categoryColor(row.categoryColor, color),
+                          ),
                         ),
-                      ),
+                ),
               ),
-            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -524,65 +554,66 @@ class _TransactionCard extends ConsumerWidget {
                 style: TextStyle(color: color, fontWeight: FontWeight.w900),
               ),
             ),
-            SizedBox(
-              width: 40,
-              child: PopupMenuButton<String>(
-                tooltip: '거래 메뉴',
-                padding: EdgeInsets.zero,
-                iconSize: 22,
-                onSelected: (value) async {
-                  if (value == 'edit') {
-                    onEdit(row);
-                  } else if (value == 'copy') {
-                    onDuplicate(row);
-                  } else if (value == 'preset') {
-                    await MobileTransactionPresetSheet.show(
-                      context,
-                      source: row,
-                    );
-                  } else if (value == 'delete') {
-                    await _confirmAndDelete(context, ref);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: ListTile(
-                      leading: Icon(Icons.edit_outlined),
-                      title: Text('수정'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'copy',
-                    child: ListTile(
-                      leading: Icon(Icons.copy_outlined),
-                      title: Text('복사'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'preset',
-                    child: ListTile(
-                      leading: Icon(Icons.bookmark_add_outlined),
-                      title: Text('프리셋으로 저장'),
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: ListTile(
-                      leading: Icon(
-                        Icons.delete_outline,
-                        color: theme.colorScheme.error,
-                      ),
-                      title: Text(
-                        '삭제',
-                        style: TextStyle(color: theme.colorScheme.error),
+            if (!selection.active)
+              SizedBox(
+                width: 40,
+                child: PopupMenuButton<String>(
+                  tooltip: '거래 메뉴',
+                  padding: EdgeInsets.zero,
+                  iconSize: 22,
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      onEdit(row);
+                    } else if (value == 'copy') {
+                      onDuplicate(row);
+                    } else if (value == 'preset') {
+                      await MobileTransactionPresetSheet.show(
+                        context,
+                        source: row,
+                      );
+                    } else if (value == 'delete') {
+                      await _confirmAndDelete(context, ref);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('수정'),
                       ),
                     ),
-                  ),
-                ],
+                    const PopupMenuItem(
+                      value: 'copy',
+                      child: ListTile(
+                        leading: Icon(Icons.copy_outlined),
+                        title: Text('복사'),
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'preset',
+                      child: ListTile(
+                        leading: Icon(Icons.bookmark_add_outlined),
+                        title: Text('프리셋으로 저장'),
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.delete_outline,
+                          color: theme.colorScheme.error,
+                        ),
+                        title: Text(
+                          '삭제',
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

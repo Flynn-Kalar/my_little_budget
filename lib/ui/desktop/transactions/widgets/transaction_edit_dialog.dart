@@ -148,7 +148,12 @@ class _State extends ConsumerState<TransactionEditDialog> {
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
     final tagSuggestions =
-        (ref.watch(allTagsProvider).asData?.value ?? const [])
+        (ref
+                    .watch(transactionTagSuggestionsProvider(_categoryId))
+                    .asData
+                    ?.value ??
+                ref.watch(allTagsProvider).asData?.value ??
+                const [])
             .map((t) => t.name)
             .toList();
     final visibleCats = categories
@@ -246,6 +251,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
               const SizedBox(height: 12),
               TagInput(
                 value: _tags,
+                suggestionContext: (_type, _categoryId),
                 suggestions: tagSuggestions,
                 onChanged: (v) => setState(() => _tags = v),
               ),

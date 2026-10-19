@@ -1,9 +1,9 @@
 #define MyAppName "나만의 작은 가계부"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0-rc.2"
+  #define MyAppVersion "1.0.0-rc.3"
 #endif
 #ifndef MyAppNumericVersion
-  #define MyAppNumericVersion "1.0.0.54"
+  #define MyAppNumericVersion "1.0.0.55"
 #endif
 #define MyAppPublisher "Flynn-Kalar"
 #define MyAppExeName "my_little_budget.exe"

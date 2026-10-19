@@ -103,6 +103,14 @@ final allTagsProvider = FutureProvider<List<Tag>>(
   (ref) => ref.watch(tagsDaoProvider).getTags(),
 );
 
+final transactionTagSuggestionsProvider = FutureProvider.autoDispose
+    .family<List<Tag>, int?>((ref, categoryId) {
+      ref.watch(allTagsProvider);
+      return ref
+          .watch(tagsDaoProvider)
+          .getTransactionTagSuggestions(categoryId: categoryId);
+    });
+
 /// SPEC 짠4.1 ??硫붾え ?먮룞?꾩꽦??
 final recentMemosProvider = FutureProvider<List<String>>(
   (ref) => ref.watch(transactionsDaoProvider).getRecentMemos(),
@@ -130,6 +138,7 @@ void refreshTransactions(WidgetRef ref) {
   ref.invalidate(transactionsCategoryBreakdownProvider);
   ref.invalidate(transactionsMonthlyTrendProvider);
   ref.invalidate(allTagsProvider);
+  ref.invalidate(transactionTagSuggestionsProvider);
   ref.invalidate(recentMemosProvider);
   ref.invalidate(accounts_providers.accountBalancesProvider);
   ref.invalidate(accounts_providers.accountTransactionsProvider);

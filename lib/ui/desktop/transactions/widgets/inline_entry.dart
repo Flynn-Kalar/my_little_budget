@@ -346,7 +346,12 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
     final tagSuggestions =
-        (ref.watch(allTagsProvider).asData?.value ?? const [])
+        (ref
+                    .watch(transactionTagSuggestionsProvider(_categoryId))
+                    .asData
+                    ?.value ??
+                ref.watch(allTagsProvider).asData?.value ??
+                const [])
             .map((t) => t.name)
             .toList();
     final recentEntries =
@@ -578,11 +583,12 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                       child: TagAutocompleteField(
                         value: _tags,
                         suggestions: tagSuggestions,
+                        suggestionContext: (_type, _categoryId),
                         width: null,
                         focusNode: _tagFocus,
                         onChanged: (v) => setState(() => _tags = v),
                         onSubmitted: (result) {
-                          if (result != TagSubmitResult.none) {
+                          if (result == TagSubmitResult.empty) {
                             _focusAfterTag();
                           }
                         },

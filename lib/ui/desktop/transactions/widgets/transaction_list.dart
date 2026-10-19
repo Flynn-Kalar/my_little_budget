@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/date.dart';
@@ -6,6 +7,8 @@ import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
+import '../../../../features/transactions/selection.dart';
+import '../../../shared/bulk_transaction_editor.dart';
 import '../../color_hex.dart';
 import '../../settings/widgets/transaction_preset_dialog.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
@@ -35,10 +38,20 @@ class TransactionList extends ConsumerWidget {
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('불러오기 오류: $e')),
-      data: (rows) => SingleChildScrollView(
-        key: const ValueKey('desktop-transactions-list-scroll'),
-        child: _ConstrainedTransactionList(
-          child: _TransactionListBody(rows: rows, filter: filter, type: type),
+      data: (rows) => TransactionSelectionArea(
+        rows: rows,
+        queryKey: (ref.watch(selectedMonthProvider), filter, type),
+        expandChild: true,
+        builder: (selection) => SingleChildScrollView(
+          key: const ValueKey('desktop-transactions-list-scroll'),
+          child: _ConstrainedTransactionList(
+            child: _TransactionListBody(
+              rows: rows,
+              filter: filter,
+              type: type,
+              selection: selection,
+            ),
+          ),
         ),
       ),
     );
@@ -75,11 +88,13 @@ class _TransactionListBody extends StatefulWidget {
     required this.rows,
     required this.filter,
     required this.type,
+    required this.selection,
   });
 
   final List<TransactionRow> rows;
   final TransactionFilter filter;
   final String? type;
+  final TransactionSelection selection;
 
   @override
   State<_TransactionListBody> createState() => _TransactionListBodyState();
@@ -117,6 +132,10 @@ class _TransactionListBodyState extends State<_TransactionListBody> {
     final completedRows = rows.where(
       (row) => row.occurredOn.compareTo(today) <= 0,
     );
+    final visibleIds = [
+      if (_plannedExpanded) ...futureRows.map((r) => r.id),
+      ...completedRows.map((r) => r.id),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,6 +144,8 @@ class _TransactionListBodyState extends State<_TransactionListBody> {
           _Section(
             title: '예정 거래',
             rows: futureRows.toList(),
+            selection: widget.selection,
+            visibleIds: visibleIds,
             planned: true,
             collapsible: true,
             expanded: _plannedExpanded,
@@ -134,7 +155,12 @@ class _TransactionListBodyState extends State<_TransactionListBody> {
         if (futureRows.isNotEmpty && completedRows.isNotEmpty)
           const SizedBox(height: 10),
         if (completedRows.isNotEmpty)
-          _Section(title: '완료 거래', rows: completedRows.toList())
+          _Section(
+            title: '완료 거래',
+            rows: completedRows.toList(),
+            selection: widget.selection,
+            visibleIds: visibleIds,
+          )
         else if (futureRows.isEmpty)
           const SizedBox.shrink(),
       ],
@@ -146,6 +172,8 @@ class _Section extends StatelessWidget {
   const _Section({
     required this.title,
     required this.rows,
+    required this.selection,
+    required this.visibleIds,
     this.planned = false,
     this.collapsible = false,
     this.expanded = true,
@@ -154,6 +182,8 @@ class _Section extends StatelessWidget {
 
   final String title;
   final List<TransactionRow> rows;
+  final TransactionSelection selection;
+  final List<int> visibleIds;
   final bool planned;
   final bool collapsible;
   final bool expanded;
@@ -191,7 +221,13 @@ class _Section extends StatelessWidget {
               totals: totals[entry.key] ?? const _DailyTotals(),
               planned: planned,
             ),
-            for (final row in entry.value) _Row(row: row, planned: planned),
+            for (final row in entry.value)
+              _Row(
+                row: row,
+                planned: planned,
+                selection: selection,
+                visibleIds: visibleIds,
+              ),
           ],
       ],
     );
@@ -440,9 +476,22 @@ class _TransferTotalText extends StatelessWidget {
 }
 
 class _Row extends ConsumerWidget {
-  const _Row({required this.row, required this.planned});
+  const _Row({
+    required this.row,
+    required this.planned,
+    required this.selection,
+    required this.visibleIds,
+  });
   final TransactionRow row;
   final bool planned;
+  final TransactionSelection selection;
+  final List<int> visibleIds;
+
+  void _toggle() => selection.toggle(
+    row.id,
+    range: HardwareKeyboard.instance.isShiftPressed,
+    orderedIds: visibleIds,
+  );
 
   Future<void> _confirmAndDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
@@ -523,11 +572,19 @@ class _Row extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: Material(
-        color: context.desktopSurface,
+        color: selection.contains(row.id)
+            ? context.desktopSelectedSurface
+            : context.desktopSurface,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
+          key: ValueKey('desktop-transaction-row-${row.id}'),
           borderRadius: BorderRadius.circular(6),
-          onTap: () => TransactionEditDialog.show(context, row),
+          onLongPress: selection.busy ? null : () => selection.enter(row.id),
+          onTap: selection.busy
+              ? null
+              : selection.active
+              ? _toggle
+              : () => TransactionEditDialog.show(context, row),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -538,7 +595,14 @@ class _Row extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                SizedBox(width: 28, child: Center(child: leading)),
+                if (selection.active)
+                  Checkbox(
+                    key: ValueKey('desktop-transaction-checkbox-${row.id}'),
+                    value: selection.contains(row.id),
+                    onChanged: selection.busy ? null : (_) => _toggle(),
+                  )
+                else
+                  SizedBox(width: 28, child: Center(child: leading)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -635,40 +699,41 @@ class _Row extends ConsumerWidget {
                     ),
                   ),
                 ),
-                SizedBox(
-                  width: _menuColumnWidth,
-                  child: PopupMenuButton<String>(
-                    tooltip: '거래 메뉴',
-                    padding: EdgeInsets.zero,
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        TransactionEditDialog.show(context, row);
-                      } else if (value == 'copy') {
-                        TransactionEditDialog.showDuplicate(context, row);
-                      } else if (value == 'preset') {
-                        TransactionPresetDialog.show(context, source: row);
-                      } else if (value == 'delete') {
-                        _confirmAndDelete(context, ref);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'edit', child: Text('수정')),
-                      const PopupMenuItem(value: 'copy', child: Text('복사')),
-                      const PopupMenuItem(
-                        value: 'preset',
-                        child: Text('프리셋으로 저장'),
-                      ),
-                      const PopupMenuDivider(),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Text(
-                          '삭제',
-                          style: TextStyle(color: context.desktopExpense),
+                if (!selection.active)
+                  SizedBox(
+                    width: _menuColumnWidth,
+                    child: PopupMenuButton<String>(
+                      tooltip: '거래 메뉴',
+                      padding: EdgeInsets.zero,
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          TransactionEditDialog.show(context, row);
+                        } else if (value == 'copy') {
+                          TransactionEditDialog.showDuplicate(context, row);
+                        } else if (value == 'preset') {
+                          TransactionPresetDialog.show(context, source: row);
+                        } else if (value == 'delete') {
+                          _confirmAndDelete(context, ref);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(value: 'edit', child: Text('수정')),
+                        const PopupMenuItem(value: 'copy', child: Text('복사')),
+                        const PopupMenuItem(
+                          value: 'preset',
+                          child: Text('프리셋으로 저장'),
                         ),
-                      ),
-                    ],
+                        const PopupMenuDivider(),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text(
+                            '삭제',
+                            style: TextStyle(color: context.desktopExpense),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
           ),

@@ -165,7 +165,7 @@ void main() {
     );
   });
 
-  testWidgets('PC 내역 화면: 빠른 입력 태그 엔터 후 메모로 포커스 이동한다', (tester) async {
+  testWidgets('PC 태그 Enter는 쉼표를 추가하고 빈 다음 태그에서만 내용으로 이동한다', (tester) async {
     tester.view.physicalSize = const Size(1400, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -192,7 +192,22 @@ void main() {
     expect(memoField, findsOneWidget);
 
     await tester.tap(tagField);
-    await tester.enterText(tagField, '테스트태그');
+    await tester.enterText(tagField, '게임');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pump();
+    await tester.pump();
+
+    expect(tester.widget<TextField>(tagField).controller!.text, '게임, ');
+    expect(tester.widget<TextField>(tagField).focusNode!.hasFocus, isTrue);
+    expect(tester.widget<TextField>(memoField).focusNode!.hasFocus, isFalse);
+
+    await tester.enterText(tagField, '게임, 스팀');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pump();
+    await tester.pump();
+    expect(tester.widget<TextField>(tagField).controller!.text, '게임, 스팀, ');
+    expect(tester.widget<TextField>(tagField).focusNode!.hasFocus, isTrue);
+
     await tester.testTextInput.receiveAction(TextInputAction.next);
     await tester.pump();
     await tester.pump();

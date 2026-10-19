@@ -11,7 +11,7 @@ import 'package:my_little_budget/features/transactions/transaction_csv.dart';
 import 'package:my_little_budget/ui/desktop/transactions/widgets/inline_entry.dart';
 import 'package:my_little_budget/ui/mobile/mobile_widgets.dart';
 import 'package:my_little_budget/ui/mobile/transactions/sheets/mobile_transaction_sheet.dart';
-import 'package:my_little_budget/ui/shared/bulk_transaction_editor.dart';
+import 'package:my_little_budget/ui/mobile/transactions/mobile_transactions_screen.dart';
 import 'package:my_little_budget/ui/shared/transaction_csv_panel.dart';
 
 void main() {
@@ -133,7 +133,7 @@ void main() {
   );
 
   testWidgets(
-    'bulk editor fits mobile and applies tag changes to selected rows',
+    'inline mobile bulk editor applies tags without opening another list',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -148,28 +148,31 @@ void main() {
           categoryId: source.categoryId,
         ),
       );
-      await tester.pumpWidget(
-        host(
-          Consumer(
-            builder: (context, ref, _) => TextButton(
-              onPressed: () => showBulkTransactionEditor(context, ref),
-              child: const Text('일괄 수정 열기'),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('일괄 수정 열기'));
+      await tester.pumpWidget(host(const MobileTransactionsScreen()));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('전체 선택 (1건)'));
+      final row = find.byKey(ValueKey('mobile-transaction-row-$id'));
+      expect(find.byType(Checkbox), findsNothing);
+      await tester.ensureVisible(row);
+      await tester.longPress(row);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      final edit = find.text('일괄 수정');
+      await tester.ensureVisible(edit);
+      await tester.tap(edit);
       await tester.pumpAndSettle();
       await tester.tap(find.byType(DropdownButtonFormField<String>));
       await tester.pumpAndSettle();
       await tester.tap(find.text('새 태그로 교체').last);
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '공통, 정리');
+      await tester.enterText(
+        find.byKey(const ValueKey('bulk-tags-input')),
+        '공통, 정리',
+      );
+      await tester.ensureVisible(find.widgetWithText(FilledButton, '1건에 적용'));
       await tester.tap(find.widgetWithText(FilledButton, '1건에 적용'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      expect(find.text('1건 선택'), findsOneWidget);
       expect(
         (await db.transactionsDao.getTransactionById(
           id,

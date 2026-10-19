@@ -10,14 +10,11 @@ import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/providers.dart';
 import '../../../../features/transactions/validation.dart';
+import '../../../../features/tags/suggestion_order.dart';
 import '../../../../features/settings/providers.dart';
 import '../../../shared/spending_limit_warning.dart';
 import '../../../shared/recent_transaction_suggestions.dart';
 import '../../mobile_widgets.dart';
-
-final _quickInputTagsProvider = FutureProvider.autoDispose<List<Tag>>(
-  (ref) => ref.watch(tagsDaoProvider).getRecommendedTags(limit: 8),
-);
 
 class MobileTransactionSheet extends ConsumerStatefulWidget {
   const MobileTransactionSheet({super.key, this.row, this.duplicate = false});
@@ -192,7 +189,6 @@ class _MobileTransactionSheetState
           .budgetLimitWarningsFor(result.value!);
       if (!mounted) return;
       refreshTransactions(ref);
-      ref.invalidate(_quickInputTagsProvider);
       Navigator.pop(context);
       showSpendingLimitWarnings(
         context,
@@ -253,10 +249,13 @@ class _MobileTransactionSheetState
         ref.watch(activeAccountsProvider).asData?.value ?? const [];
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
-    final tags = ref.watch(allTagsProvider).asData?.value ?? const <Tag>[];
-    final quickTags =
-        ref.watch(_quickInputTagsProvider).asData?.value ??
-        tags.take(8).toList();
+    final tags =
+        ref
+            .watch(transactionTagSuggestionsProvider(_categoryId))
+            .asData
+            ?.value ??
+        ref.watch(allTagsProvider).asData?.value ??
+        const <Tag>[];
     final visibleCategories = categories
         .where(
           (category) =>
@@ -391,7 +390,7 @@ class _MobileTransactionSheetState
               ),
             _TagNameSelector(
               tags: tags,
-              quickTags: quickTags,
+              suggestionContext: (_type, _categoryId),
               selectedNames: _tagNames,
               enabled: !_busy,
               onChanged: () => setState(() {}),
@@ -430,14 +429,14 @@ class _MobileTransactionSheetState
 class _TagNameSelector extends StatefulWidget {
   const _TagNameSelector({
     required this.tags,
-    required this.quickTags,
+    required this.suggestionContext,
     required this.selectedNames,
     required this.enabled,
     required this.onChanged,
   });
 
   final List<Tag> tags;
-  final List<Tag> quickTags;
+  final Object suggestionContext;
   final Set<String> selectedNames;
   final bool enabled;
   final VoidCallback onChanged;
@@ -447,26 +446,15 @@ class _TagNameSelector extends StatefulWidget {
 }
 
 class _TagNameSelectorState extends State<_TagNameSelector> {
-  bool _showAll = false;
+  final _order = TagSuggestionOrder();
 
   @override
   Widget build(BuildContext context) {
-    final featured = <Tag>[];
-    final featuredNames = <String>{};
-    for (final tag in widget.quickTags) {
-      if (featuredNames.add(tag.name)) featured.add(tag);
-    }
-    for (final tag in widget.tags) {
-      if (widget.selectedNames.contains(tag.name) &&
-          featuredNames.add(tag.name)) {
-        featured.add(tag);
-      }
-    }
-    final remaining = [
-      for (final tag in widget.tags)
-        if (!featuredNames.contains(tag.name)) tag,
-    ];
-    final visibleRemaining = _showAll ? remaining : remaining.take(12).toList();
+    final byName = {for (final tag in widget.tags) tag.name: tag};
+    final ordered = _order
+        .resolve(byName.keys.toList(), widget.suggestionContext)
+        .map((name) => byName[name]!)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,45 +472,14 @@ class _TagNameSelectorState extends State<_TagNameSelector> {
           )
         else ...[
           _TagChipGroup(
-            tags: featured,
+            tags: ordered,
             selectedNames: widget.selectedNames,
             enabled: widget.enabled,
-            onChanged: widget.onChanged,
+            onChanged: () {
+              _order.lock();
+              widget.onChanged();
+            },
           ),
-          if (remaining.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Divider(color: Theme.of(context).dividerColor),
-            const SizedBox(height: 8),
-            const Text('전체 태그', style: TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            _TagChipGroup(
-              tags: visibleRemaining,
-              selectedNames: widget.selectedNames,
-              enabled: widget.enabled,
-              onChanged: widget.onChanged,
-            ),
-            if (remaining.length > visibleRemaining.length) ...[
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _showAll = true),
-                  icon: const Icon(Icons.expand_more, size: 18),
-                  label: Text('전체보기 (${remaining.length})'),
-                ),
-              ),
-            ] else if (_showAll && remaining.length > 12) ...[
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _showAll = false),
-                  icon: const Icon(Icons.expand_less, size: 18),
-                  label: const Text('접기'),
-                ),
-              ),
-            ],
-          ],
         ],
       ],
     );
@@ -550,11 +507,15 @@ class _TagChipGroup extends StatelessWidget {
       children: [
         for (final tag in tags)
           FilterChip(
+            key: ValueKey('mobile-tag-choice-${tag.id}'),
             label: Text('#${tag.name}'),
             selected: selectedNames.contains(tag.name),
+            showCheckmark: false,
             avatar: tag.isPinned
                 ? const Icon(Icons.star_rounded, size: 16)
-                : null,
+                : selectedNames.contains(tag.name)
+                ? const Icon(Icons.check, size: 16)
+                : const SizedBox(width: 16, height: 16),
             onSelected: enabled
                 ? (selected) {
                     if (selected) {

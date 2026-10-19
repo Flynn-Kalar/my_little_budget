@@ -1,5 +1,6 @@
 param(
-  [Parameter(Mandatory = $true)][string]$NotesFile
+  [Parameter(Mandatory = $true)][string]$NotesFile,
+  [string]$AndroidBundle
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +32,10 @@ try {
   $buildNumber = $version.Groups[2].Value
   $tag = "v$appVersion"
   $notes = Get-Content -LiteralPath $NotesFile -Raw -Encoding UTF8
+  if ($AndroidBundle) {
+    $AndroidBundle = (Resolve-Path -LiteralPath $AndroidBundle).Path
+    if ([IO.Path]::GetExtension($AndroidBundle) -ne '.aab') { throw 'AndroidBundle must be an AAB file.' }
+  }
 
   # Read an existing GitHub login without printing or persisting credentials.
   $token = $env:GH_TOKEN
@@ -63,6 +68,15 @@ try {
     (Join-Path $outputDir "MyLittleBudget-Update-$appVersion.exe"),
     (Join-Path $outputDir 'SHA256SUMS.txt')
   )
+  if ($AndroidBundle) {
+    $bundleOutput = Join-Path $outputDir "MyLittleBudget-Android-$appVersion.aab"
+    Copy-Item -LiteralPath $AndroidBundle -Destination $bundleOutput -Force
+    $files += $bundleOutput
+    $checksumLines = $files | Where-Object { [IO.Path]::GetExtension($_) -in @('.exe', '.aab') } | ForEach-Object {
+      '{0}  {1}' -f (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant(), (Split-Path -Leaf $_)
+    }
+    [IO.File]::WriteAllLines((Join-Path $outputDir 'SHA256SUMS.txt'), $checksumLines, [Text.UTF8Encoding]::new($false))
+  }
   $expectedAssets = @($files | ForEach-Object {
     $file = Get-Item -LiteralPath $_
     [pscustomobject]@{ Name = $file.Name; Path = $file.FullName; Size = $file.Length; Sha256 = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() }

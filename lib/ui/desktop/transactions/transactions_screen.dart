@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shell/layout_policy.dart';
-import '../../shared/bulk_transaction_editor.dart';
 import '../desktop_section.dart';
 import 'widgets/filter_panel.dart';
 import 'widgets/inline_entry.dart';
@@ -227,13 +226,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           label: const Text('프리셋'),
                         ),
                       ],
-                      if (!_isFilterExpanded)
-                        IconButton(
-                          tooltip: '거래 일괄 수정',
-                          onPressed: () =>
-                              showBulkTransactionEditor(context, ref),
-                          icon: const Icon(Icons.checklist),
-                        ),
                     ],
                   ),
                   if (_isFilterExpanded) ...[

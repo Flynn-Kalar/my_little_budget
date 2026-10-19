@@ -37,6 +37,30 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
     return query.get();
   }
 
+  /// Rank actual transaction links, including all tags even if never used.
+  /// Category history takes priority over overall frequency.
+  Future<List<Tag>> getTransactionTagSuggestions({int? categoryId}) async {
+    final rows = await customSelect(
+      '''
+      SELECT tg.* FROM tags tg
+      LEFT JOIN transaction_tags tt ON tt.tag_id = tg.id
+      LEFT JOIN transactions tx ON tx.id = tt.transaction_id
+        AND tx.deleted_at IS NULL
+      WHERE tg.deleted_at IS NULL
+      GROUP BY tg.id
+      ORDER BY
+        SUM(CASE WHEN tx.category_id = ? THEN 1 ELSE 0 END) DESC,
+        MAX(CASE WHEN tx.category_id = ? THEN tx.occurred_on || ' ' || tx.occurred_time END) DESC,
+        COUNT(tx.id) DESC,
+        MAX(tx.occurred_on || ' ' || tx.occurred_time) DESC,
+        tg.sort_order ASC, tg.id ASC
+    ''',
+      variables: [Variable<int>(categoryId), Variable<int>(categoryId)],
+      readsFrom: {tags, transactionTags, transactions},
+    ).get();
+    return rows.map((row) => tags.map(row.data)).toList();
+  }
+
   Stream<List<Tag>> watchTags() {
     return (select(tags)..orderBy([
           (t) => OrderingTerm(expression: t.sortOrder),

@@ -21,6 +21,7 @@ class RichNoteEditor extends StatefulWidget {
     this.scrollable = true,
     this.contentPadding = const EdgeInsets.all(12),
     this.lineHeight,
+    this.onReadOnlyTap,
   });
 
   final QuillController controller;
@@ -35,6 +36,7 @@ class RichNoteEditor extends StatefulWidget {
   final bool scrollable;
   final EdgeInsetsGeometry contentPadding;
   final double? lineHeight;
+  final VoidCallback? onReadOnlyTap;
 
   static const _fontSizeItems = <String, String>{
     '8 pt': '8',
@@ -134,6 +136,20 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
         focusNode: widget.focusNode,
         scrollController: widget.scrollController,
         config: QuillEditorConfig(
+          onTapUp: readOnly && widget.onReadOnlyTap != null
+              ? (details, positionForOffset) {
+                  final position = positionForOffset(details.globalPosition);
+                  final leaf = controller.document
+                      .querySegmentLeafNode(position.offset)
+                      .leaf;
+                  if (leaf?.style.attributes[Attribute.link.key]?.value !=
+                      null) {
+                    return false;
+                  }
+                  widget.onReadOnlyTap!();
+                  return true;
+                }
+              : null,
           embedBuilders: const [NoteGoalEmbedBuilder()],
           editorKey: widget.editorKey,
           scrollable: widget.scrollable,
@@ -343,13 +359,13 @@ class _RichNoteViewerState extends State<RichNoteViewer> {
   final _focusNode = FocusNode();
   final _scrollController = ScrollController();
   StreamSubscription<dynamic>? _documentChanges;
-  late List<bool> _checklistStates = _checklistStatesFromDocument(
-    widget.document,
-  );
+  late List<bool> _checklistStates;
 
   @override
   void initState() {
     super.initState();
+    // Capture the baseline before the first checkbox mutation is delivered.
+    _checklistStates = _checklistStatesFromDocument(widget.document);
     _listenToDocumentChanges();
   }
 
@@ -401,12 +417,10 @@ class _RichNoteViewerState extends State<RichNoteViewer> {
       scrollable: widget.scrollable,
       contentPadding: widget.contentPadding,
       lineHeight: widget.lineHeight,
+      onReadOnlyTap: widget.onTap,
     );
 
-    if (widget.onTap == null ||
-        (widget.onChecklistToggle != null && _checklistStates.isNotEmpty)) {
-      return viewer;
-    }
+    if (widget.onTap == null) return viewer;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: widget.onTap,

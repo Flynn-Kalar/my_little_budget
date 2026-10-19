@@ -93,6 +93,113 @@ Future<void> tapVisible(WidgetTester tester, Finder target) async {
 
 void main() {
   for (final mobile in [false, true]) {
+    for (final checklist in [false, true]) {
+      noteTest(
+        '${mobile ? 'mobile' : 'desktop'} tapping noninteractive note text opens editing with checklist=$checklist',
+        (tester) async {
+          final db = await setup(tester, mobile);
+          final id = await db.notesDao.saveNote(
+            title: '탭 편집',
+            content: '일반 본문\n확인 항목',
+            richContent: jsonEncode([
+              {'insert': '일반 본문\n확인 항목'},
+              {
+                'insert': '\n',
+                if (checklist) 'attributes': {'list': 'unchecked'},
+              },
+            ]),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('탭 편집'));
+          await tester.pumpAndSettle();
+          if (checklist) {
+            final checkbox = find.byWidgetPredicate(
+              (w) => w.runtimeType.toString() == 'QuillCheckboxPoint',
+            );
+            await tester.tap(
+              find.descendant(of: checkbox, matching: find.byType(InkWell)),
+            );
+            await tester.pumpAndSettle();
+            expect(find.byType(RichNoteViewer), findsOneWidget);
+            expect(titleField, findsNothing);
+            expect(
+              (await db.notesDao.getNoteWithChecklist(
+                id,
+              ))!.items.single.isChecked,
+              true,
+            );
+          }
+          final text = find
+              .descendant(
+                of: find.byType(RichNoteViewer),
+                matching: find.byWidgetPredicate(
+                  (w) =>
+                      w is RichText &&
+                      w.text.toPlainText().contains(
+                        checklist ? '확인 항목' : '일반 본문',
+                      ),
+                ),
+              )
+              .first;
+          await tester.tapAt(tester.getTopLeft(text) + const Offset(30, 10));
+          await tester.pumpAndSettle();
+          expect(titleField, findsOneWidget);
+          expect(find.byType(NoteEditingSession), findsOneWidget);
+          expect(find.byType(RichNoteViewer), findsNothing);
+          if (checklist) {
+            expect(
+              checklistFromDocument(
+                tester
+                    .widget<RichNoteEditor>(find.byType(RichNoteEditor))
+                    .controller
+                    .document,
+              ).single.isChecked,
+              true,
+            );
+          }
+        },
+      );
+    }
+  }
+
+  noteTest(
+    'mobile blank reading area opens editing while dragging only scrolls',
+    (tester) async {
+      final db = await setup(tester, true);
+      await db.notesDao.saveNote(title: '짧은 메모', content: '본문');
+      await db.notesDao.saveNote(
+        title: '긴 메모',
+        content: List.generate(90, (i) => '$i 긴 본문').join('\n'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('짧은 메모'));
+      await tester.pumpAndSettle();
+      final page = find.byType(MobileNoteDetailPage);
+      await tester.tapAt(tester.getBottomRight(page) - const Offset(30, 40));
+      await tester.pumpAndSettle();
+      expect(titleField, findsOneWidget);
+      await tapVisible(tester, find.text('취소'));
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('긴 메모'));
+      await tester.pumpAndSettle();
+      final scroll = tester
+          .widget<SingleChildScrollView>(
+            find.byKey(const ValueKey('mobile-note-detail-scroll')),
+          )
+          .controller!;
+      await tester.dragFrom(
+        tester.getCenter(find.byType(MobileNoteDetailPage)),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      expect(scroll.offset, greaterThan(0));
+      expect(titleField, findsNothing);
+      expect(find.byType(RichNoteViewer), findsOneWidget);
+    },
+  );
+
+  for (final mobile in [false, true]) {
     noteTest(
       '${mobile ? 'mobile' : 'desktop'} inserts inline goals among text and checklists and saves edits',
       (tester) async {

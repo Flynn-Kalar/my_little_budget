@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/database.dart';
+import '../../../../features/tags/suggestion_order.dart';
 import '../../color_hex.dart';
 
 typedef FieldSubmitted = void Function(bool committedSuggestion);
@@ -549,6 +550,7 @@ class TagAutocompleteField extends StatefulWidget {
     this.focusNode,
     this.textInputAction,
     this.onSubmitted,
+    this.suggestionContext,
   });
 
   final List<String> value;
@@ -558,6 +560,7 @@ class TagAutocompleteField extends StatefulWidget {
   final FocusNode? focusNode;
   final TextInputAction? textInputAction;
   final TagSubmitted? onSubmitted;
+  final Object? suggestionContext;
 
   @override
   State<TagAutocompleteField> createState() => _TagAutocompleteFieldState();
@@ -566,11 +569,15 @@ class TagAutocompleteField extends StatefulWidget {
 class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
+  final _order = TagSuggestionOrder();
+  late String _typedText;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.value.join(', '));
+    _typedText = _controller.text;
+    _order.resolve(widget.suggestions, widget.suggestionContext);
     _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(_handleFocusChanged);
   }
@@ -581,6 +588,7 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
     final text = widget.value.join(', ');
     if (!_focusNode.hasFocus && _controller.text != text) {
       _controller.text = text;
+      _typedText = text;
     }
   }
 
@@ -593,11 +601,16 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
   }
 
   void _handleFocusChanged() {
-    if (!_focusNode.hasFocus) _commitCurrentToken();
+    if (_focusNode.hasFocus) {
+      _order.lock();
+    } else {
+      _commitCurrentToken();
+      _order.unlock();
+    }
   }
 
   String get _currentToken {
-    final text = _controller.text;
+    final text = _controller.text.trimRight();
     final lastSeparator = text.lastIndexOf(RegExp(r'[,#\s]'));
     return text.substring(lastSeparator + 1).trim();
   }
@@ -621,14 +634,15 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
     _controller.selection = TextSelection.collapsed(
       offset: _controller.text.length,
     );
+    _typedText = _controller.text;
   }
 
   Iterable<String> _matches(String token, Set<String> selected) {
     final lower = token.toLowerCase();
-    return widget.suggestions
+    return _order
+        .resolve(widget.suggestions, widget.suggestionContext)
         .where((tag) => !selected.contains(tag))
-        .where((tag) => lower.isEmpty || tag.toLowerCase().contains(lower))
-        .take(8);
+        .where((tag) => lower.isEmpty || tag.toLowerCase().contains(lower));
   }
 
   TagSubmitResult _commitCurrentToken() {
@@ -636,7 +650,7 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
     final tags = _parse(current);
     final token = _currentToken;
     if (token.isEmpty) {
-      _setTags(tags);
+      _setTags(tags, readyForNext: current.trimRight().endsWith(','));
       return TagSubmitResult.empty;
     }
     if (token.length > 20) {
@@ -644,10 +658,12 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
     }
 
     final selected = tags.toSet()..remove(token);
-    final exact = widget.suggestions.firstWhere(
-      (tag) => tag.toLowerCase() == token.toLowerCase(),
-      orElse: () => '',
-    );
+    final exact = _order
+        .resolve(widget.suggestions, widget.suggestionContext)
+        .firstWhere(
+          (tag) => tag.toLowerCase() == token.toLowerCase(),
+          orElse: () => '',
+        );
     final first = exact.isNotEmpty
         ? exact
         : _matches(token, selected).cast<String?>().firstOrNull;
@@ -665,11 +681,13 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
       focusNode: _focusNode,
       optionsBuilder: (textEditingValue) {
         final token = _currentToken.toLowerCase();
-        final selected = _parse(textEditingValue.text).toSet();
-        return _matches(token, selected);
+        return _matches(token, const {});
       },
       onSelected: (suggestion) {
-        final tags = _parse(_controller.text);
+        final separator = _typedText.trimRight().lastIndexOf(RegExp(r'[,#\s]'));
+        final tags = _parse(
+          separator < 0 ? '' : _typedText.substring(0, separator + 1),
+        );
         if (!tags.contains(suggestion)) tags.add(suggestion);
         _setTags(tags, readyForNext: true);
       },
@@ -679,6 +697,8 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
           controller: controller,
           focusNode: focusNode,
           textInputAction: widget.textInputAction ?? TextInputAction.next,
+          // Enter confirms a tag; only an empty trailing token advances focus.
+          onEditingComplete: () {},
           decoration: const InputDecoration(
             hintText: '\uD0DC\uADF8',
             isDense: true,
@@ -687,12 +707,19 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
             border: OutlineInputBorder(),
           ),
           onChanged: (value) {
+            _typedText = value;
             if (value.contains(',') || value.contains('#')) {
               widget.onChanged(_parse(value));
             }
           },
           onSubmitted: (_) {
             if (_currentToken.isEmpty) {
+              widget.onSubmitted?.call(_commitCurrentToken());
+              return;
+            }
+            if (widget.suggestions.any(
+              (tag) => tag.toLowerCase() == _currentToken.toLowerCase(),
+            )) {
               widget.onSubmitted?.call(_commitCurrentToken());
               return;
             }
@@ -711,8 +738,13 @@ class _TagAutocompleteFieldState extends State<TagAutocompleteField> {
           width: widget.width ?? 180,
           options: options.toList(),
           onSelected: onSelected,
-          itemBuilder: (context, tag, highlighted) =>
-              _OptionTile(label: '#$tag', highlighted: highlighted),
+          itemBuilder: (context, tag, highlighted) => _OptionTile(
+            label: '#$tag',
+            highlighted: highlighted,
+            leading: widget.value.contains(tag)
+                ? const Icon(Icons.check, size: 16)
+                : null,
+          ),
         );
       },
     );
@@ -727,11 +759,13 @@ class TagInput extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.suggestions = const [],
+    this.suggestionContext,
   });
 
   final List<String> value;
   final ValueChanged<List<String>> onChanged;
   final List<String> suggestions;
+  final Object? suggestionContext;
 
   @override
   State<TagInput> createState() => _TagInputState();
@@ -739,6 +773,7 @@ class TagInput extends StatefulWidget {
 
 class _TagInputState extends State<TagInput> {
   final _ctrl = TextEditingController();
+  final _order = TagSuggestionOrder();
 
   @override
   void dispose() {
@@ -747,6 +782,7 @@ class _TagInputState extends State<TagInput> {
   }
 
   void _add(String raw) {
+    _order.lock();
     final names = raw
         .split(RegExp(r'[,#\s]+'))
         .map((name) => name.trim())
@@ -767,10 +803,11 @@ class _TagInputState extends State<TagInput> {
   @override
   Widget build(BuildContext context) {
     final query = _ctrl.text.trim();
-    final matches = widget.suggestions
-        .where((s) => !widget.value.contains(s))
-        .where((s) => query.isEmpty || s.contains(query))
-        .take(8)
+    final matches = _order
+        .resolve(widget.suggestions, widget.suggestionContext)
+        .where(
+          (s) => query.isEmpty || s.toLowerCase().contains(query.toLowerCase()),
+        )
         .toList();
 
     return Column(
@@ -781,9 +818,14 @@ class _TagInputState extends State<TagInput> {
           runSpacing: 6,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            ...widget.value.map(
-              (t) => InputChip(label: Text('#$t'), onDeleted: () => _remove(t)),
-            ),
+            ...widget.value
+                .where((name) => !widget.suggestions.contains(name))
+                .map(
+                  (t) => InputChip(
+                    label: Text('#$t'),
+                    onDeleted: () => _remove(t),
+                  ),
+                ),
             SizedBox(
               width: 140,
               child: TextField(
@@ -810,7 +852,12 @@ class _TagInputState extends State<TagInput> {
               spacing: 6,
               children: matches
                   .map(
-                    (s) => ActionChip(
+                    (s) => FilterChip(
+                      key: ValueKey('desktop-tag-choice-$s'),
+                      showCheckmark: false,
+                      avatar: widget.value.contains(s)
+                          ? const Icon(Icons.check, size: 16)
+                          : const SizedBox(width: 16, height: 16),
                       label: Text(
                         '#$s',
                         style: TextStyle(
@@ -819,7 +866,15 @@ class _TagInputState extends State<TagInput> {
                         ),
                       ),
                       visualDensity: VisualDensity.compact,
-                      onPressed: () => _add(s),
+                      selected: widget.value.contains(s),
+                      onSelected: (selected) {
+                        _order.lock();
+                        if (selected) {
+                          _add(s);
+                        } else {
+                          _remove(s);
+                        }
+                      },
                     ),
                   )
                   .toList(),
