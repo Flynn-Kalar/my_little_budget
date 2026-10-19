@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:my_little_budget/app.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
+import 'package:my_little_budget/ui/desktop/budget/budget_screen.dart';
+import 'package:my_little_budget/ui/desktop/investments/investments_screen.dart';
 
 void main() {
   testWidgets('데스크톱 예산은 내역 헤더에서 진입한다', (tester) async {
@@ -37,9 +39,16 @@ void main() {
     await tester.pumpAndSettle();
 
     final router = GoRouter.of(tester.element(find.text('my_little_budget')));
-    expect(router.routeInformationProvider.value.uri.path, '/budget');
+    expect(find.byType(BudgetScreen), findsOneWidget);
+    expect(
+      GoRouterState.of(
+        tester.element(find.byType(BudgetScreen)),
+      ).matchedLocation,
+      '/budget',
+    );
+    expect(router.canPop(), isTrue);
 
-    router.go('/transactions');
+    await tester.tap(find.byTooltip('뒤로가기'));
     await tester.pumpAndSettle();
 
     const investmentsButton = ValueKey(
@@ -48,7 +57,14 @@ void main() {
     expect(find.byKey(investmentsButton), findsOneWidget);
     await tester.tap(find.byKey(investmentsButton));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/investments');
+    expect(find.byType(InvestmentsScreen), findsOneWidget);
+    expect(
+      GoRouterState.of(
+        tester.element(find.byType(InvestmentsScreen)),
+      ).matchedLocation,
+      '/investments',
+    );
+    expect(router.canPop(), isTrue);
   });
 
   testWidgets('모바일 예산과 연간 통계는 각 페이지 헤더에서 진입한다', (tester) async {

@@ -142,7 +142,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           'desktop-transactions-budget-button',
                         ),
                         tooltip: '예산 보기',
-                        onPressed: () => context.go('/budget'),
+                        onPressed: () => context.push('/budget'),
                         icon: const Icon(Icons.savings_outlined, size: 18),
                         constraints: const BoxConstraints.tightFor(
                           width: 32,
@@ -155,7 +155,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         key: const ValueKey(
                           'desktop-transactions-budget-button',
                         ),
-                        onPressed: () => context.go('/budget'),
+                        onPressed: () => context.push('/budget'),
                         icon: const Icon(Icons.savings_outlined, size: 18),
                         label: const Text('예산 보기'),
                       ),
@@ -166,7 +166,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           'desktop-transactions-investments-button',
                         ),
                         tooltip: '투자 보기',
-                        onPressed: () => context.go('/investments'),
+                        onPressed: () => context.push('/investments'),
                         icon: const Icon(Icons.trending_up, size: 18),
                         constraints: const BoxConstraints.tightFor(
                           width: 32,
@@ -179,7 +179,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         key: const ValueKey(
                           'desktop-transactions-investments-button',
                         ),
-                        onPressed: () => context.go('/investments'),
+                        onPressed: () => context.push('/investments'),
                         icon: const Icon(Icons.trending_up, size: 18),
                         label: const Text('투자 보기'),
                       ),

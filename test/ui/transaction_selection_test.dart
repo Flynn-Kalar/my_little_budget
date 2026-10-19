@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_little_budget/core/date.dart';
+import 'package:my_little_budget/core/money.dart';
 import 'package:my_little_budget/ui/desktop/transactions/transactions_screen.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/daos/transactions_dao.dart';
@@ -75,6 +76,96 @@ void main() {
   );
   Finder checkbox(int id, {bool mobile = false}) => find.byKey(
     ValueKey('${mobile ? 'mobile' : 'desktop'}-transaction-checkbox-$id'),
+  );
+
+  for (final mobile in [false, true]) {
+    testWidgets(
+      '${mobile ? 'mobile' : 'PC'} selected delete confirms totals, supports cancel, and removes only selected rows',
+      (tester) async {
+        await open(tester, mobile: mobile);
+        await tester.ensureVisible(row(ids[0], mobile: mobile));
+        await tester.longPress(row(ids[0], mobile: mobile));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(row(ids[1], mobile: mobile));
+        await tester.tap(row(ids[1], mobile: mobile));
+        await tester.pumpAndSettle();
+        final delete = find.byKey(
+          const ValueKey('transaction-selection-delete-button'),
+        );
+        await tester.ensureVisible(delete);
+        await tester.tap(delete);
+        await tester.pumpAndSettle();
+        expect(find.text('선택한 거래 삭제'), findsOneWidget);
+        expect(find.textContaining('선택한 2건을 삭제할까요?'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.textContaining('지출 ${formatKRW(3000)}'),
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('취소'));
+        await tester.pumpAndSettle();
+        expect(find.text('2건 선택'), findsOneWidget);
+        expect(await db.transactionsDao.getTransactionById(ids[0]), isNotNull);
+        await tester.tap(delete);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('transaction-selection-confirm-delete')),
+        );
+        await tester.pumpAndSettle();
+        for (final id in ids.take(2)) {
+          expect(await db.transactionsDao.getTransactionById(id), isNull);
+          expect(row(id, mobile: mobile), findsNothing);
+        }
+        expect(await db.transactionsDao.getTransactionById(ids[2]), isNotNull);
+        expect(await db.transactionsDao.getTransactionById(ids[3]), isNotNull);
+        expect(
+          find.byKey(const ValueKey('transaction-selection-toolbar')),
+          findsNothing,
+        );
+        expect(find.byType(Checkbox), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'delete failure retains selection and shows an error without expanding editing',
+    (tester) async {
+      await open(tester);
+      await tester.longPress(row(ids[0]));
+      await tester.pumpAndSettle();
+      await tester.tap(row(ids[1]));
+      await tester.pumpAndSettle();
+      await db.customStatement(
+        '''CREATE TRIGGER fail_ui_bulk_delete BEFORE DELETE ON transactions
+      WHEN OLD.id = ${ids[1]} BEGIN SELECT RAISE(ABORT, 'test failure'); END''',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('transaction-selection-delete-button')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('transaction-selection-confirm-delete')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('삭제하지 못했습니다. 목록을 확인한 뒤 다시 시도해주세요.'), findsOneWidget);
+      expect(find.text('2건 선택'), findsOneWidget);
+      expect(await db.transactionsDao.getTransactionById(ids[0]), isNotNull);
+      expect(await db.transactionsDao.getTransactionById(ids[1]), isNotNull);
+      await tester.tap(find.text('선택 해제'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextButton>(
+              find.byKey(const ValueKey('transaction-selection-delete-button')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
   );
 
   testWidgets(

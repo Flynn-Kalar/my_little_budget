@@ -67,6 +67,7 @@ class TransactionSelection extends ChangeNotifier {
     final available = availableIds.toSet();
     if (queryChanged || available.isEmpty) {
       active = false;
+      busy = false;
       _ids.clear();
       _anchor = null;
     } else {

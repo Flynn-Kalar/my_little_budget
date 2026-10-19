@@ -1,6 +1,6 @@
 #define MyAppName "나만의 작은 가계부"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0-rc.3"
+  #define MyAppVersion "1.0.0-rc.4"
 #endif
 #ifndef MyAppNumericVersion
   #define MyAppNumericVersion "1.0.0.55"

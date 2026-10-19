@@ -102,12 +102,74 @@ class _BulkTransactionEditorState
   int? _categoryId;
   String _tagMode = 'keep';
   bool _expanded = false;
+  bool _confirmingDelete = false;
   String? _error;
 
   @override
   void dispose() {
     _tags.dispose();
     super.dispose();
+  }
+
+  Future<void> _delete(List<TransactionRow> selected) async {
+    final selection = widget.selection;
+    if (selection.busy || selected.isEmpty) return;
+    final ids = selected.map((row) => row.id).toSet();
+    int total(String type) => selected
+        .where((row) => row.type == type)
+        .fold(0, (sum, row) => sum + row.amount);
+    setState(() {
+      _error = null;
+      _confirmingDelete = true;
+    });
+    selection.setBusy(true);
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('선택한 거래 삭제'),
+          content: Text(
+            '선택한 ${ids.length}건을 삭제할까요?\n\n'
+            '수입 ${formatKRW(total('income'))}\n'
+            '지출 ${formatKRW(total('expense'))}'
+            '${selected.any((row) => row.type == 'transfer') ? '\n이체 ${formatKRW(total('transfer'))}' : ''}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              key: const ValueKey('transaction-selection-confirm-delete'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text('${ids.length}건 삭제'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      setState(() => _confirmingDelete = false);
+      await ref.read(transactionsDaoProvider).bulkDeleteTransactions(ids: ids);
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      selection.setBusy(false);
+      selection.exit();
+      refreshTransactions(ref);
+      messenger.showSnackBar(
+        SnackBar(content: Text('${ids.length}건을 삭제했습니다.')),
+      );
+    } catch (_) {
+      if (mounted) setState(() => _error = '삭제하지 못했습니다. 목록을 확인한 뒤 다시 시도해주세요.');
+    } finally {
+      if (mounted) {
+        setState(() => _confirmingDelete = false);
+        if (selection.busy) selection.setBusy(false);
+      }
+    }
   }
 
   Future<void> _save(int? categoryId) async {
@@ -192,6 +254,8 @@ class _BulkTransactionEditorState
                 Expanded(
                   child: Text(
                     '${selected.length}건 선택',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -204,6 +268,17 @@ class _BulkTransactionEditorState
                     size: 18,
                   ),
                   label: const Text('일괄 수정'),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('transaction-selection-delete-button'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                  onPressed: busy || selected.isEmpty
+                      ? null
+                      : () => _delete(selected),
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: const Text('삭제'),
                 ),
                 IconButton(
                   tooltip: '선택 모드 종료',
@@ -305,13 +380,6 @@ class _BulkTransactionEditorState
                           ),
                         ),
                       ],
-                      if (_error != null)
-                        Text(
-                          _error!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -329,7 +397,12 @@ class _BulkTransactionEditorState
                   child: Text('${selected.length}건에 적용'),
                 ),
               ),
-            if (busy) const LinearProgressIndicator(),
+            if (_error != null)
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            if (busy && !_confirmingDelete) const LinearProgressIndicator(),
           ],
         ),
       ),

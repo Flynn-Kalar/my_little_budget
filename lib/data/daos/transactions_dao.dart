@@ -823,6 +823,28 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     await (delete(transactions)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Delete the confirmed selection atomically, using the same tag cascades
+  /// and sync outbox triggers as single-row deletion.
+  Future<void> bulkDeleteTransactions({required Set<int> ids}) async {
+    if (ids.isEmpty) throw ArgumentError('삭제할 거래를 선택해주세요.');
+    final selectedIds = Set<int>.of(ids);
+    await transaction(() async {
+      final rows = await (select(
+        transactions,
+      )..where((t) => t.id.isIn(selectedIds))).get();
+      if (rows.length != selectedIds.length ||
+          rows.any((r) => r.deletedAt != null)) {
+        throw StateError('일부 거래가 변경되었습니다. 목록을 다시 확인해주세요.');
+      }
+      final deleted = await (delete(
+        transactions,
+      )..where((t) => t.id.isIn(selectedIds))).go();
+      if (deleted != selectedIds.length) {
+        throw StateError('일부 거래를 삭제하지 못했습니다.');
+      }
+    });
+  }
+
   /// Only offer reusable entries whose account and category are still active.
   Future<List<TransactionRow>> recentInputEntries() async {
     final rows = await customSelect(

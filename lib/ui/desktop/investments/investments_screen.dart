@@ -11,6 +11,7 @@ import '../../../features/investments/quantity_precision.dart';
 import '../../../features/investments/validation.dart';
 import 'package:my_little_budget/features/investments/providers.dart';
 import '../../shared/amount_input_formatter.dart';
+import '../page_back_button.dart';
 import 'widgets/investment_summary_card.dart';
 
 class InvestmentsScreen extends ConsumerStatefulWidget {
@@ -45,9 +46,14 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '투자',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            const Row(
+              children: [
+                PageBackButton(),
+                Text(
+                  '투자',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             SizedBox(height: 20),
             Wrap(

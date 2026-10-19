@@ -12,6 +12,7 @@ import '../../../features/budget/validation.dart';
 import 'package:my_little_budget/features/budget/providers.dart';
 import '../../shared/amount_input_formatter.dart';
 import '../../shared/daily_budget_guidance.dart';
+import '../page_back_button.dart';
 import 'widgets/budget_read_only_content.dart';
 
 class BudgetScreen extends ConsumerWidget {
@@ -29,9 +30,14 @@ class BudgetScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '예산',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            const Row(
+              children: [
+                PageBackButton(),
+                Text(
+                  '예산',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             SizedBox(height: 20),
             Wrap(
