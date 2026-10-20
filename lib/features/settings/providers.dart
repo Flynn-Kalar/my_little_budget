@@ -4,6 +4,7 @@ import '../../data/database.dart';
 import '../../data/providers.dart';
 import '../../data/daos/recurring_dao.dart';
 import '../../data/daos/transaction_presets_dao.dart';
+import '../accounts/providers.dart' as accounts_providers;
 import 'package:my_little_budget/features/budget/providers.dart'
     as budget_providers;
 import 'package:my_little_budget/features/stats/providers.dart'
@@ -39,6 +40,14 @@ final transactionPresetItemsProvider =
     );
 
 void refreshCategories(WidgetRef ref) {
+  ref.invalidate(transactions_providers.transactionsListProvider);
+  ref.invalidate(accounts_providers.accountTransactionsProvider);
+  ref.invalidate(accounts_providers.accountDetailCategoriesProvider);
+  ref.invalidate(stats_providers.statsCategoryTransactionsProvider);
+  ref.invalidate(stats_providers.statsTagTransactionsProvider);
+  ref.invalidate(settingsTagsProvider);
+  ref.invalidate(transactions_providers.allTagsProvider);
+  ref.invalidate(transactions_providers.transactionTagSuggestionsProvider);
   ref.invalidate(allCategoriesProvider);
   ref.invalidate(settingsActiveCategoriesProvider);
   ref.invalidate(transactions_providers.activeCategoriesProvider);
@@ -49,6 +58,7 @@ void refreshCategories(WidgetRef ref) {
 }
 
 void refreshTags(WidgetRef ref) {
+  ref.invalidate(transactions_providers.transactionTagSuggestionsProvider);
   ref.invalidate(settingsTagsProvider);
   ref.invalidate(transactions_providers.allTagsProvider);
   ref.invalidate(transactions_providers.transactionsListProvider);

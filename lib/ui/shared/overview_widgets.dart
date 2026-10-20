@@ -4,6 +4,7 @@ import '../../core/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/daos/transactions_dao.dart';
 import '../../features/home/providers.dart';
+import 'category_icon.dart';
 
 class OverviewCard extends StatelessWidget {
   const OverviewCard({super.key, required this.child, this.padding = 24});
@@ -258,21 +259,12 @@ class _RecentRow extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(vertical: 6),
       onTap: onTap,
-      leading: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .1),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Icon(
-          income
-              ? Icons.south_west
-              : transfer
-              ? Icons.swap_horiz
-              : Icons.receipt_long_outlined,
-          color: color,
-        ),
+      leading: CategoryIconBadge(
+        name: row.categoryName,
+        iconId: row.categoryIcon,
+        colorHex: row.categoryColor,
+        type: row.type,
+        size: 42,
       ),
       title: Text(
         row.memo?.trim().isNotEmpty == true

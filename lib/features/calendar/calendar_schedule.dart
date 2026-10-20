@@ -24,11 +24,13 @@ class CalendarScheduleSettings {
     this.timeZone,
     this.allDayDate,
     this.exceptions = const {},
+    this.isDday = false,
   });
   final int every;
   final String? until;
   final String? timeZone;
   final String? allDayDate;
+  final bool isDday;
 
   /// Keys identify the original civil date, even after an occurrence is moved.
   final Map<String, Map<String, dynamic>> exceptions;
@@ -43,6 +45,7 @@ class CalendarScheduleSettings {
         until: map['until'] as String?,
         timeZone: map['zone'] as String?,
         allDayDate: map['date'] as String?,
+        isDday: map['dday'] as bool? ?? false,
         exceptions: {
           for (final e in (map['exceptions'] as Map? ?? {}).entries)
             e.key as String: Map<String, dynamic>.from(e.value as Map),
@@ -57,6 +60,7 @@ class CalendarScheduleSettings {
     'until': until,
     'zone': timeZone,
     'date': allDayDate,
+    'dday': isDday,
     'exceptions': exceptions,
   });
   CalendarScheduleSettings withException(
@@ -67,6 +71,7 @@ class CalendarScheduleSettings {
     until: until,
     timeZone: timeZone,
     allDayDate: allDayDate,
+    isDday: isDday,
     exceptions: {...exceptions}
       ..remove(key)
       ..addAll(exception == null ? {} : {key: exception}),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/date.dart';
 import '../desktop_section.dart';
@@ -104,7 +105,7 @@ class StatsScreen extends ConsumerWidget {
             SizedBox(height: 16),
             trend.when(
               data: (rows) =>
-                  DesktopSection(minWidth: 600, child: _TrendCard(rows: rows)),
+                  DesktopSection(minWidth: 960, child: _TrendCard(rows: rows)),
               loading: () => const _StatsCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
@@ -308,7 +309,7 @@ class _CategoryDonutChart extends StatelessWidget {
       children: [
         PieChart(
           PieChartData(
-            centerSpaceRadius: 58,
+            centerSpaceRadius: 68,
             sectionsSpace: 2,
             startDegreeOffset: -90,
             sections: [
@@ -329,11 +330,11 @@ class _CategoryDonutChart extends StatelessWidget {
               '총 지출',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.desktopMuted, fontSize: 10),
+              style: TextStyle(color: context.desktopMuted, fontSize: 12),
             ),
             SizedBox(height: 4),
             SizedBox(
-              width: 96,
+              width: 116,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
@@ -342,7 +343,7 @@ class _CategoryDonutChart extends StatelessWidget {
                   maxLines: 1,
                   style: TextStyle(
                     color: context.desktopExpense,
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -353,11 +354,11 @@ class _CategoryDonutChart extends StatelessWidget {
               '순액',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.desktopMuted, fontSize: 10),
+              style: TextStyle(color: context.desktopMuted, fontSize: 12),
             ),
             SizedBox(height: 2),
             SizedBox(
-              width: 96,
+              width: 116,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
@@ -368,7 +369,7 @@ class _CategoryDonutChart extends StatelessWidget {
                     color: netAmount == null || netAmount! >= 0
                         ? context.desktopIncome
                         : context.desktopExpense,
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -395,7 +396,7 @@ class _TagDonutChart extends StatelessWidget {
       children: [
         PieChart(
           PieChartData(
-            centerSpaceRadius: 58,
+            centerSpaceRadius: 68,
             sectionsSpace: 2,
             startDegreeOffset: -90,
             sections: [
@@ -416,11 +417,11 @@ class _TagDonutChart extends StatelessWidget {
               '태그 합계',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.desktopMuted, fontSize: 10),
+              style: TextStyle(color: context.desktopMuted, fontSize: 12),
             ),
             SizedBox(height: 4),
             SizedBox(
-              width: 96,
+              width: 116,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
@@ -429,7 +430,7 @@ class _TagDonutChart extends StatelessWidget {
                   maxLines: 1,
                   style: TextStyle(
                     color: context.desktopExpense,
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -857,7 +858,6 @@ class _CategoryDetailRow extends StatelessWidget {
 
 class _TrendCard extends StatelessWidget {
   const _TrendCard({required this.rows});
-
   final List<MonthlyTrendRow> rows;
 
   @override
@@ -865,67 +865,120 @@ class _TrendCard extends StatelessWidget {
     final totalIncome = rows.fold<int>(0, (sum, row) => sum + row.income);
     final totalExpense = rows.fold<int>(0, (sum, row) => sum + row.expense);
     final totalNet = totalIncome - totalExpense;
-
     return _StatsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: Text(
                   '최근 12개월 추세',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                 ),
               ),
               Text(
-                '축: 만원',
+                '단위: 만원',
                 style: TextStyle(color: context.desktopMuted, fontSize: 12),
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _TrendSummaryTile(
-                  label: '수입',
-                  amount: totalIncome,
-                  color: context.desktopIncome,
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _TrendLegend(label: '수입', color: context.desktopIncome),
+                        const SizedBox(width: 14),
+                        _TrendLegend(
+                          label: '지출',
+                          color: context.desktopExpense,
+                        ),
+                        const SizedBox(width: 14),
+                        _TrendLegend(
+                          label: '순액',
+                          color: _trendNetColor(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      key: const ValueKey('desktop-trend-chart'),
+                      height: 180,
+                      child: rows.isEmpty
+                          ? const _EmptyState(message: '최근 12개월 거래 내역이 없습니다.')
+                          : _TrendChart(rows: rows),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _TrendSummaryTile(
-                  label: '지출',
-                  amount: totalExpense,
-                  color: context.desktopExpense,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _TrendSummaryTile(
-                  label: '순액',
-                  amount: totalNet,
-                  color: totalNet < 0
-                      ? context.desktopExpense
-                      : _trendNetColor(context),
+              const SizedBox(width: 20),
+              SizedBox(
+                key: const ValueKey('desktop-trend-totals'),
+                width: 200,
+                child: Column(
+                  children: [
+                    _TrendSummaryTile(
+                      label: '수입',
+                      amount: totalIncome,
+                      color: context.desktopIncome,
+                      icon: Icons.south,
+                    ),
+                    const SizedBox(height: 8),
+                    _TrendSummaryTile(
+                      label: '지출',
+                      amount: totalExpense,
+                      color: context.desktopExpense,
+                      icon: Icons.north,
+                    ),
+                    const SizedBox(height: 8),
+                    _TrendSummaryTile(
+                      label: '순액',
+                      amount: totalNet,
+                      color: totalNet < 0
+                          ? context.desktopExpense
+                          : _trendNetColor(context),
+                      icon: Icons.bar_chart,
+                      signed: true,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          SizedBox(height: 16),
-          if (rows.isEmpty)
-            const _EmptyState(message: '최근 12개월 거래 내역이 없습니다.')
-          else ...[
-            SizedBox(height: 210, child: _TrendChart(rows: rows)),
-            SizedBox(height: 12),
+          if (rows.isNotEmpty) ...[
+            const SizedBox(height: 16),
             _TrendTable(rows: rows),
           ],
         ],
       ),
     );
   }
+}
+
+class _TrendLegend extends StatelessWidget {
+  const _TrendLegend({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 5),
+      Text(label, style: TextStyle(color: context.desktopMuted, fontSize: 12)),
+    ],
+  );
 }
 
 const int _axisStep = 500000;
@@ -968,6 +1021,7 @@ class _TrendChart extends StatelessWidget {
         lineTouchData: LineTouchData(
           enabled: true,
           touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => const Color(0xFF30364E),
             fitInsideHorizontally: true,
             fitInsideVertically: true,
             getTooltipItems: (spots) {
@@ -1011,18 +1065,20 @@ class _TrendChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 28,
+              reservedSize: 38,
               interval: 1,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
                 if (index < 0 || index >= rows.length) {
                   return const SizedBox.shrink();
                 }
+                final date = parseMonthKey(rows[index].month);
                 return SideTitleWidget(
                   meta: meta,
                   child: Text(
-                    '${parseMonthKey(rows[index].month).month}',
-                    style: TextStyle(color: context.desktopMuted, fontSize: 11),
+                    '${index == 0 || date.month == 1 ? '${date.year}년\n' : ''}${date.month}월',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.desktopMuted, fontSize: 10),
                   ),
                 );
               },
@@ -1052,20 +1108,17 @@ class _TrendChart extends StatelessWidget {
     return LineChartBarData(
       isCurved: false,
       color: color,
-      barWidth: 3,
+      barWidth: 2,
       dotData: FlDotData(
         show: true,
         getDotPainter: (_, _, _, _) => FlDotCirclePainter(
-          radius: 3.5,
+          radius: 3,
           color: color,
           strokeWidth: 2,
           strokeColor: context.desktopSurface,
         ),
       ),
-      belowBarData: BarAreaData(
-        show: true,
-        color: color.withValues(alpha: 0.08),
-      ),
+      belowBarData: BarAreaData(show: false),
       spots: [
         for (var i = 0; i < rows.length; i++)
           FlSpot(i.toDouble(), read(rows[i]).toDouble()),
@@ -1098,16 +1151,26 @@ LineTooltipItem _trendTooltipItem(
     _ => _trendNetColor(context),
   };
   return LineTooltipItem(
-    '$label ${formatKRW(amount)}',
-    TextStyle(color: color, fontWeight: FontWeight.w800),
+    spot.barIndex == 0
+        ? '${parseMonthKey(row.month).year}년 ${parseMonthKey(row.month).month}월\n'
+        : '',
+    const TextStyle(
+      color: Colors.white,
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+    ),
+    children: [
+      TextSpan(
+        text: '● ',
+        style: TextStyle(color: color),
+      ),
+      TextSpan(text: '$label  ${formatKRW(amount)}'),
+    ],
   );
 }
 
 Color _trendNetColor(BuildContext context) {
-  final theme = Theme.of(context);
-  return theme.brightness == Brightness.dark
-      ? context.desktopAccent
-      : context.desktopWarning;
+  return context.desktopAccent;
 }
 
 class _TrendSummaryTile extends StatelessWidget {
@@ -1115,145 +1178,175 @@ class _TrendSummaryTile extends StatelessWidget {
     required this.label,
     required this.amount,
     required this.color,
+    required this.icon,
+    this.signed = false,
   });
-
   final String label;
   final int amount;
   final Color color;
+  final IconData icon;
+  final bool signed;
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.desktopSelectedSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.desktopBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: context.desktopMuted)),
-            SizedBox(height: 4),
-            Text(
-              formatKRW(amount),
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .07),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 22),
         ),
-      ),
-    );
-  }
-}
-
-class _TrendTable extends StatelessWidget {
-  const _TrendTable({required this.rows});
-
-  final List<MonthlyTrendRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [for (final row in rows) _TrendMonthChip(row: row)],
-    );
-  }
-}
-
-class _TrendMonthChip extends StatelessWidget {
-  const _TrendMonthChip({required this.row});
-
-  final MonthlyTrendRow row;
-
-  @override
-  Widget build(BuildContext context) {
-    final d = parseMonthKey(row.month);
-    final netColor = row.net < 0
-        ? context.desktopExpense
-        : Theme.of(context).colorScheme.onSurface;
-
-    return SizedBox(
-      width: 164,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: context.desktopSelectedSurface,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        const SizedBox(width: 10),
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${d.year}.${d.month}',
-                style: TextStyle(
-                  color: context.desktopMuted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                label,
+                style: TextStyle(color: context.desktopMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 3),
+              Tooltip(
+                message: formatKRW(amount),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${signed && amount > 0 ? '+' : ''}${formatKRW(amount)}',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
-              SizedBox(height: 4),
-              _MiniAmount(
-                label: '수입',
-                amount: row.income,
-                color: context.desktopIncome,
-              ),
-              _MiniAmount(
-                label: '지출',
-                amount: row.expense,
-                color: context.desktopExpense,
-              ),
-              _MiniAmount(label: '순액', amount: row.net, color: netColor),
             ],
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
 
-class _MiniAmount extends StatelessWidget {
-  const _MiniAmount({
-    required this.label,
-    required this.amount,
-    required this.color,
-  });
-
-  final String label;
-  final int amount;
-  final Color color;
+class _TrendTable extends StatelessWidget {
+  const _TrendTable({required this.rows});
+  final List<MonthlyTrendRow> rows;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final format = NumberFormat('#,##0.####', 'ko_KR');
+    String amount(int value) => format.format(value / 10000);
+    final style = DefaultTextStyle.of(context).style.copyWith(fontSize: 12);
+    var columnWidth = 72.0;
+    for (final row in rows) {
+      var width = 72.0;
+      final date = parseMonthKey(row.month);
+      for (final value in [
+        '${date.year}.${date.month.toString().padLeft(2, '0')}',
+        amount(row.income),
+        amount(row.expense),
+        amount(row.net),
+      ]) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: value,
+            style: style.copyWith(fontWeight: FontWeight.w700),
+          ),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        if (painter.width + 20 > width) width = painter.width + 20;
+        painter.dispose();
+      }
+      if (width > columnWidth) columnWidth = width;
+    }
+    Widget cell(
+      String text, {
+      Color? color,
+      bool bold = false,
+      String? tooltip,
+    }) {
+      final content = Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          style: style.copyWith(
+            color: color,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+          ),
+        ),
+      );
+      return tooltip == null
+          ? content
+          : Tooltip(message: tooltip, child: content);
+    }
+
+    TableRow values(
+      String label,
+      int Function(MonthlyTrendRow) read,
+      Color color,
+    ) => TableRow(
       children: [
-        SizedBox(
-          width: 32,
-          child: Text(
-            label,
-            style: TextStyle(color: context.desktopMuted, fontSize: 11),
-          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: _TrendLegend(label: label, color: color),
         ),
-        Expanded(
-          child: Text(
-            formatKRW(amount),
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
+        for (final row in rows)
+          cell(
+            amount(read(row)),
+            color: label == '순액' && read(row) < 0
+                ? context.desktopExpense
+                : null,
+            tooltip: '${row.month} $label ${formatKRW(read(row))}',
           ),
-        ),
       ],
+    );
+    return DesktopSection(
+      minWidth: 64 + columnWidth * rows.length,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Table(
+          key: const ValueKey('desktop-trend-monthly-table'),
+          defaultColumnWidth: const FlexColumnWidth(),
+          columnWidths: const {0: FixedColumnWidth(64)},
+          border: TableBorder.all(
+            color: context.desktopBorder.withValues(alpha: .65),
+            width: .6,
+          ),
+          children: [
+            TableRow(
+              decoration: BoxDecoration(
+                color: context.desktopSelectedSurface.withValues(alpha: .55),
+              ),
+              children: [
+                cell('구분', color: context.desktopMuted, bold: true),
+                for (final row in rows)
+                  cell(
+                    '${parseMonthKey(row.month).year}.${parseMonthKey(row.month).month.toString().padLeft(2, '0')}',
+                    color: context.desktopMuted,
+                    bold: true,
+                  ),
+              ],
+            ),
+            values('수입', (row) => row.income, context.desktopIncome),
+            values('지출', (row) => row.expense, context.desktopExpense),
+            values('순액', (row) => row.net, _trendNetColor(context)),
+          ],
+        ),
+      ),
     );
   }
 }

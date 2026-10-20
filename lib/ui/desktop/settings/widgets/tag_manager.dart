@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/tag_category_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
@@ -225,7 +226,16 @@ class _TagRow extends StatelessWidget {
             ),
           ),
           SizedBox(width: 12),
-          Expanded(child: Text('#${tag.name}', style: TextStyle(fontSize: 14))),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('#${tag.name}', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 4),
+                TagCategorySummary(categoryIdsJson: tag.categoryIdsJson),
+              ],
+            ),
+          ),
           IconButton(
             onPressed: busy ? null : onEdit,
             icon: Icon(Icons.edit_outlined, size: 16),

@@ -8,6 +8,8 @@ import '../../../data/providers.dart';
 import '../../../features/tags/validation.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import '../mobile_widgets.dart';
+import '../../../data/tag_category_links.dart';
+import '../../shared/tag_category_selector.dart';
 
 class MobileTagsScreen extends ConsumerWidget {
   const MobileTagsScreen({super.key});
@@ -84,6 +86,7 @@ class _TagCard extends ConsumerWidget {
         contentPadding: EdgeInsets.zero,
         leading: CircleAvatar(backgroundColor: _parseColor(tag.color)),
         title: Text('#${tag.name}'),
+        subtitle: TagCategorySummary(categoryIdsJson: tag.categoryIdsJson),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -181,6 +184,9 @@ class _TagSheet extends ConsumerStatefulWidget {
 class _TagSheetState extends ConsumerState<_TagSheet> {
   late final _name = TextEditingController(text: widget.tag?.name ?? '');
   bool _busy = false;
+  late Set<int> _categoryIds = readTagCategoryIds(
+    widget.tag?.categoryIdsJson ?? '[]',
+  ).toSet();
   String? _error;
 
   bool get _isEdit => widget.tag != null;
@@ -203,9 +209,20 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
       if (_isEdit) {
         await ref
             .read(tagsDaoProvider)
-            .updateTag(widget.tag!.id, draft.name, draft.color);
+            .updateTag(
+              widget.tag!.id,
+              draft.name,
+              draft.color,
+              categoryIds: _categoryIds.toList(),
+            );
       } else {
-        await ref.read(tagsDaoProvider).createTag(draft.name, draft.color);
+        await ref
+            .read(tagsDaoProvider)
+            .createTag(
+              draft.name,
+              draft.color,
+              categoryIds: _categoryIds.toList(),
+            );
       }
       if (!mounted) return;
       refreshTags(ref);
@@ -241,50 +258,59 @@ class _TagSheetState extends ConsumerState<_TagSheet> {
         top: 16,
         bottom: mobileBottomPadding(context, spacing: 16),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            _isEdit ? '태그 수정' : '태그 추가',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _name,
-            enabled: !_busy,
-            decoration: InputDecoration(
-              labelText: '이름',
-              prefixText: '#',
-              border: const OutlineInputBorder(),
-              errorText: _error,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _isEdit ? '태그 수정' : '태그 추가',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              if (_isEdit)
-                TextButton.icon(
-                  onPressed: _busy ? null : _delete,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('삭제'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.appExpense,
+            const SizedBox(height: 16),
+            TextField(
+              controller: _name,
+              enabled: !_busy,
+              decoration: InputDecoration(
+                labelText: '이름',
+                prefixText: '#',
+                border: const OutlineInputBorder(),
+                errorText: _error,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TagCategorySelector(
+              selected: _categoryIds,
+              enabled: !_busy,
+              maxHeight: 160,
+              onChanged: (ids) => setState(() => _categoryIds = ids),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (_isEdit)
+                  TextButton.icon(
+                    onPressed: _busy ? null : _delete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('삭제'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.appExpense,
+                    ),
                   ),
+                const Spacer(),
+                TextButton(
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  child: const Text('취소'),
                 ),
-              const Spacer(),
-              TextButton(
-                onPressed: _busy ? null : () => Navigator.pop(context),
-                child: const Text('취소'),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: _busy ? null : _save,
-                child: const Text('저장'),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _busy ? null : _save,
+                  child: const Text('저장'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

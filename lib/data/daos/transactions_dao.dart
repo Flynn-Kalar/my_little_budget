@@ -42,6 +42,7 @@ class TransactionRow {
     this.categoryId,
     this.categoryName,
     this.categoryColor,
+    this.categoryIcon,
     this.fromAccountId,
     this.fromAccountName,
     this.toAccountId,
@@ -68,6 +69,7 @@ class TransactionRow {
   final int? categoryId;
   final String? categoryName;
   final String? categoryColor;
+  final String? categoryIcon;
   final int? fromAccountId;
   final String? fromAccountName;
   final int? toAccountId;
@@ -335,7 +337,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       SELECT
         t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo,
         t.account_id, a.name AS account_name,
-        t.category_id, c.name AS category_name, c.color AS category_color,
+        t.category_id, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
         t.from_account_id, fa.name AS from_account_name,
         t.to_account_id, ta.name AS to_account_name
       FROM transactions t
@@ -595,7 +597,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       SELECT
         t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo,
         t.account_id, a.name AS account_name,
-        t.category_id, c.name AS category_name, c.color AS category_color,
+        t.category_id, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
         t.from_account_id, fa.name AS from_account_name,
         t.to_account_id, ta.name AS to_account_name
       FROM transactions t
@@ -627,7 +629,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       SELECT
         t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo,
         t.account_id, a.name AS account_name,
-        t.category_id, c.name AS category_name, c.color AS category_color,
+        t.category_id, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
         t.from_account_id, fa.name AS from_account_name,
         t.to_account_id, ta.name AS to_account_name
       FROM transactions t
@@ -850,7 +852,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     final rows = await customSelect(
       '''
       SELECT t.*, a.name AS account_name, c.name AS category_name,
-        c.color AS category_color, fa.name AS from_account_name,
+        c.color AS category_color, c.icon AS category_icon, fa.name AS from_account_name,
         ta.name AS to_account_name
       FROM transactions t
       LEFT JOIN accounts a ON a.id = t.account_id
@@ -1045,6 +1047,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       categoryId: r.readNullable<int>('category_id'),
       categoryName: r.readNullable<String>('category_name'),
       categoryColor: r.readNullable<String>('category_color'),
+      categoryIcon: r.readNullable<String>('category_icon'),
       fromAccountId: r.readNullable<int>('from_account_id'),
       fromAccountName: r.readNullable<String>('from_account_name'),
       toAccountId: r.readNullable<int>('to_account_id'),
@@ -1066,6 +1069,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       categoryId: row.categoryId,
       categoryName: row.categoryName,
       categoryColor: row.categoryColor,
+      categoryIcon: row.categoryIcon,
       fromAccountId: row.fromAccountId,
       fromAccountName: row.fromAccountName,
       toAccountId: row.toAccountId,

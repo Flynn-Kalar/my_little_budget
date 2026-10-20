@@ -9,6 +9,7 @@ import '../../../../data/providers.dart';
 import '../../../../features/transactions/providers.dart';
 import '../../../../features/transactions/selection.dart';
 import '../../../shared/bulk_transaction_editor.dart';
+import '../../../shared/category_icon.dart';
 import '../../mobile_widgets.dart';
 import '../../settings/sheets/mobile_transaction_preset_sheet.dart';
 
@@ -468,20 +469,12 @@ class _TransactionCard extends ConsumerWidget {
                     : (_) => selection.toggle(row.id),
               )
             else
-              SizedBox(
-                width: 24,
-                child: Center(
-                  child: isTransfer
-                      ? Icon(Icons.swap_horiz, size: 18, color: color)
-                      : Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _categoryColor(row.categoryColor, color),
-                          ),
-                        ),
-                ),
+              CategoryIconBadge(
+                name: row.categoryName,
+                iconId: row.categoryIcon,
+                colorHex: row.categoryColor,
+                type: row.type,
+                size: 36,
               ),
             const SizedBox(width: 8),
             Expanded(
@@ -718,9 +711,6 @@ String _dateLabel(String dateKey) {
     return dateKey;
   }
 }
-
-Color _categoryColor(String? hex, Color fallback) =>
-    hex == null ? fallback : _colorFromHex(hex, fallback);
 
 Color _colorFromHex(String hex, Color fallback) {
   final normalized = hex.replaceFirst('#', '');

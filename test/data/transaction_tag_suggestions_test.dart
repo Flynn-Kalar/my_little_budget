@@ -6,7 +6,7 @@ import 'package:my_little_budget/features/tags/suggestion_order.dart';
 
 void main() {
   test(
-    'category history ranks first; other tags stay available by overall frequency',
+    'explicit categories rank first; each group uses overall frequency',
     () async {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
@@ -34,7 +34,21 @@ void main() {
       for (var i = 0; i < 4; i++) {
         await save(categories[1].id, ['전체자주']);
       }
-      await db.tagsDao.createTag('미사용', '#64748b');
+      await db.tagsDao.createTag(
+        '미사용',
+        '#64748b',
+        categoryIds: [categories[0].id],
+      );
+      for (final tag in await db.tagsDao.getTags()) {
+        if (tag.name == '분류자주' || tag.name == '분류최근') {
+          await db.tagsDao.updateTag(
+            tag.id,
+            tag.name,
+            tag.color,
+            categoryIds: [categories[0].id],
+          );
+        }
+      }
       Future<List<String>> names([int? id]) async =>
           (await db.tagsDao.getTransactionTagSuggestions(
             categoryId: id,
@@ -43,9 +57,9 @@ void main() {
       expect(await names(categories[0].id), [
         '분류자주',
         '분류최근',
-        '분류과거',
-        '전체자주',
         '미사용',
+        '전체자주',
+        '분류과거',
       ]);
       expect(await names(categories[1].id), [
         '전체자주',

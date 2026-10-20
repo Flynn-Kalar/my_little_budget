@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/categories/validation.dart';
+import '../../../shared/category_icon_picker.dart';
 import '../../../desktop/color_hex.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 
@@ -30,6 +31,7 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
     text: widget.category?.name ?? '',
   );
   late String _color = widget.category?.color ?? randomColor();
+  late String? _icon = widget.category?.icon;
   bool _busy = false;
 
   bool get _isEditing => widget.category != null;
@@ -45,6 +47,7 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
       name: _nameCtrl.text,
       type: widget.category?.type ?? widget.type ?? 'expense',
       color: _color,
+      icon: _icon,
     );
     if (result.isFail) {
       _show(result.errors.values.first);
@@ -103,6 +106,7 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
         children: [
           TextField(
             controller: _nameCtrl,
+            onChanged: (_) => setState(() {}),
             maxLength: 20,
             decoration: const InputDecoration(
               labelText: '이름',
@@ -144,6 +148,15 @@ class _CategoryFormState extends ConsumerState<CategoryForm> {
             ],
           ),
           SizedBox(height: 14),
+          CategoryIconPicker(
+            value: _icon,
+            name: _nameCtrl.text,
+            type: widget.category?.type ?? widget.type ?? 'expense',
+            colorHex: _color,
+            enabled: !_busy,
+            onChanged: (value) => setState(() => _icon = value),
+          ),
+          const SizedBox(height: 14),
           Row(
             children: [
               FilledButton(

@@ -6139,6 +6139,18 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
     requiredDuringInsert: false,
     defaultValue: const Constant('#64748b'),
   );
+  static const VerificationMeta _categoryIdsJsonMeta = const VerificationMeta(
+    'categoryIdsJson',
+  );
+  @override
+  late final GeneratedColumn<String> categoryIdsJson = GeneratedColumn<String>(
+    'category_ids_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -6242,6 +6254,7 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
     uuid,
     name,
     color,
+    categoryIdsJson,
     sortOrder,
     usageCount,
     lastUsedAt,
@@ -6284,6 +6297,15 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
       context.handle(
         _colorMeta,
         color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('category_ids_json')) {
+      context.handle(
+        _categoryIdsJsonMeta,
+        categoryIdsJson.isAcceptableOrUnknown(
+          data['category_ids_json']!,
+          _categoryIdsJsonMeta,
+        ),
       );
     }
     if (data.containsKey('sort_order')) {
@@ -6362,6 +6384,10 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
         DriftSqlType.string,
         data['${effectivePrefix}color'],
       )!,
+      categoryIdsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_ids_json'],
+      )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -6408,6 +6434,7 @@ class Tag extends DataClass implements Insertable<Tag> {
   final String uuid;
   final String name;
   final String color;
+  final String categoryIdsJson;
   final int sortOrder;
   final int usageCount;
   final String? lastUsedAt;
@@ -6421,6 +6448,7 @@ class Tag extends DataClass implements Insertable<Tag> {
     required this.uuid,
     required this.name,
     required this.color,
+    required this.categoryIdsJson,
     required this.sortOrder,
     required this.usageCount,
     this.lastUsedAt,
@@ -6437,6 +6465,7 @@ class Tag extends DataClass implements Insertable<Tag> {
     map['uuid'] = Variable<String>(uuid);
     map['name'] = Variable<String>(name);
     map['color'] = Variable<String>(color);
+    map['category_ids_json'] = Variable<String>(categoryIdsJson);
     map['sort_order'] = Variable<int>(sortOrder);
     map['usage_count'] = Variable<int>(usageCount);
     if (!nullToAbsent || lastUsedAt != null) {
@@ -6458,6 +6487,7 @@ class Tag extends DataClass implements Insertable<Tag> {
       uuid: Value(uuid),
       name: Value(name),
       color: Value(color),
+      categoryIdsJson: Value(categoryIdsJson),
       sortOrder: Value(sortOrder),
       usageCount: Value(usageCount),
       lastUsedAt: lastUsedAt == null && nullToAbsent
@@ -6483,6 +6513,7 @@ class Tag extends DataClass implements Insertable<Tag> {
       uuid: serializer.fromJson<String>(json['uuid']),
       name: serializer.fromJson<String>(json['name']),
       color: serializer.fromJson<String>(json['color']),
+      categoryIdsJson: serializer.fromJson<String>(json['categoryIdsJson']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       usageCount: serializer.fromJson<int>(json['usageCount']),
       lastUsedAt: serializer.fromJson<String?>(json['lastUsedAt']),
@@ -6501,6 +6532,7 @@ class Tag extends DataClass implements Insertable<Tag> {
       'uuid': serializer.toJson<String>(uuid),
       'name': serializer.toJson<String>(name),
       'color': serializer.toJson<String>(color),
+      'categoryIdsJson': serializer.toJson<String>(categoryIdsJson),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'usageCount': serializer.toJson<int>(usageCount),
       'lastUsedAt': serializer.toJson<String?>(lastUsedAt),
@@ -6517,6 +6549,7 @@ class Tag extends DataClass implements Insertable<Tag> {
     String? uuid,
     String? name,
     String? color,
+    String? categoryIdsJson,
     int? sortOrder,
     int? usageCount,
     Value<String?> lastUsedAt = const Value.absent(),
@@ -6530,6 +6563,7 @@ class Tag extends DataClass implements Insertable<Tag> {
     uuid: uuid ?? this.uuid,
     name: name ?? this.name,
     color: color ?? this.color,
+    categoryIdsJson: categoryIdsJson ?? this.categoryIdsJson,
     sortOrder: sortOrder ?? this.sortOrder,
     usageCount: usageCount ?? this.usageCount,
     lastUsedAt: lastUsedAt.present ? lastUsedAt.value : this.lastUsedAt,
@@ -6545,6 +6579,9 @@ class Tag extends DataClass implements Insertable<Tag> {
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
       name: data.name.present ? data.name.value : this.name,
       color: data.color.present ? data.color.value : this.color,
+      categoryIdsJson: data.categoryIdsJson.present
+          ? data.categoryIdsJson.value
+          : this.categoryIdsJson,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       usageCount: data.usageCount.present
           ? data.usageCount.value
@@ -6569,6 +6606,7 @@ class Tag extends DataClass implements Insertable<Tag> {
           ..write('uuid: $uuid, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('categoryIdsJson: $categoryIdsJson, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('usageCount: $usageCount, ')
           ..write('lastUsedAt: $lastUsedAt, ')
@@ -6587,6 +6625,7 @@ class Tag extends DataClass implements Insertable<Tag> {
     uuid,
     name,
     color,
+    categoryIdsJson,
     sortOrder,
     usageCount,
     lastUsedAt,
@@ -6604,6 +6643,7 @@ class Tag extends DataClass implements Insertable<Tag> {
           other.uuid == this.uuid &&
           other.name == this.name &&
           other.color == this.color &&
+          other.categoryIdsJson == this.categoryIdsJson &&
           other.sortOrder == this.sortOrder &&
           other.usageCount == this.usageCount &&
           other.lastUsedAt == this.lastUsedAt &&
@@ -6619,6 +6659,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
   final Value<String> uuid;
   final Value<String> name;
   final Value<String> color;
+  final Value<String> categoryIdsJson;
   final Value<int> sortOrder;
   final Value<int> usageCount;
   final Value<String?> lastUsedAt;
@@ -6632,6 +6673,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     this.uuid = const Value.absent(),
     this.name = const Value.absent(),
     this.color = const Value.absent(),
+    this.categoryIdsJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.usageCount = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
@@ -6646,6 +6688,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     this.uuid = const Value.absent(),
     required String name,
     this.color = const Value.absent(),
+    this.categoryIdsJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.usageCount = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
@@ -6660,6 +6703,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     Expression<String>? uuid,
     Expression<String>? name,
     Expression<String>? color,
+    Expression<String>? categoryIdsJson,
     Expression<int>? sortOrder,
     Expression<int>? usageCount,
     Expression<String>? lastUsedAt,
@@ -6674,6 +6718,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
       if (uuid != null) 'uuid': uuid,
       if (name != null) 'name': name,
       if (color != null) 'color': color,
+      if (categoryIdsJson != null) 'category_ids_json': categoryIdsJson,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (usageCount != null) 'usage_count': usageCount,
       if (lastUsedAt != null) 'last_used_at': lastUsedAt,
@@ -6690,6 +6735,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     Value<String>? uuid,
     Value<String>? name,
     Value<String>? color,
+    Value<String>? categoryIdsJson,
     Value<int>? sortOrder,
     Value<int>? usageCount,
     Value<String?>? lastUsedAt,
@@ -6704,6 +6750,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
       uuid: uuid ?? this.uuid,
       name: name ?? this.name,
       color: color ?? this.color,
+      categoryIdsJson: categoryIdsJson ?? this.categoryIdsJson,
       sortOrder: sortOrder ?? this.sortOrder,
       usageCount: usageCount ?? this.usageCount,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
@@ -6729,6 +6776,9 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
+    }
+    if (categoryIdsJson.present) {
+      map['category_ids_json'] = Variable<String>(categoryIdsJson.value);
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
@@ -6764,6 +6814,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
           ..write('uuid: $uuid, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
+          ..write('categoryIdsJson: $categoryIdsJson, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('usageCount: $usageCount, ')
           ..write('lastUsedAt: $lastUsedAt, ')
@@ -17798,6 +17849,7 @@ typedef $$TagsTableCreateCompanionBuilder =
       Value<String> uuid,
       required String name,
       Value<String> color,
+      Value<String> categoryIdsJson,
       Value<int> sortOrder,
       Value<int> usageCount,
       Value<String?> lastUsedAt,
@@ -17813,6 +17865,7 @@ typedef $$TagsTableUpdateCompanionBuilder =
       Value<String> uuid,
       Value<String> name,
       Value<String> color,
+      Value<String> categoryIdsJson,
       Value<int> sortOrder,
       Value<int> usageCount,
       Value<String?> lastUsedAt,
@@ -17873,6 +17926,11 @@ class $$TagsTableFilterComposer extends Composer<_$AppDatabase, $TagsTable> {
 
   ColumnFilters<String> get color => $composableBuilder(
     column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryIdsJson => $composableBuilder(
+    column: $table.categoryIdsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17970,6 +18028,11 @@ class $$TagsTableOrderingComposer extends Composer<_$AppDatabase, $TagsTable> {
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get categoryIdsJson => $composableBuilder(
+    column: $table.categoryIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -18031,6 +18094,11 @@ class $$TagsTableAnnotationComposer
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryIdsJson => $composableBuilder(
+    column: $table.categoryIdsJson,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -18120,6 +18188,7 @@ class $$TagsTableTableManager
                 Value<String> uuid = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> color = const Value.absent(),
+                Value<String> categoryIdsJson = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> usageCount = const Value.absent(),
                 Value<String?> lastUsedAt = const Value.absent(),
@@ -18133,6 +18202,7 @@ class $$TagsTableTableManager
                 uuid: uuid,
                 name: name,
                 color: color,
+                categoryIdsJson: categoryIdsJson,
                 sortOrder: sortOrder,
                 usageCount: usageCount,
                 lastUsedAt: lastUsedAt,
@@ -18148,6 +18218,7 @@ class $$TagsTableTableManager
                 Value<String> uuid = const Value.absent(),
                 required String name,
                 Value<String> color = const Value.absent(),
+                Value<String> categoryIdsJson = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> usageCount = const Value.absent(),
                 Value<String?> lastUsedAt = const Value.absent(),
@@ -18161,6 +18232,7 @@ class $$TagsTableTableManager
                 uuid: uuid,
                 name: name,
                 color: color,
+                categoryIdsJson: categoryIdsJson,
                 sortOrder: sortOrder,
                 usageCount: usageCount,
                 lastUsedAt: lastUsedAt,

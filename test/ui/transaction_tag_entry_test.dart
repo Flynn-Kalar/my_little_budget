@@ -113,6 +113,14 @@ void main() {
       for (var i = 0; i < 3; i++) {
         await save(categories[1].id, ['스팀']);
       }
+      for (final tag in await db.tagsDao.getTags()) {
+        await db.tagsDao.updateTag(
+          tag.id,
+          tag.name,
+          tag.color,
+          categoryIds: [categories[tag.name == '게임' ? 0 : 1].id],
+        );
+      }
       for (var i = 0; i < 23; i++) {
         await db.tagsDao.createTag('추가$i', '#64748b');
       }

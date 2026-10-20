@@ -12,7 +12,7 @@
 
 Flutter로 만든 한국어 개인 가계부 앱입니다. 데이터는 로컬 SQLite에 저장되며 Windows 데스크톱과 Android 모바일에 각각 최적화된 UI를 제공합니다. 필요하면 JSON 파일이나 Supabase를 이용해 데이터를 백업하고 동기화할 수 있습니다.
 
-- 현재 버전: `1.0.0-rc.5+55`
+- 소스 버전: `1.0.0-rc.7+56`
 - 지원 UI: Windows 데스크톱/태블릿, Android 모바일
 - 저장소: [Flynn-Kalar/my_little_budget](https://github.com/Flynn-Kalar/my_little_budget)
 

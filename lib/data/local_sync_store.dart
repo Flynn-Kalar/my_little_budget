@@ -6,6 +6,7 @@ import 'database.dart';
 import 'defaults.dart';
 import 'sync_metadata.dart';
 import 'sync_models.dart';
+import 'tag_category_links.dart';
 
 class LocalSyncStore {
   LocalSyncStore(this._db);
@@ -131,6 +132,22 @@ WHERE uuid = ?
     }
 
     switch (entity) {
+      case 'tags':
+        final categoryIds = readTagCategoryIds(
+          row.read<String>('category_ids_json'),
+        );
+        final uuids = <String>[];
+        for (final id in categoryIds) {
+          final category = await _db
+              .customSelect(
+                'SELECT uuid FROM categories WHERE id = ?',
+                variables: [Variable<int>(id)],
+              )
+              .getSingleOrNull();
+          if (category != null) uuids.add(category.read<String>('uuid'));
+        }
+        payload['category_uuids'] = uuids;
+        break;
       case 'transactions':
         payload['account_uuid'] = await _uuidForId(
           'accounts',
@@ -259,6 +276,9 @@ WHERE uuid = ?
         return false;
       }
       if (localUuid != null) {
+        if (entity == 'categories') {
+          await _db.tagsDao.removeCategoryAssignment(local!.read<int>('id'));
+        }
         await _db.customStatement(
           'UPDATE $entity SET sync_status = ? WHERE uuid = ?',
           [syncStatusRemoteDelete, localUuid],
@@ -378,6 +398,19 @@ WHERE uuid = ?
     }
 
     switch (entity) {
+      case 'tags':
+        // Old clients omit this optional field. Preserve assignments on update;
+        // new rows inherit the empty-list database default.
+        if (payload.containsKey('category_uuids')) {
+          final ids = <int>[];
+          for (final uuid in _stringList(payload['category_uuids'])) {
+            final id = await _idForUuid('categories', uuid);
+            if (id == null) throw FormatException('태그의 카테고리를 찾을 수 없습니다: $uuid');
+            ids.add(id);
+          }
+          values['category_ids_json'] = encodeTagCategoryIds(ids);
+        }
+        break;
       case 'transactions':
         values['account_id'] = await _idForUuid(
           'accounts',

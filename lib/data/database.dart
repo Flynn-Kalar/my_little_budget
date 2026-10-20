@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 22;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -77,6 +77,11 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
+      if (from < 23 &&
+          await _tableExists('tags') &&
+          !await _columnExists('tags', 'category_ids_json')) {
+        await m.addColumn(tags, tags.categoryIdsJson);
+      }
       if (from >= 12 &&
           from < 22 &&
           await _tableExists('calendar_events') &&

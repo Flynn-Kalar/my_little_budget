@@ -9,10 +9,12 @@ import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/selection.dart';
 import '../../../shared/bulk_transaction_editor.dart';
+import '../../../shared/category_icon.dart';
 import '../../color_hex.dart';
 import '../../settings/widgets/transaction_preset_dialog.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 import 'transaction_edit_dialog.dart';
+import '../transaction_spacing.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 const _listMaxWidth = 1040.0;
@@ -75,7 +77,12 @@ class _ConstrainedTransactionList extends StatelessWidget {
           child: SizedBox(
             key: const ValueKey('desktop-transactions-list-width'),
             width: width,
-            child: child,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: transactionContentInset,
+              ),
+              child: child,
+            ),
           ),
         );
       },
@@ -281,8 +288,8 @@ class _SectionHeader extends StatelessWidget {
               color: planned ? context.desktopWarning : context.desktopMuted,
             ),
           ),
-          const Spacer(),
-          _SectionSummaryText(totals: totals),
+          const SizedBox(width: 12),
+          Expanded(child: _SectionSummaryText(totals: totals)),
         ],
       ),
     );
@@ -313,7 +320,7 @@ class _SectionSummaryText extends StatelessWidget {
     return Text(
       parts.join(' · '),
       textAlign: TextAlign.end,
-      overflow: TextOverflow.ellipsis,
+      softWrap: true,
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w800,
@@ -396,32 +403,35 @@ class _DateHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 12,
-            runSpacing: 4,
-            children: [
-              if (totals.income > 0)
-                _DailyTotalText(
-                  key: ValueKey('desktop-transactions-date-income-$date'),
-                  label: '수입',
-                  value: totals.income,
-                  color: context.desktopIncome,
-                ),
-              if (totals.expense > 0)
-                _DailyTotalText(
-                  key: ValueKey('desktop-transactions-date-expense-$date'),
-                  label: '지출',
-                  value: totals.expense,
-                  color: context.desktopExpense,
-                ),
-              if (totals.transferCount > 0)
-                _TransferTotalText(
-                  key: ValueKey('desktop-transactions-date-transfer-$date'),
-                  count: totals.transferCount,
-                  value: totals.transferAmount,
-                ),
-            ],
+          Expanded(
+            flex: 3,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                if (totals.income > 0)
+                  _DailyTotalText(
+                    key: ValueKey('desktop-transactions-date-income-$date'),
+                    label: '수입',
+                    value: totals.income,
+                    color: context.desktopIncome,
+                  ),
+                if (totals.expense > 0)
+                  _DailyTotalText(
+                    key: ValueKey('desktop-transactions-date-expense-$date'),
+                    label: '지출',
+                    value: totals.expense,
+                    color: context.desktopExpense,
+                  ),
+                if (totals.transferCount > 0)
+                  _TransferTotalText(
+                    key: ValueKey('desktop-transactions-date-transfer-$date'),
+                    count: totals.transferCount,
+                    value: totals.transferAmount,
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -536,22 +546,17 @@ class _Row extends ConsumerWidget {
     final String secondary;
 
     if (isTransfer) {
-      leading = CircleAvatar(
-        radius: 14,
-        backgroundColor: context.desktopSelectedSurface,
-        child: Icon(Icons.swap_horiz, size: 16, color: context.desktopMuted),
-      );
+      leading = CategoryIconBadge(type: row.type, size: 32);
       title = '${row.fromAccountName ?? '?'} → ${row.toAccountName ?? '?'}';
       metaParts = [if (showTime) row.occurredTime];
       secondary = '이체';
     } else {
-      leading = Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: colorFromHex(row.categoryColor),
-        ),
+      leading = CategoryIconBadge(
+        name: row.categoryName,
+        iconId: row.categoryIcon,
+        colorHex: row.categoryColor,
+        type: row.type,
+        size: 32,
       );
       title = row.categoryName ?? '(카테고리 없음)';
       metaParts = [if (showTime) row.occurredTime];
@@ -564,6 +569,26 @@ class _Row extends ConsumerWidget {
         ? context.desktopIncome
         : context.desktopExpense;
     final sign = isTransfer ? '' : (isIncome ? '+' : '-');
+    final amountText = '$sign${formatKRW(row.amount)}';
+    final amountStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+      color: amountColor,
+    );
+    final amountPainter = TextPainter(
+      text: TextSpan(
+        text: amountText,
+        style: DefaultTextStyle.of(context).style.merge(amountStyle),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final amountWidth = amountPainter.width.ceilToDouble().clamp(
+      _amountColumnWidth,
+      double.infinity,
+    );
+    amountPainter.dispose();
 
     final visibleTags = row.tags.take(2).toList();
     final hiddenTagCount = row.tags.length - visibleTags.length;
@@ -586,7 +611,10 @@ class _Row extends ConsumerWidget {
               ? _toggle
               : () => TransactionEditDialog.show(context, row),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: transactionRowInset,
+              vertical: 8,
+            ),
             decoration: BoxDecoration(
               border: Border.all(
                 color: context.desktopBorder.withValues(alpha: 0.72),
@@ -602,7 +630,7 @@ class _Row extends ConsumerWidget {
                     onChanged: selection.busy ? null : (_) => _toggle(),
                   )
                 else
-                  SizedBox(width: 28, child: Center(child: leading)),
+                  SizedBox(width: 32, child: Center(child: leading)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -687,16 +715,12 @@ class _Row extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  width: _amountColumnWidth,
+                  width: amountWidth,
                   child: Text(
-                    '$sign${formatKRW(row.amount)}',
+                    amountText,
                     textAlign: TextAlign.end,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: amountColor,
-                    ),
+                    maxLines: 1,
+                    style: amountStyle,
                   ),
                 ),
                 if (!selection.active)
@@ -787,7 +811,15 @@ class _TagChip extends StatelessWidget {
         color: c.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text('#$name', style: TextStyle(fontSize: 10, color: c)),
+      child: Tooltip(
+        message: '#$name',
+        child: Text(
+          '#$name',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 10, color: c),
+        ),
+      ),
     );
   }
 }

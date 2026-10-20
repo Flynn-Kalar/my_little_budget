@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
-import '../../../desktop/color_hex.dart';
+import '../../../shared/category_icon.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import 'category_form.dart';
 
@@ -259,7 +259,13 @@ class _CategoryRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _ColorDot(color: category.color),
+          CategoryIconBadge(
+            name: category.name,
+            iconId: category.icon,
+            colorHex: category.color,
+            type: category.type,
+            size: 32,
+          ),
           SizedBox(width: 12),
           Expanded(child: Text(category.name, style: TextStyle(fontSize: 14))),
           if (archived)
@@ -278,7 +284,9 @@ class _CategoryRow extends StatelessWidget {
               onPressed: busy ? null : onDelete,
               icon: Icon(Icons.delete_outline, size: 14),
               label: Text('삭제'),
-              style: TextButton.styleFrom(foregroundColor: context.desktopWarning),
+              style: TextButton.styleFrom(
+                foregroundColor: context.desktopWarning,
+              ),
             ),
           ] else
             IconButton(
@@ -329,26 +337,17 @@ class _ReorderCategoryRow extends StatelessWidget {
             icon: Icon(Icons.arrow_downward, size: 14),
             visualDensity: VisualDensity.compact,
           ),
-          _ColorDot(color: category.color),
+          CategoryIconBadge(
+            name: category.name,
+            iconId: category.icon,
+            colorHex: category.color,
+            type: category.type,
+            size: 32,
+          ),
           SizedBox(width: 12),
           Expanded(child: Text(category.name, style: TextStyle(fontSize: 14))),
         ],
       ),
     );
   }
-}
-
-class _ColorDot extends StatelessWidget {
-  const _ColorDot({required this.color});
-  final String color;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 12,
-    height: 12,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: colorFromHex(color),
-    ),
-  );
 }

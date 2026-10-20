@@ -67,6 +67,7 @@ class CalendarEventsDao extends DatabaseAccessor<AppDatabase>
       timeZone: config.timeZone,
       allDayDate: allDay ? noteDateKey(startAt) : null,
       exceptions: config.exceptions,
+      isDday: config.isDday,
     );
     if (effectiveConfig.validationError != null) {
       throw ArgumentError(effectiveConfig.validationError);

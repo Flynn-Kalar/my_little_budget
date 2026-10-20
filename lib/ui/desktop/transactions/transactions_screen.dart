@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'transaction_spacing.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -123,6 +124,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           child: SingleChildScrollView(
             primary: false,
             key: const ValueKey('desktop-transactions-header-scroll'),
+            padding: const EdgeInsets.symmetric(
+              horizontal: transactionContentInset,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -133,76 +137,82 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   ),
                   const SizedBox(height: 14),
                 ],
-                Row(
-                  children: [
-                    const Expanded(child: MonthNav()),
-                    if (compact)
-                      IconButton.filledTonal(
+                DesktopSection(
+                  minWidth: 400,
+                  child: Row(
+                    children: [
+                      const Expanded(child: MonthNav()),
+                      if (compact)
+                        IconButton.filledTonal(
+                          key: const ValueKey(
+                            'desktop-transactions-budget-button',
+                          ),
+                          tooltip: '예산 보기',
+                          onPressed: () => context.push('/budget'),
+                          icon: const Icon(Icons.savings_outlined, size: 18),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 32,
+                            height: 36,
+                          ),
+                          padding: EdgeInsets.zero,
+                        )
+                      else
+                        FilledButton.tonalIcon(
+                          key: const ValueKey(
+                            'desktop-transactions-budget-button',
+                          ),
+                          onPressed: () => context.push('/budget'),
+                          icon: const Icon(Icons.savings_outlined, size: 18),
+                          label: const Text('예산 보기'),
+                        ),
+                      const SizedBox(width: 8),
+                      if (compact)
+                        IconButton.filledTonal(
+                          key: const ValueKey(
+                            'desktop-transactions-investments-button',
+                          ),
+                          tooltip: '투자 보기',
+                          onPressed: () => context.push('/investments'),
+                          icon: const Icon(Icons.trending_up, size: 18),
+                          constraints: const BoxConstraints.tightFor(
+                            width: 32,
+                            height: 36,
+                          ),
+                          padding: EdgeInsets.zero,
+                        )
+                      else
+                        FilledButton.tonalIcon(
+                          key: const ValueKey(
+                            'desktop-transactions-investments-button',
+                          ),
+                          onPressed: () => context.push('/investments'),
+                          icon: const Icon(Icons.trending_up, size: 18),
+                          label: const Text('투자 보기'),
+                        ),
+                      const SizedBox(width: 8),
+                      IconButton(
                         key: const ValueKey(
-                          'desktop-transactions-budget-button',
+                          'desktop-transactions-collapse-button',
                         ),
-                        tooltip: '예산 보기',
-                        onPressed: () => context.push('/budget'),
-                        icon: const Icon(Icons.savings_outlined, size: 18),
-                        constraints: const BoxConstraints.tightFor(
-                          width: 32,
-                          height: 36,
+                        constraints: compact
+                            ? const BoxConstraints.tightFor(
+                                width: 32,
+                                height: 36,
+                              )
+                            : null,
+                        padding: compact ? EdgeInsets.zero : null,
+                        tooltip: _isHeaderCollapsed ? '상단 펼치기' : '상단 접기',
+                        onPressed: () => setState(
+                          () => _isHeaderCollapsed = !_isHeaderCollapsed,
                         ),
-                        padding: EdgeInsets.zero,
-                      )
-                    else
-                      FilledButton.tonalIcon(
-                        key: const ValueKey(
-                          'desktop-transactions-budget-button',
+                        icon: Icon(
+                          _isHeaderCollapsed
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_up,
                         ),
-                        onPressed: () => context.push('/budget'),
-                        icon: const Icon(Icons.savings_outlined, size: 18),
-                        label: const Text('예산 보기'),
                       ),
-                    const SizedBox(width: 8),
-                    if (compact)
-                      IconButton.filledTonal(
-                        key: const ValueKey(
-                          'desktop-transactions-investments-button',
-                        ),
-                        tooltip: '투자 보기',
-                        onPressed: () => context.push('/investments'),
-                        icon: const Icon(Icons.trending_up, size: 18),
-                        constraints: const BoxConstraints.tightFor(
-                          width: 32,
-                          height: 36,
-                        ),
-                        padding: EdgeInsets.zero,
-                      )
-                    else
-                      FilledButton.tonalIcon(
-                        key: const ValueKey(
-                          'desktop-transactions-investments-button',
-                        ),
-                        onPressed: () => context.push('/investments'),
-                        icon: const Icon(Icons.trending_up, size: 18),
-                        label: const Text('투자 보기'),
-                      ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      key: const ValueKey(
-                        'desktop-transactions-collapse-button',
-                      ),
-                      constraints: compact
-                          ? const BoxConstraints.tightFor(width: 32, height: 36)
-                          : null,
-                      padding: compact ? EdgeInsets.zero : null,
-                      tooltip: _isHeaderCollapsed ? '상단 펼치기' : '상단 접기',
-                      onPressed: () => setState(
-                        () => _isHeaderCollapsed = !_isHeaderCollapsed,
-                      ),
-                      icon: Icon(
-                        _isHeaderCollapsed
-                            ? Icons.keyboard_arrow_down
-                            : Icons.keyboard_arrow_up,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (!_isHeaderCollapsed) ...[
                   const SizedBox(height: 10),
@@ -240,7 +250,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   ],
                   const SizedBox(height: 10),
                   DesktopSection(
-                    minWidth: 720,
+                    minWidth: 720 - 2 * transactionContentInset,
                     child: InlineEntry(
                       preset: _selectedPreset,
                       presetRevision: _presetRevision,

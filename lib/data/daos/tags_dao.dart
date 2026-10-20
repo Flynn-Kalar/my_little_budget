@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../core/date.dart';
 import '../database.dart';
 import '../sync_metadata.dart';
+import '../tag_category_links.dart';
 import '../tables/tags.dart';
 import '../tables/transaction_presets.dart';
 import '../tables/transactions.dart';
@@ -38,7 +39,8 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   }
 
   /// Rank actual transaction links, including all tags even if never used.
-  /// Category history takes priority over overall frequency.
+  /// Explicit category assignments group tags first; both groups use overall
+  /// transaction frequency. Merely using a tag in a category does not assign it.
   Future<List<Tag>> getTransactionTagSuggestions({int? categoryId}) async {
     final rows = await customSelect(
       '''
@@ -49,13 +51,15 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
       WHERE tg.deleted_at IS NULL
       GROUP BY tg.id
       ORDER BY
-        SUM(CASE WHEN tx.category_id = ? THEN 1 ELSE 0 END) DESC,
-        MAX(CASE WHEN tx.category_id = ? THEN tx.occurred_on || ' ' || tx.occurred_time END) DESC,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM json_each(tg.category_ids_json) assigned
+          WHERE assigned.value = ?
+        ) THEN 0 ELSE 1 END ASC,
         COUNT(tx.id) DESC,
         MAX(tx.occurred_on || ' ' || tx.occurred_time) DESC,
         tg.sort_order ASC, tg.id ASC
     ''',
-      variables: [Variable<int>(categoryId), Variable<int>(categoryId)],
+      variables: [Variable<int>(categoryId)],
       readsFrom: {tags, transactionTags, transactions},
     ).get();
     return rows.map((row) => tags.map(row.data)).toList();
@@ -69,13 +73,19 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
         .watch();
   }
 
-  Future<int> createTag(String name, String color) async {
+  Future<int> createTag(
+    String name,
+    String color, {
+    List<int> categoryIds = const [],
+  }) async {
+    final categoryIdsJson = await _validateCategories(categoryIds);
     final nextOrder = await _nextSortOrder();
     final now = sqlNow();
     return into(tags).insert(
       TagsCompanion.insert(
         name: name,
         color: Value(color),
+        categoryIdsJson: Value(categoryIdsJson),
         sortOrder: Value(nextOrder),
         createdAt: Value(now),
         updatedAt: Value(now),
@@ -83,15 +93,40 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
     );
   }
 
-  Future<void> updateTag(int id, String name, String color) async {
+  Future<void> updateTag(
+    int id,
+    String name,
+    String color, {
+    List<int>? categoryIds,
+  }) async {
+    final categoryIdsJson = categoryIds == null
+        ? null
+        : await _validateCategories(categoryIds);
     await (update(tags)..where((t) => t.id.equals(id))).write(
       TagsCompanion(
         name: Value(name),
         color: Value(color),
+        categoryIdsJson: categoryIdsJson == null
+            ? const Value.absent()
+            : Value(categoryIdsJson),
         updatedAt: Value(sqlNow()),
         syncStatus: const Value(syncStatusPending),
       ),
     );
+  }
+
+  Future<String> _validateCategories(List<int> ids) async {
+    final uniqueIds = ids.toSet();
+    if (uniqueIds.isNotEmpty) {
+      final table = attachedDatabase.categories;
+      final categories = await (select(
+        table,
+      )..where((c) => c.id.isIn(uniqueIds) & c.deletedAt.isNull())).get();
+      if (categories.length != uniqueIds.length) {
+        throw ArgumentError('존재하지 않는 카테고리가 포함되어 있습니다.');
+      }
+    }
+    return encodeTagCategoryIds(uniqueIds);
   }
 
   Future<void> setTagPinned(int id, bool pinned) async {
@@ -102,6 +137,15 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
         syncStatus: const Value(syncStatusPending),
       ),
     );
+  }
+
+  Future<void> removeCategoryAssignment(int categoryId) async {
+    final rows = await getTags();
+    for (final tag in rows) {
+      final ids = readTagCategoryIds(tag.categoryIdsJson);
+      if (!ids.remove(categoryId)) continue;
+      await updateTag(tag.id, tag.name, tag.color, categoryIds: ids);
+    }
   }
 
   Future<void> updateTagOrder(List<int> orderedIds) async {

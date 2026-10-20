@@ -29,6 +29,7 @@ class CalendarReminderStore {
           timeZone: deviceZone,
           allDayDate: settings.allDayDate,
           exceptions: settings.exceptions,
+          isDday: settings.isDday,
         );
         await (db.update(
           db.calendarEvents,

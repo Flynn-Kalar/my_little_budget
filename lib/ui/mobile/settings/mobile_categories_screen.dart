@@ -6,6 +6,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/categories/validation.dart';
+import '../../shared/category_icon.dart';
+import '../../shared/category_icon_picker.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import '../mobile_widgets.dart';
 
@@ -167,7 +169,13 @@ class _CategoryCard extends ConsumerWidget {
     return MobileCard(
       child: ListTile(
         contentPadding: EdgeInsets.zero,
-        leading: CircleAvatar(backgroundColor: _parseColor(item.color)),
+        leading: CategoryIconBadge(
+          name: item.name,
+          iconId: item.icon,
+          colorHex: item.color,
+          type: item.type,
+          size: 42,
+        ),
         title: Text(item.name),
         subtitle: Text(item.type == 'income' ? '수입' : '지출'),
         trailing: PopupMenuButton<String>(
@@ -257,6 +265,7 @@ class _CategorySheet extends ConsumerStatefulWidget {
 class _CategorySheetState extends ConsumerState<_CategorySheet> {
   late final _name = TextEditingController(text: widget.item?.name ?? '');
   late String _type = widget.item?.type ?? 'expense';
+  late String? _icon = widget.item?.icon;
   bool _busy = false;
 
   bool get _isEdit => widget.item != null;
@@ -268,7 +277,12 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
   }
 
   Future<void> _save() async {
-    final result = validateCategory(name: _name.text, type: _type);
+    final result = validateCategory(
+      name: _name.text,
+      type: _type,
+      color: widget.item?.color ?? '#64748b',
+      icon: _icon,
+    );
     if (result.isFail) {
       _showSnack('카테고리 이름을 입력해주세요.');
       return;
@@ -312,66 +326,73 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
         top: 16,
         bottom: mobileBottomPadding(context, spacing: 16),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            _isEdit ? '카테고리 수정' : '카테고리 추가',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _name,
-            enabled: !_busy,
-            decoration: const InputDecoration(
-              labelText: '이름',
-              border: OutlineInputBorder(),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _isEdit ? '카테고리 수정' : '카테고리 추가',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'expense', label: Text('지출')),
-              ButtonSegment(value: 'income', label: Text('수입')),
-            ],
-            selected: {_type},
-            showSelectedIcon: false,
-            onSelectionChanged: _isEdit || _busy
-                ? null
-                : (selected) => setState(() => _type = selected.first),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              if (_isEdit)
-                TextButton.icon(
-                  onPressed: _busy ? null : _archive,
-                  icon: const Icon(Icons.archive_outlined),
-                  label: const Text('보관'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.appAccent,
+            const SizedBox(height: 16),
+            TextField(
+              controller: _name,
+              onChanged: (_) => setState(() {}),
+              enabled: !_busy,
+              decoration: const InputDecoration(
+                labelText: '이름',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'expense', label: Text('지출')),
+                ButtonSegment(value: 'income', label: Text('수입')),
+              ],
+              selected: {_type},
+              showSelectedIcon: false,
+              onSelectionChanged: _isEdit || _busy
+                  ? null
+                  : (selected) => setState(() => _type = selected.first),
+            ),
+            const SizedBox(height: 16),
+            CategoryIconPicker(
+              value: _icon,
+              name: _name.text,
+              type: _type,
+              colorHex: widget.item?.color ?? '#64748b',
+              enabled: !_busy,
+              onChanged: (value) => setState(() => _icon = value),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (_isEdit)
+                  TextButton.icon(
+                    onPressed: _busy ? null : _archive,
+                    icon: const Icon(Icons.archive_outlined),
+                    label: const Text('보관'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.appAccent,
+                    ),
                   ),
+                const Spacer(),
+                TextButton(
+                  onPressed: _busy ? null : () => Navigator.pop(context),
+                  child: const Text('취소'),
                 ),
-              const Spacer(),
-              TextButton(
-                onPressed: _busy ? null : () => Navigator.pop(context),
-                child: const Text('취소'),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: _busy ? null : _save,
-                child: const Text('저장'),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _busy ? null : _save,
+                  child: const Text('저장'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-Color _parseColor(String hex) {
-  final value = int.tryParse(hex.replaceFirst('#', ''), radix: 16);
-  return Color(0xFF000000 | (value ?? 0x64748B));
 }

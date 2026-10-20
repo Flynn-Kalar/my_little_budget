@@ -7,16 +7,19 @@ class CategoryDraft {
     required this.name,
     required this.type,
     required this.color,
+    this.icon,
   });
   final String name;
   final String type; // income | expense
   final String color;
+  final String? icon;
 }
 
 ValidationResult<CategoryDraft> validateCategory({
   required String name,
   required String type,
   String color = '#64748b',
+  String? icon,
 }) {
   final errors = <String, String>{};
 
@@ -33,6 +36,6 @@ ValidationResult<CategoryDraft> validateCategory({
 
   if (errors.isNotEmpty) return ValidationResult.fail(errors);
   return ValidationResult.ok(
-    CategoryDraft(name: cleaned, type: type, color: color),
+    CategoryDraft(name: cleaned, type: type, color: color, icon: icon),
   );
 }

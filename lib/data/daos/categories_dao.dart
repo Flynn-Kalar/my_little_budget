@@ -86,6 +86,7 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
         CategoriesCompanion(
           name: Value(draft.name),
           color: Value(draft.color),
+          icon: Value(draft.icon),
           updatedAt: Value(sqlNow()),
           syncStatus: const Value(syncStatusPending),
         ),
@@ -103,6 +104,7 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
           name: draft.name,
           type: draft.type,
           color: Value(draft.color),
+          icon: Value(draft.icon),
           sortOrder: Value(nextOrder),
           // Upgraded databases may lack the SQL timestamp defaults.
           createdAt: Value(now),
@@ -153,7 +155,10 @@ class CategoriesDao extends DatabaseAccessor<AppDatabase>
       return '이 카테고리는 $usage건의 기록에 사용 중이라 삭제할 수 없습니다. '
           '먼저 해당 기록을 정리해주세요.';
     }
-    await (delete(categories)..where((c) => c.id.equals(id))).go();
+    await transaction(() async {
+      await attachedDatabase.tagsDao.removeCategoryAssignment(id);
+      await (delete(categories)..where((c) => c.id.equals(id))).go();
+    });
     return null;
   }
 }

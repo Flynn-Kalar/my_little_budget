@@ -8,6 +8,8 @@ import '../../../../data/providers.dart';
 import '../../../../features/tags/validation.dart';
 import '../../../desktop/color_hex.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
+import '../../../../data/tag_category_links.dart';
+import '../../../shared/tag_category_selector.dart';
 
 class TagForm extends ConsumerStatefulWidget {
   const TagForm({super.key, this.tag, required this.onDone});
@@ -23,6 +25,9 @@ class _TagFormState extends ConsumerState<TagForm> {
   late final _nameCtrl = TextEditingController(text: widget.tag?.name ?? '');
   late String _color = widget.tag?.color ?? randomColor();
   bool _busy = false;
+  late Set<int> _categoryIds = readTagCategoryIds(
+    widget.tag?.categoryIdsJson ?? '[]',
+  ).toSet();
 
   @override
   void dispose() {
@@ -41,9 +46,22 @@ class _TagFormState extends ConsumerState<TagForm> {
       final draft = result.value!;
       final id = widget.tag?.id;
       if (id == null) {
-        await ref.read(tagsDaoProvider).createTag(draft.name, draft.color);
+        await ref
+            .read(tagsDaoProvider)
+            .createTag(
+              draft.name,
+              draft.color,
+              categoryIds: _categoryIds.toList(),
+            );
       } else {
-        await ref.read(tagsDaoProvider).updateTag(id, draft.name, draft.color);
+        await ref
+            .read(tagsDaoProvider)
+            .updateTag(
+              id,
+              draft.name,
+              draft.color,
+              categoryIds: _categoryIds.toList(),
+            );
       }
       refreshTags(ref);
       widget.onDone();
@@ -119,6 +137,12 @@ class _TagFormState extends ConsumerState<TagForm> {
             ],
           ),
           SizedBox(height: 14),
+          TagCategorySelector(
+            selected: _categoryIds,
+            enabled: !_busy,
+            onChanged: (ids) => setState(() => _categoryIds = ids),
+          ),
+          const SizedBox(height: 14),
           Row(
             children: [
               FilledButton(

@@ -1,3 +1,4 @@
+import '../../../shared/category_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -323,13 +324,12 @@ class _GeneralRow extends ConsumerWidget {
       amountColor = isIncoming ? context.desktopIncome : context.desktopExpense;
       sign = isIncoming ? '+' : '-';
     } else {
-      leading = Container(
-        width: 10,
-        height: 10,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: colorFromHex(row.categoryColor),
-        ),
+      leading = CategoryIconBadge(
+        name: row.categoryName,
+        iconId: row.categoryIcon,
+        colorHex: row.categoryColor,
+        type: row.type,
+        size: 32,
       );
       title = row.categoryName ?? '(카테고리 없음)';
       metaParts = [
@@ -359,7 +359,7 @@ class _GeneralRow extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                SizedBox(width: 28, child: Center(child: leading)),
+                SizedBox(width: 32, child: Center(child: leading)),
                 SizedBox(width: 8),
                 Expanded(
                   child: Column(

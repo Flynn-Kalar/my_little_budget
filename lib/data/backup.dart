@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'database.dart';
 import 'sync_metadata.dart';
+import 'tag_category_links.dart';
 
 /// SPEC §5.2 — 백업 JSON 모델 + 파싱.
 
@@ -209,6 +210,10 @@ Map<String, Object?> _bools(Map<String, dynamic> m, List<String> keys) {
 }
 
 Map<String, Object?> _tagJson(Map<String, dynamic> m) {
+  m['categoryIdsJson'] ??= '[]';
+  m['categoryIdsJson'] = encodeTagCategoryIds(
+    readTagCategoryIds(m['categoryIdsJson'] as String),
+  );
   m['usageCount'] ??= 0;
   m['isPinned'] ??= false;
   return _bools(m, const ['isPinned']);

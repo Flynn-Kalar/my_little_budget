@@ -16,6 +16,9 @@ import '../../shared/calendar_schedule_options.dart';
 import '../../shared/calendar_occurrence_actions.dart';
 import '../../shared/calendar_event_status.dart';
 import '../../shared/calendar_entries.dart';
+import '../../shared/calendar_day_agenda.dart';
+import '../../shared/calendar_dday_list.dart';
+import '../../../features/calendar/calendar_dday.dart';
 import 'package:my_little_budget/features/calendar/providers.dart';
 import '../../shared/notes_calendar.dart' as note_calendar;
 import 'package:my_little_budget/features/notes/providers.dart';
@@ -31,6 +34,7 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   String _month = currentMonthKey();
+  bool _showDday = false;
   String? _openedRequest;
   void _openRequestedEvent(List<CalendarEvent> events) {
     if (widget.openEventId == null || widget.openRequest == _openedRequest) {
@@ -68,17 +72,37 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             FilledButton.icon(
               key: const ValueKey('desktop-calendar-add-button'),
-              onPressed: () => _CalendarEventDialog.show(context),
+              onPressed: () =>
+                  _CalendarEventDialog.show(context, initialDday: _showDday),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('일정 추가'),
             ),
           ],
         ),
         const SizedBox(height: 20),
-        _MonthNav(
-          month: _month,
-          onChanged: (value) => setState(() => _month = value),
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(
+              value: false,
+              label: Text('월간'),
+              icon: Icon(Icons.calendar_month),
+            ),
+            ButtonSegment(
+              value: true,
+              label: Text('D-day'),
+              icon: Icon(Icons.flag_outlined),
+            ),
+          ],
+          selected: {_showDday},
+          onSelectionChanged: (value) =>
+              setState(() => _showDday = value.first),
         ),
+        const SizedBox(height: 12),
+        if (!_showDday)
+          _MonthNav(
+            month: _month,
+            onChanged: (value) => setState(() => _month = value),
+          ),
         const SizedBox(height: 16),
         Expanded(
           child: events.when(
@@ -86,17 +110,39 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             error: (error, _) => Center(child: Text('캘린더를 불러오지 못했습니다. $error')),
             data: (value) {
               _openRequestedEvent(value);
-              final eventEntries = calendarOccurrencesByDate(value, _month);
-              final holidays = koreanHolidaysForMonth(_month);
+              if (_showDday) {
+                return SingleChildScrollView(
+                  child: CalendarDdayList(
+                    events: value,
+                    onOpen: (event) =>
+                        _CalendarEventDialog.show(context, event: event),
+                    onAdd: () =>
+                        _CalendarEventDialog.show(context, initialDday: true),
+                  ),
+                );
+              }
+              final months = calendarVisibleDays(
+                _month,
+              ).map((date) => toDateKey(date).substring(0, 7)).toSet();
+              final eventEntries = {
+                for (final month in months)
+                  ...calendarOccurrencesByDate(value, month),
+              };
+              final holidays = {
+                for (final month in months) ...koreanHolidaysForMonth(month),
+              };
               return notes.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) =>
                     Center(child: Text('메모를 불러오지 못했습니다. $error')),
                 data: (noteRows) {
-                  final noteEntries = note_calendar.noteCalendarEntriesByDate(
-                    noteRows,
-                    _month,
-                  );
+                  final noteEntries = {
+                    for (final month in months)
+                      ...note_calendar.noteCalendarEntriesByDate(
+                        noteRows,
+                        month,
+                      ),
+                  };
                   final entries = _combineCalendarEntries(
                     eventEntries,
                     noteEntries,
@@ -121,7 +167,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               width: 360,
                               child: _AgendaList(
                                 month: _month,
-                                entries: entries,
+                                entries: {
+                                  for (final entry in entries.entries)
+                                    if (entry.key.startsWith(_month))
+                                      entry.key: entry.value,
+                                },
                               ),
                             ),
                           ],
@@ -264,51 +314,86 @@ class _DayCell extends StatelessWidget {
         .toList();
     final visibleOneTimeCount = repeating.isEmpty ? 3 : 2;
     final isHoliday = entries.any((entry) => entry.holiday != null);
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        border: Border.all(color: theme.dividerColor),
-        borderRadius: BorderRadius.circular(8),
-        color: inMonth
-            ? theme.cardTheme.color
-            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${day.day}',
-            key: ValueKey('desktop-calendar-day-${toDateKey(day)}'),
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: _calendarDayColor(
-                day,
-                theme: theme,
-                inMonth: inMonth,
-                isHoliday: isHoliday,
-              ),
-            ),
+    return InkWell(
+      key: ValueKey('desktop-calendar-cell-${toDateKey(day)}'),
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _openCalendarDay(context, day, entries),
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.dividerColor),
+            borderRadius: BorderRadius.circular(8),
+            color: inMonth
+                ? theme.cardTheme.color
+                : theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.35,
+                  ),
           ),
-          const SizedBox(height: 6),
-          for (final entry in oneTime.take(visibleOneTimeCount))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: _EntryPill(entry: entry),
-            ),
-          if (repeating.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: _RepeatingPill(entries: repeating),
-            ),
-          if (entries.length >
-              visibleOneTimeCount + (repeating.isEmpty ? 0 : 1))
-            Text(
-              '+${entries.length - visibleOneTimeCount - (repeating.isEmpty ? 0 : 1)}',
-              style: TextStyle(fontSize: 11, color: context.desktopMuted),
-            ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${day.day}',
+                key: ValueKey('desktop-calendar-day-${toDateKey(day)}'),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: _calendarDayColor(
+                    day,
+                    theme: theme,
+                    inMonth: inMonth,
+                    isHoliday: isHoliday,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              for (final entry in oneTime.take(visibleOneTimeCount))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: _EntryPill(entry: entry),
+                ),
+              if (repeating.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: _RepeatingPill(entries: repeating),
+                ),
+              if (entries.length >
+                  visibleOneTimeCount + (repeating.isEmpty ? 0 : 1))
+                Text(
+                  '+${entries.length - visibleOneTimeCount - (repeating.isEmpty ? 0 : 1)}',
+                  style: TextStyle(fontSize: 11, color: context.desktopMuted),
+                ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+}
+
+Future<void> _openCalendarDay(
+  BuildContext context,
+  DateTime date,
+  List<_CalendarEntry> entries,
+) async {
+  if (entries.isEmpty) {
+    await _CalendarEventDialog.show(context, initialDate: date);
+    return;
+  }
+  final selected = await showCalendarDayAgenda(context, date, [
+    for (final entry in entries)
+      CalendarDayAgendaItem(
+        title: entry.title,
+        subtitle: entry.subtitle,
+        icon: entry.icon,
+        color: entry.color(context),
+      ),
+  ]);
+  if (!context.mounted || selected == null) return;
+  if (selected == -1) {
+    await _CalendarEventDialog.show(context, initialDate: date);
+  } else {
+    await entries[selected].open(context);
   }
 }
 
@@ -488,9 +573,12 @@ class _CalendarEntry {
   String get shortLabel {
     final event = eventEntry?.event;
     if (event != null) {
-      return event.allDay
+      final label = event.allDay
           ? event.title
           : '${calendarTimeLabel(start)} ${event.title}';
+      return CalendarScheduleSettings.fromEvent(event).isDday
+          ? '${calendarDdayLabel(calendarEventStart(event))} · $label'
+          : label;
     }
     if (holiday != null) return holiday!.name;
     return '메모 ${noteEntry!.note.title}';
@@ -499,6 +587,9 @@ class _CalendarEntry {
   String get subtitle {
     final event = eventEntry?.event;
     if (event != null) {
+      if (CalendarScheduleSettings.fromEvent(event).isDday) {
+        return '${calendarDdayLabel(calendarEventStart(event))} · ${event.allDay ? '종일' : calendarTimeLabel(start)}';
+      }
       if (_isRepeating(event)) {
         return '반복 일정 · ${event.allDay ? '종일' : calendarTimeLabel(start)}';
       }
@@ -511,6 +602,9 @@ class _CalendarEntry {
   IconData get icon {
     final event = eventEntry?.event;
     if (event != null) {
+      if (CalendarScheduleSettings.fromEvent(event).isDday) {
+        return Icons.flag_outlined;
+      }
       return _isRepeating(event) ? Icons.repeat : Icons.event_outlined;
     }
     if (holiday != null) return Icons.flag_outlined;
@@ -576,14 +670,29 @@ Map<String, List<_CalendarEntry>> _combineCalendarEntries(
 }
 
 class _CalendarEventDialog extends ConsumerStatefulWidget {
-  const _CalendarEventDialog({this.event});
+  const _CalendarEventDialog({
+    this.event,
+    this.initialDate,
+    this.initialDday = false,
+  });
 
   final CalendarEvent? event;
+  final DateTime? initialDate;
+  final bool initialDday;
 
-  static Future<void> show(BuildContext context, {CalendarEvent? event}) {
+  static Future<void> show(
+    BuildContext context, {
+    CalendarEvent? event,
+    DateTime? initialDate,
+    bool initialDday = false,
+  }) {
     return showDialog<void>(
       context: context,
-      builder: (_) => _CalendarEventDialog(event: event),
+      builder: (_) => _CalendarEventDialog(
+        event: event,
+        initialDate: initialDate,
+        initialDday: initialDday,
+      ),
     );
   }
 
@@ -602,7 +711,7 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
   );
   late final _link = TextEditingController(text: widget.event?.linkUrl ?? '');
   late DateTime _date = widget.event == null
-      ? DateTime.now()
+      ? widget.initialDate ?? DateTime.now()
       : calendarEventStart(widget.event!);
   late TimeOfDay _startTime = TimeOfDay.fromDateTime(_date);
   late TimeOfDay _endTime = TimeOfDay.fromDateTime(
@@ -628,6 +737,7 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDday) _scheduleDraft.isDday = true;
     if (_scheduleDraft.zone.text.isEmpty) {
       reminderDeviceZone().then((zone) {
         if (mounted && _scheduleDraft.zone.text.isEmpty) {
@@ -757,6 +867,16 @@ class _CalendarEventDialogState extends ConsumerState<_CalendarEventDialog> {
                     label: const Text('변경'),
                   ),
                 ],
+              ),
+              SwitchListTile(
+                key: const ValueKey('calendar-dday-switch'),
+                value: _scheduleDraft.isDday,
+                onChanged: _busy
+                    ? null
+                    : (value) => setState(() => _scheduleDraft.isDday = value),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('D-day'),
+                subtitle: Text('시작 날짜 기준 · ${calendarDdayLabel(_date)}'),
               ),
               SwitchListTile(
                 value: _allDay,

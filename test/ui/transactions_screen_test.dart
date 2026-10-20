@@ -79,8 +79,8 @@ void main() {
     expect(sidePanelFinder, findsOneWidget);
     expect(listWidthFinder, findsOneWidget);
     expect(tester.getSize(mainColumnFinder).width, 720);
-    expect(tester.getSize(summaryFinder).width, 720);
-    expect(tester.getSize(inlineEntryFinder).width, 720);
+    expect(tester.getSize(summaryFinder).width, 688);
+    expect(tester.getSize(inlineEntryFinder).width, 688);
     expect(tester.getSize(scrollFinder).width, 720);
     expect(tester.getSize(listWidthFinder).width, 720);
     expect(

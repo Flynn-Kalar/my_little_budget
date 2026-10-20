@@ -12,6 +12,7 @@ class Tags extends Table {
   TextColumn get uuid => text().clientDefault(newSyncUuid).unique()();
   TextColumn get name => text().withLength(min: 1, max: 20).unique()();
   TextColumn get color => text().withDefault(const Constant('#64748b'))();
+  TextColumn get categoryIdsJson => text().withDefault(const Constant('[]'))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   IntColumn get usageCount => integer().withDefault(const Constant(0))();
   TextColumn get lastUsedAt => text().nullable()();

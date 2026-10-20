@@ -8,13 +8,15 @@ class CalendarScheduleDraft extends ChangeNotifier {
     : original = settings,
       every = TextEditingController(text: '${settings.every}'),
       zone = TextEditingController(text: settings.timeZone ?? ''),
-      until = settings.until {
+      until = settings.until,
+      isDday = settings.isDday {
     every.addListener(notifyListeners);
     zone.addListener(notifyListeners);
   }
   CalendarScheduleSettings original;
   final TextEditingController every, zone;
   String? until;
+  bool isDday;
   CalendarScheduleSettings settings({
     required DateTime start,
     required bool allDay,
@@ -24,6 +26,7 @@ class CalendarScheduleDraft extends ChangeNotifier {
     timeZone: zone.text.trim().isEmpty ? original.timeZone : zone.text.trim(),
     allDayDate: allDay ? noteDateKey(start) : null,
     exceptions: original.exceptions,
+    isDday: isDday,
   );
   @override
   void dispose() {

@@ -118,6 +118,7 @@ void main() {
           name: 'source-category',
           type: 'expense',
           color: '#203040',
+          icon: 'pets',
         ),
       );
       final sourceTagId = await source.tagsDao.createTag(
@@ -137,6 +138,12 @@ void main() {
         ['source-category', 'expense'],
       );
       final sourceTag = await _rowById(source, 'tags', sourceTagId);
+      await source.tagsDao.updateTag(
+        sourceTagId,
+        'source-tag',
+        '#304050',
+        categoryIds: [sourceCategory['id']! as int],
+      );
       final transactionId = await source.transactionsDao.saveTransaction(
         draft: TransactionDraft(
           type: 'expense',
@@ -167,7 +174,10 @@ void main() {
         'categories',
         categoryUuid,
       ))!;
+      expect(categoryPayload['icon'], 'pets');
       final tagPayload = (await sourceStore.buildPayload('tags', tagUuid))!;
+      expect(tagPayload['category_uuids'], [categoryUuid]);
+      expect(tagPayload.containsKey('category_ids_json'), isFalse);
       final transactionPayload = await sourceStore.buildPayload(
         'transactions',
         transactionUuid,
@@ -262,10 +272,22 @@ WHERE t.uuid = ?
 
       expect(targetAccount!['id'], isNot(sourceAccount['id']));
       expect(targetCategory!['id'], isNot(sourceCategory['id']));
+      expect(targetCategory['icon'], 'pets');
       expect(targetTag!['id'], isNot(sourceTag['id']));
       expect(imported.read<int>('account_id'), targetAccount['id']);
       expect(imported.read<int>('category_id'), targetCategory['id']);
       expect(imported.read<int>('tag_id'), targetTag['id']);
+      expect(targetTag['category_ids_json'], '[${targetCategory['id']}]');
+      final legacyPayload = {...tagPayload}..remove('category_uuids');
+      await targetStore.applyRemotePage(
+        entity: 'tags',
+        bootstrap: false,
+        rows: [_remoteRow(uuid: tagUuid, payload: legacyPayload, revision: 5)],
+      );
+      expect(
+        (await _rowByUuid(target, 'tags', tagUuid))!['category_ids_json'],
+        '[${targetCategory['id']}]',
+      );
     },
   );
 }

@@ -16,6 +16,9 @@ import '../../shared/calendar_schedule_options.dart';
 import '../../shared/calendar_occurrence_actions.dart';
 import '../../shared/calendar_event_status.dart';
 import '../../shared/calendar_entries.dart';
+import '../../shared/calendar_day_agenda.dart';
+import '../../shared/calendar_dday_list.dart';
+import '../../../features/calendar/calendar_dday.dart';
 import 'package:my_little_budget/features/calendar/providers.dart';
 import '../../shared/notes_calendar.dart' as note_calendar;
 import 'package:my_little_budget/features/notes/providers.dart';
@@ -33,6 +36,7 @@ class MobileCalendarScreen extends ConsumerStatefulWidget {
 
 class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
   String _month = currentMonthKey();
+  bool _showDday = false;
   String? _openedRequest;
   void _openRequestedEvent(List<CalendarEvent> events) {
     if (widget.openEventId == null || widget.openRequest == _openedRequest) {
@@ -52,26 +56,62 @@ class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
     final notes = ref.watch(notesProvider);
     return MobilePageScaffold(
       title: '캘린더',
-      onAdd: () => _MobileCalendarEventSheet.show(context),
+      onAdd: () =>
+          _MobileCalendarEventSheet.show(context, initialDday: _showDday),
       addTooltip: '일정 추가',
       children: [
-        MobileMonthNav(
-          month: _month,
-          onChanged: (value) => setState(() => _month = value),
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(
+              value: false,
+              label: Text('월간'),
+              icon: Icon(Icons.calendar_month),
+            ),
+            ButtonSegment(
+              value: true,
+              label: Text('D-day'),
+              icon: Icon(Icons.flag_outlined),
+            ),
+          ],
+          selected: {_showDday},
+          onSelectionChanged: (value) =>
+              setState(() => _showDday = value.first),
         ),
+        if (!_showDday)
+          MobileMonthNav(
+            month: _month,
+            onChanged: (value) => setState(() => _month = value),
+          ),
         MobileAsync(
           value: events,
           builder: (value) {
             _openRequestedEvent(value);
-            final eventEntries = calendarOccurrencesByDate(value, _month);
-            final holidays = koreanHolidaysForMonth(_month);
+            if (_showDday) {
+              return CalendarDdayList(
+                events: value,
+                onOpen: (event) =>
+                    _MobileCalendarEventSheet.show(context, event: event),
+                onAdd: () =>
+                    _MobileCalendarEventSheet.show(context, initialDday: true),
+              );
+            }
+            final months = calendarVisibleDays(
+              _month,
+            ).map((date) => toDateKey(date).substring(0, 7)).toSet();
+            final eventEntries = {
+              for (final month in months)
+                ...calendarOccurrencesByDate(value, month),
+            };
+            final holidays = {
+              for (final month in months) ...koreanHolidaysForMonth(month),
+            };
             return MobileAsync(
               value: notes,
               builder: (noteRows) {
-                final noteEntries = note_calendar.noteCalendarEntriesByDate(
-                  noteRows,
-                  _month,
-                );
+                final noteEntries = {
+                  for (final month in months)
+                    ...note_calendar.noteCalendarEntriesByDate(noteRows, month),
+                };
                 final entries = _combineCalendarEntries(
                   eventEntries,
                   noteEntries,
@@ -82,7 +122,13 @@ class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
                   children: [
                     _MobileCalendarGrid(month: _month, entries: entries),
                     const SizedBox(height: 12),
-                    _MobileAgendaList(entries: entries),
+                    _MobileAgendaList(
+                      entries: {
+                        for (final entry in entries.entries)
+                          if (entry.key.startsWith(_month))
+                            entry.key: entry.value,
+                      },
+                    ),
                   ],
                 );
               },
@@ -183,52 +229,85 @@ class _MobileDayCell extends StatelessWidget {
     ];
     final hiddenCount = entries.length - visible.length;
     final isHoliday = entries.any((entry) => entry.holiday != null);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
-      decoration: BoxDecoration(
-        border: Border.all(color: theme.dividerColor),
-        borderRadius: BorderRadius.circular(6),
-        color: inMonth
-            ? theme.cardTheme.color
-            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            '${day.day}',
-            key: ValueKey('mobile-calendar-day-${toDateKey(day)}'),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: _calendarDayColor(
-                day,
-                theme: theme,
-                inMonth: inMonth,
-                isHoliday: isHoliday,
-              ),
-            ),
-          ),
-          const SizedBox(height: 3),
-          for (final entry in visible)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: _CalendarEntryPill(entry: entry),
-            ),
-          if (hiddenCount > 0)
+    return InkWell(
+      key: ValueKey('mobile-calendar-cell-${toDateKey(day)}'),
+      borderRadius: BorderRadius.circular(6),
+      onTap: () => _openCalendarDay(context, day, entries),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
+        decoration: BoxDecoration(
+          border: Border.all(color: theme.dividerColor),
+          borderRadius: BorderRadius.circular(6),
+          color: inMonth
+              ? theme.cardTheme.color
+              : theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.35,
+                ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Text(
-              '+$hiddenCount',
+              '${day.day}',
+              key: ValueKey('mobile-calendar-day-${toDateKey(day)}'),
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
+                color: _calendarDayColor(
+                  day,
+                  theme: theme,
+                  inMonth: inMonth,
+                  isHoliday: isHoliday,
+                ),
               ),
             ),
-        ],
+            const SizedBox(height: 3),
+            for (final entry in visible)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: _CalendarEntryPill(entry: entry),
+              ),
+            if (hiddenCount > 0)
+              Text(
+                '+$hiddenCount',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.62),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+          ],
+        ),
       ),
     );
+  }
+}
+
+Future<void> _openCalendarDay(
+  BuildContext context,
+  DateTime date,
+  List<_MobileCalendarEntry> entries,
+) async {
+  if (entries.isEmpty) {
+    await _MobileCalendarEventSheet.show(context, initialDate: date);
+    return;
+  }
+  final selected = await showCalendarDayAgenda(context, date, [
+    for (final entry in entries)
+      CalendarDayAgendaItem(
+        title: entry.title,
+        subtitle: entry.subtitle,
+        icon: entry.icon,
+        color: entry.color(context),
+      ),
+  ]);
+  if (!context.mounted || selected == null) return;
+  if (selected == -1) {
+    await _MobileCalendarEventSheet.show(context, initialDate: date);
+  } else {
+    await entries[selected].open(context);
   }
 }
 
@@ -403,16 +482,31 @@ class _EmptyCalendarCard extends StatelessWidget {
 }
 
 class _MobileCalendarEventSheet extends ConsumerStatefulWidget {
-  const _MobileCalendarEventSheet({this.event});
+  const _MobileCalendarEventSheet({
+    this.event,
+    this.initialDate,
+    this.initialDday = false,
+  });
 
   final CalendarEvent? event;
+  final DateTime? initialDate;
+  final bool initialDday;
 
-  static Future<void> show(BuildContext context, {CalendarEvent? event}) {
+  static Future<void> show(
+    BuildContext context, {
+    CalendarEvent? event,
+    DateTime? initialDate,
+    bool initialDday = false,
+  }) {
     return showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (_) => _MobileCalendarEventSheet(event: event),
+      builder: (_) => _MobileCalendarEventSheet(
+        event: event,
+        initialDate: initialDate,
+        initialDday: initialDday,
+      ),
     );
   }
 
@@ -432,7 +526,7 @@ class _MobileCalendarEventSheetState
   );
   late final _link = TextEditingController(text: widget.event?.linkUrl ?? '');
   late DateTime _date = widget.event == null
-      ? DateTime.now()
+      ? widget.initialDate ?? DateTime.now()
       : calendarEventStart(widget.event!);
   late TimeOfDay _startTime = TimeOfDay.fromDateTime(_date);
   late TimeOfDay _endTime = TimeOfDay.fromDateTime(
@@ -458,6 +552,7 @@ class _MobileCalendarEventSheetState
   @override
   void initState() {
     super.initState();
+    if (widget.initialDday) _scheduleDraft.isDday = true;
     if (_scheduleDraft.zone.text.isEmpty) {
       reminderDeviceZone().then((zone) {
         if (mounted && _scheduleDraft.zone.text.isEmpty) {
@@ -593,6 +688,16 @@ class _MobileCalendarEventSheetState
               onPressed: _busy ? null : _pickDate,
               icon: const Icon(Icons.calendar_month, size: 18),
               label: Text(toDateKey(_date)),
+            ),
+            SwitchListTile(
+              key: const ValueKey('calendar-dday-switch'),
+              value: _scheduleDraft.isDday,
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(() => _scheduleDraft.isDday = value),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('D-day'),
+              subtitle: Text('시작 날짜 기준 · ${calendarDdayLabel(_date)}'),
             ),
             SwitchListTile(
               value: _allDay,
@@ -884,9 +989,12 @@ class _MobileCalendarEntry {
     final event = eventEntry?.event;
     if (event != null) {
       if (_isRepeating(event)) return '반복';
-      return event.allDay
+      final label = event.allDay
           ? event.title
           : '${calendarTimeLabel(start)} ${event.title}';
+      return CalendarScheduleSettings.fromEvent(event).isDday
+          ? '${calendarDdayLabel(calendarEventStart(event))} · $label'
+          : label;
     }
     if (holiday != null) return holiday!.name;
     return isRepeating ? '반복 메모' : noteEntry!.note.title;
@@ -896,6 +1004,9 @@ class _MobileCalendarEntry {
     final event = eventEntry?.event;
     if (event != null) {
       final time = event.allDay ? '종일' : calendarTimeLabel(start);
+      if (CalendarScheduleSettings.fromEvent(event).isDday) {
+        return '${calendarDdayLabel(calendarEventStart(event))} · $time';
+      }
       final location = event.location?.trim();
       if (location != null && location.isNotEmpty) return '$time · $location';
       return _isRepeating(event) ? '반복 일정 · $time' : time;
@@ -907,6 +1018,9 @@ class _MobileCalendarEntry {
   IconData get icon {
     final event = eventEntry?.event;
     if (event != null) {
+      if (CalendarScheduleSettings.fromEvent(event).isDday) {
+        return Icons.flag_outlined;
+      }
       return _isRepeating(event) ? Icons.repeat : Icons.event_outlined;
     }
     if (holiday != null) return Icons.flag_outlined;
