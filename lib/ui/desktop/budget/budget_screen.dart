@@ -13,6 +13,7 @@ import 'package:my_little_budget/features/budget/providers.dart';
 import '../../shared/amount_input_formatter.dart';
 import '../page_back_button.dart';
 import 'widgets/budget_read_only_content.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class BudgetScreen extends ConsumerWidget {
   const BudgetScreen({super.key});
@@ -47,6 +48,14 @@ class BudgetScreen extends ConsumerWidget {
                 _BudgetMonthNav(month: month),
                 _CopyPreviousMonthButton(month: month),
                 _AddBudgetGroupButton(month: month),
+                BulkManageButton(
+                  entity: BulkEntity.budgets,
+                  key: ValueKey('bulk-budgets-$month'),
+                  items: [
+                    for (final row in rows.asData?.value ?? [])
+                      BulkItem(row.groupId, row.groupName, month),
+                  ],
+                ),
               ],
             ),
             SizedBox(height: 8),

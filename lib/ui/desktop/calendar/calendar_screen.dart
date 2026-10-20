@@ -19,6 +19,7 @@ import '../../shared/calendar_entries.dart';
 import '../../shared/calendar_day_agenda.dart';
 import '../../shared/calendar_dday_list.dart';
 import '../../../features/calendar/calendar_dday.dart';
+import '../../shared/bulk_manage_button.dart';
 import 'package:my_little_budget/features/calendar/providers.dart';
 import '../../shared/notes_calendar.dart' as note_calendar;
 import 'package:my_little_budget/features/notes/providers.dart';
@@ -80,6 +81,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ],
         ),
         const SizedBox(height: 20),
+        BulkManageButton(
+          entity: BulkEntity.calendar,
+          items: [
+            for (final event in events.asData?.value ?? [])
+              if (!_showDday ||
+                  CalendarScheduleSettings.fromEvent(event).isDday)
+                BulkItem(
+                  event.id,
+                  event.title,
+                  toDateKey(calendarEventStart(event)),
+                ),
+          ],
+        ),
+        const SizedBox(height: 8),
         SegmentedButton<bool>(
           segments: const [
             ButtonSegment(

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import 'widgets/recurring_list.dart';
+import '../../shared/bulk_manage_button.dart';
+import '../../shared/recurring_order_button.dart';
 
 class RecurringScreen extends ConsumerWidget {
   const RecurringScreen({super.key});
@@ -43,6 +45,14 @@ class RecurringScreen extends ConsumerWidget {
               style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
             SizedBox(height: 24),
+            RecurringOrderButton(items: items.asData?.value ?? const []),
+            BulkManageButton(
+              entity: BulkEntity.recurring,
+              items: [
+                for (final item in items.asData?.value ?? [])
+                  BulkItem(item.recurring.id, item.recurring.name),
+              ],
+            ),
             items.when(
               loading: () => Padding(
                 padding: EdgeInsets.all(40),

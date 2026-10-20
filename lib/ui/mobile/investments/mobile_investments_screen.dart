@@ -12,6 +12,7 @@ import '../../../features/investments/quantity_precision.dart';
 import '../../../features/investments/validation.dart';
 import 'package:my_little_budget/features/investments/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/bulk_manage_button.dart';
 
 enum _InvestmentTab { holdings, transactions, realizedPnl }
 
@@ -141,6 +142,22 @@ class _MobileInvestmentsScreenState
             }
             return Column(
               children: [
+                BulkManageButton(
+                  entity: BulkEntity.investments,
+                  items: [
+                    for (final row in filteredRows)
+                      BulkItem(
+                        row.id,
+                        row.ticker,
+                        '${row.occurredOn} · ${_sideLabel(row.side)} · ${formatKRW(row.totalAmount)}',
+                      ),
+                  ],
+                  onChanged: () {
+                    ref.invalidate(_annualInvestmentRowsProvider);
+                    ref.invalidate(_annualInvestmentSummaryProvider);
+                    ref.invalidate(_annualRealizedPnlProvider);
+                  },
+                ),
                 for (final row in filteredRows)
                   _InvestmentCard(
                     row: row,

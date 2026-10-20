@@ -388,6 +388,9 @@ WHERE uuid = ?
     final values = <String, Object?>{};
     for (final column in _payloadColumns[entity]!) {
       if (!payload.containsKey(column)) {
+        if (entity == 'recurring_transactions' && column == 'sort_order') {
+          continue; // Older clients preserve the local order; new rows use zero.
+        }
         if (entity == 'calendar_events' && column == 'schedule_data') {
           values[column] = '{}';
           continue;
@@ -775,6 +778,7 @@ const _payloadColumns = <String, List<String>>{
     'created_at',
   ],
   'recurring_transactions': [
+    'sort_order',
     'name',
     'type',
     'amount',

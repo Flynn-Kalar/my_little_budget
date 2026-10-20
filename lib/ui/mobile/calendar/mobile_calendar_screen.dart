@@ -23,6 +23,7 @@ import 'package:my_little_budget/features/calendar/providers.dart';
 import '../../shared/notes_calendar.dart' as note_calendar;
 import 'package:my_little_budget/features/notes/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class MobileCalendarScreen extends ConsumerStatefulWidget {
   const MobileCalendarScreen({super.key, this.openEventId, this.openRequest});
@@ -60,6 +61,19 @@ class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
           _MobileCalendarEventSheet.show(context, initialDday: _showDday),
       addTooltip: '일정 추가',
       children: [
+        BulkManageButton(
+          entity: BulkEntity.calendar,
+          items: [
+            for (final event in events.asData?.value ?? [])
+              if (!_showDday ||
+                  CalendarScheduleSettings.fromEvent(event).isDday)
+                BulkItem(
+                  event.id,
+                  event.title,
+                  toDateKey(calendarEventStart(event)),
+                ),
+          ],
+        ),
         SegmentedButton<bool>(
           segments: const [
             ButtonSegment(

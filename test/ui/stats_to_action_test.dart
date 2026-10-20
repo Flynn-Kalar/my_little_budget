@@ -92,7 +92,7 @@ void main() {
         const ValueKey('desktop-transactions-compact-overview'),
       );
       expect(overview, findsOneWidget);
-      expect(find.text('월말 예상 -${formatKRW(30000)}'), findsOneWidget);
+      expect(find.text('월말 예상 순수입 -${formatKRW(30000)}'), findsOneWidget);
       final amount = find.byKey(
         const ValueKey('desktop-transactions-inline-amount'),
       );

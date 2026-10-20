@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/database.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import 'widgets/category_manager.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -56,6 +57,18 @@ class CategoriesScreen extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    BulkManageButton(
+                      entity: BulkEntity.categories,
+                      items: [
+                        for (final item in all)
+                          BulkItem(
+                            item.id,
+                            item.name,
+                            '${item.type == 'income' ? '수입' : '지출'}${item.archivedAt == null ? '' : ' · 보관됨'}',
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     CategoryManager(
                       type: 'expense',
                       title: '지출 카테고리',

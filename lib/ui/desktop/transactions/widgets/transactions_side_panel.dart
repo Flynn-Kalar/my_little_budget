@@ -52,7 +52,7 @@ class TransactionsSidePanel extends ConsumerWidget {
                   color: context.desktopExpense,
                 ),
                 _MetricRow(
-                  label: '예상 월말 변화',
+                  label: '월말 예상 순수입',
                   value: _signedMoney(expectedMonthEnd),
                   color: expectedMonthEnd >= 0
                       ? context.desktopAccent
@@ -141,7 +141,7 @@ class _CompactTransactionsOverviewState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '월말 예상 ${_signedMoney(overview.projectedNet)}',
+                            '월말 예상 순수입 ${_signedMoney(overview.projectedNet)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.bold),

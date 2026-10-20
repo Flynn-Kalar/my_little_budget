@@ -10,6 +10,7 @@ import '../../../data/providers.dart';
 import '../../../features/accounts/validation.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class MobileAccountsScreen extends ConsumerWidget {
   const MobileAccountsScreen({super.key});
@@ -42,6 +43,13 @@ class MobileAccountsScreen extends ConsumerWidget {
             final expense = context.appExpense;
             return Column(
               children: [
+                BulkManageButton(
+                  entity: BulkEntity.accounts,
+                  items: [
+                    for (final item in value)
+                      BulkItem(item.accountId, item.name),
+                  ],
+                ),
                 MobileCard(
                   child: Column(
                     children: [

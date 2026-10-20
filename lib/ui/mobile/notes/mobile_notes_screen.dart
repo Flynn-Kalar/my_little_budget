@@ -1,3 +1,4 @@
+import '../../shared/bulk_manage_button.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -163,6 +164,13 @@ class _MobileNotesScreenState extends ConsumerState<MobileNotesScreen> {
             }
             return Column(
               children: [
+                BulkManageButton(
+                  entity: BulkEntity.notes,
+                  items: [
+                    for (final entry in filtered)
+                      BulkItem(entry.note.id, entry.note.title),
+                  ],
+                ),
                 for (final entry in filtered) _MobileNoteCard(entry: entry),
               ],
             );

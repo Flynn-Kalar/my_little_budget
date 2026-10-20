@@ -10,6 +10,7 @@ import '../../../data/providers.dart';
 import '../../../features/budget/validation.dart';
 import 'package:my_little_budget/features/budget/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/bulk_manage_button.dart';
 import '../../shared/daily_budget_guidance.dart';
 
 class MobileBudgetScreen extends ConsumerWidget {
@@ -26,6 +27,14 @@ class MobileBudgetScreen extends ConsumerWidget {
       onAdd: () => _BudgetGroupSheet.show(context, month: month),
       addTooltip: '예산 추가',
       children: [
+        BulkManageButton(
+          entity: BulkEntity.budgets,
+          key: ValueKey('bulk-budgets-$month'),
+          items: [
+            for (final row in rows.asData?.value ?? [])
+              BulkItem(row.groupId, row.groupName, month),
+          ],
+        ),
         MobileMonthNav(
           month: month,
           onChanged: (value) =>

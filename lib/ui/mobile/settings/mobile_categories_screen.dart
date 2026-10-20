@@ -8,6 +8,7 @@ import '../../../data/providers.dart';
 import '../../../features/categories/validation.dart';
 import '../../shared/category_icon.dart';
 import '../../shared/category_icon_picker.dart';
+import '../../shared/bulk_manage_button.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import '../mobile_widgets.dart';
 
@@ -40,6 +41,17 @@ class MobileCategoriesScreen extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                BulkManageButton(
+                  entity: BulkEntity.categories,
+                  items: [
+                    for (final item in items)
+                      BulkItem(
+                        item.id,
+                        item.name,
+                        '${item.type == 'income' ? '수입' : '지출'}${item.archivedAt == null ? '' : ' · 보관됨'}',
+                      ),
+                  ],
+                ),
                 _CategorySection(title: '지출 카테고리', items: expense),
                 _CategorySection(title: '수입 카테고리', items: income),
                 if (archived.isNotEmpty)

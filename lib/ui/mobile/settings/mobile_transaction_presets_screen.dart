@@ -7,6 +7,7 @@ import '../../../data/providers.dart';
 import '../../../features/settings/providers.dart';
 import '../mobile_widgets.dart';
 import 'sheets/mobile_transaction_preset_sheet.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class MobileTransactionPresetsScreen extends ConsumerWidget {
   const MobileTransactionPresetsScreen({super.key});
@@ -19,6 +20,13 @@ class MobileTransactionPresetsScreen extends ConsumerWidget {
       onAdd: () => MobileTransactionPresetSheet.show(context),
       addTooltip: '새 프리셋',
       children: [
+        BulkManageButton(
+          entity: BulkEntity.presets,
+          items: [
+            for (final item in items.asData?.value ?? [])
+              BulkItem(item.preset.id, item.displayName),
+          ],
+        ),
         items.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Text('프리셋을 불러오지 못했습니다: $error'),

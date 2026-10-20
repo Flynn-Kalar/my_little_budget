@@ -4874,6 +4874,18 @@ class $RecurringTransactionsTable extends RecurringTransactions
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4946,6 +4958,7 @@ class $RecurringTransactionsTable extends RecurringTransactions
     lastGeneratedOn,
     tagNames,
     active,
+    sortOrder,
     createdAt,
     updatedAt,
     deletedAt,
@@ -5135,6 +5148,12 @@ class $RecurringTransactionsTable extends RecurringTransactions
         active.isAcceptableOrUnknown(data['active']!, _activeMeta),
       );
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -5260,6 +5279,10 @@ class $RecurringTransactionsTable extends RecurringTransactions
         DriftSqlType.bool,
         data['${effectivePrefix}active'],
       )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}created_at'],
@@ -5310,6 +5333,7 @@ class RecurringTransaction extends DataClass
   final String? lastGeneratedOn;
   final String? tagNames;
   final bool active;
+  final int sortOrder;
   final String createdAt;
   final String updatedAt;
   final String? deletedAt;
@@ -5338,6 +5362,7 @@ class RecurringTransaction extends DataClass
     this.lastGeneratedOn,
     this.tagNames,
     required this.active,
+    required this.sortOrder,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -5393,6 +5418,7 @@ class RecurringTransaction extends DataClass
       map['tag_names'] = Variable<String>(tagNames);
     }
     map['active'] = Variable<bool>(active);
+    map['sort_order'] = Variable<int>(sortOrder);
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -5447,6 +5473,7 @@ class RecurringTransaction extends DataClass
           ? const Value.absent()
           : Value(tagNames),
       active: Value(active),
+      sortOrder: Value(sortOrder),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -5489,6 +5516,7 @@ class RecurringTransaction extends DataClass
       lastGeneratedOn: serializer.fromJson<String?>(json['lastGeneratedOn']),
       tagNames: serializer.fromJson<String?>(json['tagNames']),
       active: serializer.fromJson<bool>(json['active']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
       deletedAt: serializer.fromJson<String?>(json['deletedAt']),
@@ -5524,6 +5552,7 @@ class RecurringTransaction extends DataClass
       'lastGeneratedOn': serializer.toJson<String?>(lastGeneratedOn),
       'tagNames': serializer.toJson<String?>(tagNames),
       'active': serializer.toJson<bool>(active),
+      'sortOrder': serializer.toJson<int>(sortOrder),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
       'deletedAt': serializer.toJson<String?>(deletedAt),
@@ -5555,6 +5584,7 @@ class RecurringTransaction extends DataClass
     Value<String?> lastGeneratedOn = const Value.absent(),
     Value<String?> tagNames = const Value.absent(),
     bool? active,
+    int? sortOrder,
     String? createdAt,
     String? updatedAt,
     Value<String?> deletedAt = const Value.absent(),
@@ -5589,6 +5619,7 @@ class RecurringTransaction extends DataClass
         : this.lastGeneratedOn,
     tagNames: tagNames.present ? tagNames.value : this.tagNames,
     active: active ?? this.active,
+    sortOrder: sortOrder ?? this.sortOrder,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -5639,6 +5670,7 @@ class RecurringTransaction extends DataClass
           : this.lastGeneratedOn,
       tagNames: data.tagNames.present ? data.tagNames.value : this.tagNames,
       active: data.active.present ? data.active.value : this.active,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -5674,6 +5706,7 @@ class RecurringTransaction extends DataClass
           ..write('lastGeneratedOn: $lastGeneratedOn, ')
           ..write('tagNames: $tagNames, ')
           ..write('active: $active, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -5707,6 +5740,7 @@ class RecurringTransaction extends DataClass
     lastGeneratedOn,
     tagNames,
     active,
+    sortOrder,
     createdAt,
     updatedAt,
     deletedAt,
@@ -5739,6 +5773,7 @@ class RecurringTransaction extends DataClass
           other.lastGeneratedOn == this.lastGeneratedOn &&
           other.tagNames == this.tagNames &&
           other.active == this.active &&
+          other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -5770,6 +5805,7 @@ class RecurringTransactionsCompanion
   final Value<String?> lastGeneratedOn;
   final Value<String?> tagNames;
   final Value<bool> active;
+  final Value<int> sortOrder;
   final Value<String> createdAt;
   final Value<String> updatedAt;
   final Value<String?> deletedAt;
@@ -5798,6 +5834,7 @@ class RecurringTransactionsCompanion
     this.lastGeneratedOn = const Value.absent(),
     this.tagNames = const Value.absent(),
     this.active = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -5827,6 +5864,7 @@ class RecurringTransactionsCompanion
     this.lastGeneratedOn = const Value.absent(),
     this.tagNames = const Value.absent(),
     this.active = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -5860,6 +5898,7 @@ class RecurringTransactionsCompanion
     Expression<String>? lastGeneratedOn,
     Expression<String>? tagNames,
     Expression<bool>? active,
+    Expression<int>? sortOrder,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
     Expression<String>? deletedAt,
@@ -5891,6 +5930,7 @@ class RecurringTransactionsCompanion
       if (lastGeneratedOn != null) 'last_generated_on': lastGeneratedOn,
       if (tagNames != null) 'tag_names': tagNames,
       if (active != null) 'active': active,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -5922,6 +5962,7 @@ class RecurringTransactionsCompanion
     Value<String?>? lastGeneratedOn,
     Value<String?>? tagNames,
     Value<bool>? active,
+    Value<int>? sortOrder,
     Value<String>? createdAt,
     Value<String>? updatedAt,
     Value<String?>? deletedAt,
@@ -5953,6 +5994,7 @@ class RecurringTransactionsCompanion
       lastGeneratedOn: lastGeneratedOn ?? this.lastGeneratedOn,
       tagNames: tagNames ?? this.tagNames,
       active: active ?? this.active,
+      sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -6036,6 +6078,9 @@ class RecurringTransactionsCompanion
     if (active.present) {
       map['active'] = Variable<bool>(active.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
     }
@@ -6077,6 +6122,7 @@ class RecurringTransactionsCompanion
           ..write('lastGeneratedOn: $lastGeneratedOn, ')
           ..write('tagNames: $tagNames, ')
           ..write('active: $active, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -16801,6 +16847,7 @@ typedef $$RecurringTransactionsTableCreateCompanionBuilder =
       Value<String?> lastGeneratedOn,
       Value<String?> tagNames,
       Value<bool> active,
+      Value<int> sortOrder,
       Value<String> createdAt,
       Value<String> updatedAt,
       Value<String?> deletedAt,
@@ -16831,6 +16878,7 @@ typedef $$RecurringTransactionsTableUpdateCompanionBuilder =
       Value<String?> lastGeneratedOn,
       Value<String?> tagNames,
       Value<bool> active,
+      Value<int> sortOrder,
       Value<String> createdAt,
       Value<String> updatedAt,
       Value<String?> deletedAt,
@@ -17040,6 +17088,11 @@ class $$RecurringTransactionsTableFilterComposer
 
   ColumnFilters<bool> get active => $composableBuilder(
     column: $table.active,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17260,6 +17313,11 @@ class $$RecurringTransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -17453,6 +17511,9 @@ class $$RecurringTransactionsTableAnnotationComposer
   GeneratedColumn<bool> get active =>
       $composableBuilder(column: $table.active, builder: (column) => column);
 
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -17627,6 +17688,7 @@ class $$RecurringTransactionsTableTableManager
                 Value<String?> lastGeneratedOn = const Value.absent(),
                 Value<String?> tagNames = const Value.absent(),
                 Value<bool> active = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
                 Value<String?> deletedAt = const Value.absent(),
@@ -17655,6 +17717,7 @@ class $$RecurringTransactionsTableTableManager
                 lastGeneratedOn: lastGeneratedOn,
                 tagNames: tagNames,
                 active: active,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -17685,6 +17748,7 @@ class $$RecurringTransactionsTableTableManager
                 Value<String?> lastGeneratedOn = const Value.absent(),
                 Value<String?> tagNames = const Value.absent(),
                 Value<bool> active = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
                 Value<String?> deletedAt = const Value.absent(),
@@ -17713,6 +17777,7 @@ class $$RecurringTransactionsTableTableManager
                 lastGeneratedOn: lastGeneratedOn,
                 tagNames: tagNames,
                 active: active,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

@@ -13,6 +13,7 @@ import 'package:my_little_budget/features/accounts/providers.dart';
 import '../../../features/transactions/validation.dart';
 import '../transactions/sheets/mobile_transaction_sheet.dart';
 import '../mobile_widgets.dart';
+import '../../shared/account_transaction_month_header.dart';
 
 class MobileAccountDetailScreen extends ConsumerWidget {
   const MobileAccountDetailScreen({super.key, required this.accountId});
@@ -73,20 +74,68 @@ class MobileAccountDetailScreen extends ConsumerWidget {
             );
           },
         ),
+        const Padding(
+          padding: EdgeInsets.only(top: 12, bottom: 8),
+          child: Text(
+            '자산 거래내역',
+            key: ValueKey('mobile-account-transactions-heading'),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+        ),
         _AccountDetailFilterCard(accountId: accountId),
         MobileAsync(
           value: rows,
           builder: (value) {
             if (value.isEmpty) return const EmptyMobileCard('거래내역이 없습니다.');
+            final months = <String, Map<String, List<TransactionRow>>>{};
+            for (final row in value) {
+              final days = months[row.occurredOn.substring(0, 7)] ??= {};
+              (days[row.occurredOn] ??= []).add(row);
+            }
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final row in value)
-                  _AccountTransactionCard(row: row, accountId: accountId),
+                for (final month in months.entries) ...[
+                  AccountTransactionMonthHeader(
+                    key: ValueKey('mobile-account-month-${month.key}'),
+                    monthKey: month.key,
+                  ),
+                  for (final day in month.value.entries) ...[
+                    _AccountDayHeader(dateKey: day.key),
+                    for (final row in day.value)
+                      _AccountTransactionCard(row: row, accountId: accountId),
+                  ],
+                ],
               ],
             );
           },
         ),
       ],
+    );
+  }
+}
+
+class _AccountDayHeader extends StatelessWidget {
+  const _AccountDayHeader({required this.dateKey});
+  final String dateKey;
+  @override
+  Widget build(BuildContext context) {
+    final date = parseDateKey(dateKey);
+    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    return Semantics(
+      header: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 8),
+        child: Text(
+          '${date.month}월 ${date.day}일 · ${weekdays[date.weekday - 1]}요일',
+          key: ValueKey('mobile-account-day-$dateKey'),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 }

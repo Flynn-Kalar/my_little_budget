@@ -13,6 +13,7 @@ import 'package:my_little_budget/features/investments/providers.dart';
 import '../../shared/amount_input_formatter.dart';
 import '../page_back_button.dart';
 import 'widgets/investment_summary_card.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class InvestmentsScreen extends ConsumerStatefulWidget {
   const InvestmentsScreen({super.key});
@@ -964,6 +965,17 @@ class _InvestmentRowsCard extends StatelessWidget {
           else
             Column(
               children: [
+                BulkManageButton(
+                  entity: BulkEntity.investments,
+                  items: [
+                    for (final row in rows)
+                      BulkItem(
+                        row.id,
+                        row.ticker,
+                        '${row.occurredOn} · ${_sideLabel(row.side)} · ${formatKRW(row.totalAmount)}',
+                      ),
+                  ],
+                ),
                 const _InvestmentRowsHeader(),
                 const Divider(height: 1),
                 for (final row in rows) _InvestmentRow(row: row),

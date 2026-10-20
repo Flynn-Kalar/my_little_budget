@@ -46,14 +46,17 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
     with _$RecurringDaoMixin {
   RecurringDao(super.db);
 
-  /// 활성 우선, id 순. 자산/카테고리명 동봉. SPEC §4.8.2.
+  /// Saved order first. Legacy rows share zero and retain active-first/id order.
   Future<List<RecurringListItem>> listRecurringTransactions() async {
     final recs =
-        await (select(recurringTransactions)..orderBy([
-              (r) =>
-                  OrderingTerm(expression: r.active, mode: OrderingMode.desc),
-              (r) => OrderingTerm(expression: r.id),
-            ]))
+        await (select(recurringTransactions)
+              ..where((r) => r.deletedAt.isNull())
+              ..orderBy([
+                (r) => OrderingTerm(expression: r.sortOrder),
+                (r) =>
+                    OrderingTerm(expression: r.active, mode: OrderingMode.desc),
+                (r) => OrderingTerm(expression: r.id),
+              ]))
             .get();
 
     final accNames = {
@@ -115,34 +118,66 @@ class RecurringDao extends DatabaseAccessor<AppDatabase>
       );
       return id;
     }
-    return into(recurringTransactions).insert(
-      RecurringTransactionsCompanion.insert(
-        name: draft.name,
-        type: draft.type,
-        amount: draft.amount,
-        memo: Value(draft.memo),
-        accountId: Value(draft.accountId),
-        categoryId: Value(draft.categoryId),
-        fromAccountId: Value(draft.fromAccountId),
-        toAccountId: Value(draft.toAccountId),
-        frequency: draft.frequency,
-        dayOfMonth: Value(draft.dayOfMonth),
-        dayOfWeek: Value(draft.dayOfWeek),
-        monthlyMode: Value(draft.monthlyMode),
-        weekOfMonth: Value(draft.weekOfMonth),
-        nonBusinessDayAdjustment: Value(draft.nonBusinessDayAdjustment),
-        includeNonBusinessDays: Value(draft.includeNonBusinessDays),
-        occurredTime: Value(draft.occurredTime),
-        startDate: draft.startDate,
-        endDate: Value(draft.endDate),
-        tagNames: Value(tagNamesJson),
-      ),
-    );
+    return transaction(() async {
+      final maximum = await customSelect(
+        'SELECT COALESCE(MAX(sort_order), -1) AS value FROM recurring_transactions',
+      ).getSingle();
+      return into(recurringTransactions).insert(
+        RecurringTransactionsCompanion.insert(
+          sortOrder: Value(maximum.read<int>('value') + 1),
+          name: draft.name,
+          type: draft.type,
+          amount: draft.amount,
+          memo: Value(draft.memo),
+          accountId: Value(draft.accountId),
+          categoryId: Value(draft.categoryId),
+          fromAccountId: Value(draft.fromAccountId),
+          toAccountId: Value(draft.toAccountId),
+          frequency: draft.frequency,
+          dayOfMonth: Value(draft.dayOfMonth),
+          dayOfWeek: Value(draft.dayOfWeek),
+          monthlyMode: Value(draft.monthlyMode),
+          weekOfMonth: Value(draft.weekOfMonth),
+          nonBusinessDayAdjustment: Value(draft.nonBusinessDayAdjustment),
+          includeNonBusinessDays: Value(draft.includeNonBusinessDays),
+          occurredTime: Value(draft.occurredTime),
+          startDate: draft.startDate,
+          endDate: Value(draft.endDate),
+          tagNames: Value(tagNamesJson),
+        ),
+      );
+    });
   }
 
   Future<void> deleteRecurring(int id) async {
     await (delete(recurringTransactions)..where((r) => r.id.equals(id))).go();
   }
+
+  Future<void> updateRecurringOrder(List<int> orderedIds) =>
+      transaction(() async {
+        final current = await (select(
+          recurringTransactions,
+        )..where((r) => r.deletedAt.isNull())).get();
+        final ids = orderedIds.toSet();
+        if (orderedIds.isEmpty ||
+            ids.length != orderedIds.length ||
+            ids.length != current.length ||
+            !current.every((row) => ids.contains(row.id))) {
+          throw StateError('반복 거래 목록이 변경되었습니다. 닫고 다시 순서를 편집해주세요.');
+        }
+        final now = sqlNow();
+        for (var index = 0; index < orderedIds.length; index++) {
+          await (update(
+            recurringTransactions,
+          )..where((r) => r.id.equals(orderedIds[index]))).write(
+            RecurringTransactionsCompanion(
+              sortOrder: Value(index),
+              updatedAt: Value(now),
+              syncStatus: const Value(syncStatusPending),
+            ),
+          );
+        }
+      });
 
   Future<void> toggleRecurringActive(int id, bool active) async {
     await (update(recurringTransactions)..where((r) => r.id.equals(id))).write(

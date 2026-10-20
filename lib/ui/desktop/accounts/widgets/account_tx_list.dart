@@ -12,6 +12,7 @@ import '../../color_hex.dart';
 import '../../transactions/widgets/transaction_edit_dialog.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import 'adjustment_edit_dialog.dart';
+import '../../../shared/account_transaction_month_header.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -74,29 +75,36 @@ class AccountTxList extends ConsumerWidget {
               );
             }
 
-            // 날짜별 그룹
-            final groups = <String, List<TransactionRow>>{};
+            // Keep the existing descending row order within month/day groups.
+            final months = <String, Map<String, List<TransactionRow>>>{};
             for (final r in rows) {
-              (groups[r.occurredOn] ??= []).add(r);
+              final days = months[r.occurredOn.substring(0, 7)] ??= {};
+              (days[r.occurredOn] ??= []).add(r);
             }
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final entry in groups.entries) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16, bottom: 6),
-                    child: Text(
-                      _dateHeader(entry.key),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: context.desktopMuted,
+                for (final month in months.entries) ...[
+                  AccountTransactionMonthHeader(
+                    key: ValueKey('desktop-account-month-${month.key}'),
+                    monthKey: month.key,
+                  ),
+                  for (final entry in month.value.entries) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16, bottom: 6),
+                      child: Text(
+                        _dateHeader(entry.key),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: context.desktopMuted,
+                        ),
                       ),
                     ),
-                  ),
-                  for (final row in entry.value)
-                    _TxRowItem(row: row, accountId: accountId),
+                    for (final row in entry.value)
+                      _TxRowItem(row: row, accountId: accountId),
+                  ],
                 ],
                 SizedBox(height: 20),
                 _InitialBalanceRow(initialBalance: initialBalance),

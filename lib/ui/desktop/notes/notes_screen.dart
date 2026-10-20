@@ -23,6 +23,7 @@ import 'package:my_little_budget/features/notes/providers.dart';
 import '../../shared/rich_note_editor.dart';
 import '../../shared/note_editing_session.dart';
 import '../../../shell/layout_policy.dart';
+import '../../shared/bulk_manage_button.dart';
 
 enum _NoteFilter { all, inProgress, completed }
 
@@ -164,16 +165,34 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 return matchesQuery && matchesFilter;
               }).toList();
               if (filtered.isEmpty) return const _EmptyNotes();
-              return GridView.builder(
-                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: compact ? 600 : 330,
-                  mainAxisExtent: 212,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                ),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) =>
-                    _NoteCard(entry: filtered[index]),
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: BulkManageButton(
+                      entity: BulkEntity.notes,
+                      items: [
+                        for (final entry in filtered)
+                          BulkItem(entry.note.id, entry.note.title),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: GridView.builder(
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: compact ? 600 : 330,
+                        mainAxisExtent: 212,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                      ),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) =>
+                          _NoteCard(entry: filtered[index]),
+                    ),
+                  ),
+                ],
               );
             },
           ),

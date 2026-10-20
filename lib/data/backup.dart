@@ -220,6 +220,7 @@ Map<String, Object?> _tagJson(Map<String, dynamic> m) {
 }
 
 Map<String, Object?> _recurringJson(Map<String, dynamic> m) {
+  m['sortOrder'] ??= 0;
   m['includeNonBusinessDays'] ??= true;
   m['monthlyMode'] ??= 'day';
   m['nonBusinessDayAdjustment'] ??= 'same';

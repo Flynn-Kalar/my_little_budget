@@ -10,6 +10,7 @@ import '../../color_hex.dart';
 import '../account_refresh.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import 'account_form_dialog.dart';
+import '../../../shared/bulk_manage_button.dart';
 
 const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};
 
@@ -93,6 +94,15 @@ class _State extends ConsumerState<AccountList> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: BulkManageButton(
+                entity: BulkEntity.accounts,
+                items: [
+                  for (final item in items) BulkItem(item.accountId, item.name),
+                ],
+              ),
+            ),
             // 상단 액션
             Padding(
               padding: const EdgeInsets.only(bottom: 8),

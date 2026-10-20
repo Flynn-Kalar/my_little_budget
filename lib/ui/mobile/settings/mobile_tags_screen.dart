@@ -10,6 +10,7 @@ import 'package:my_little_budget/features/settings/providers.dart';
 import '../mobile_widgets.dart';
 import '../../../data/tag_category_links.dart';
 import '../../shared/tag_category_selector.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class MobileTagsScreen extends ConsumerWidget {
   const MobileTagsScreen({super.key});
@@ -36,6 +37,10 @@ class MobileTagsScreen extends ConsumerWidget {
             if (items.isEmpty) return const EmptyMobileCard('태그가 없습니다.');
             return Column(
               children: [
+                BulkManageButton(
+                  entity: BulkEntity.tags,
+                  items: [for (final tag in items) BulkItem(tag.id, tag.name)],
+                ),
                 for (var i = 0; i < items.length; i++)
                   _TagCard(tag: items[i], tags: items, index: i),
               ],

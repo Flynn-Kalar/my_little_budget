@@ -8,6 +8,7 @@ import '../../../../data/providers.dart';
 import '../../../desktop/color_hex.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import 'tag_form.dart';
+import '../../../shared/bulk_manage_button.dart';
 
 class TagManager extends ConsumerStatefulWidget {
   const TagManager({super.key, required this.tags});
@@ -107,6 +108,13 @@ class _TagManagerState extends ConsumerState<TagManager> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: BulkManageButton(
+            entity: BulkEntity.tags,
+            items: [for (final tag in widget.tags) BulkItem(tag.id, tag.name)],
+          ),
+        ),
         Row(
           children: [
             const Spacer(),

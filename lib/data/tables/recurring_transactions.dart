@@ -64,6 +64,7 @@ class RecurringTransactions extends Table {
   // 자동 생성된 거래에 적용할 태그 이름 배열 (JSON 문자열, 예: '["여행","고정"]')
   TextColumn get tagNames => text().nullable()();
   BoolColumn get active => boolean().withDefault(const Constant(true))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   TextColumn get createdAt =>
       text().withDefault(const CustomExpression("datetime('now')"))();
   TextColumn get updatedAt =>

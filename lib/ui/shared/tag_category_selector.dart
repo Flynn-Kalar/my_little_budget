@@ -11,11 +11,13 @@ class TagCategorySelector extends ConsumerWidget {
     required this.onChanged,
     this.enabled = true,
     this.maxHeight = 180,
+    this.includeArchived = false,
   });
   final Set<int> selected;
   final ValueChanged<Set<int>> onChanged;
   final bool enabled;
   final double maxHeight;
+  final bool includeArchived;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Column(
@@ -55,7 +57,9 @@ class TagCategorySelector extends ConsumerWidget {
                   .where(
                     (c) =>
                         c.deletedAt == null &&
-                        (c.archivedAt == null || selected.contains(c.id)),
+                        (includeArchived ||
+                            c.archivedAt == null ||
+                            selected.contains(c.id)),
                   )
                   .toList();
               if (visible.isEmpty) return const Text('지정할 카테고리가 없습니다.');

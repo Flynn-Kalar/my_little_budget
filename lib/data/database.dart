@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -175,6 +175,14 @@ WHERE reminder_at IS NOT NULL
       }
       if (from < 21 && await _tableExists('notes')) {
         await m.createTable(noteDrafts);
+      }
+      if (from < 24 &&
+          await _tableExists('recurring_transactions') &&
+          !await _columnExists('recurring_transactions', 'sort_order')) {
+        await m.addColumn(
+          recurringTransactions,
+          recurringTransactions.sortOrder,
+        );
       }
     },
     beforeOpen: (details) async {

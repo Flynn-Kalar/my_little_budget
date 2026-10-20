@@ -13,6 +13,8 @@ import '../../../data/providers.dart';
 import '../../../features/recurring/validation.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/bulk_manage_button.dart';
+import '../../shared/recurring_order_button.dart';
 
 class MobileRecurringScreen extends ConsumerWidget {
   const MobileRecurringScreen({super.key});
@@ -38,7 +40,17 @@ class MobileRecurringScreen extends ConsumerWidget {
           builder: (value) {
             if (value.isEmpty) return const EmptyMobileCard('반복거래가 없습니다.');
             return Column(
-              children: [for (final item in value) _RecurringCard(item: item)],
+              children: [
+                RecurringOrderButton(items: value),
+                BulkManageButton(
+                  entity: BulkEntity.recurring,
+                  items: [
+                    for (final item in value)
+                      BulkItem(item.recurring.id, item.recurring.name),
+                  ],
+                ),
+                for (final item in value) _RecurringCard(item: item),
+              ],
             );
           },
         ),

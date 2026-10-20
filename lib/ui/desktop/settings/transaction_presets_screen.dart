@@ -6,6 +6,7 @@ import '../../../data/daos/transaction_presets_dao.dart';
 import '../../../data/providers.dart';
 import '../../../features/settings/providers.dart';
 import 'widgets/transaction_preset_dialog.dart';
+import '../../shared/bulk_manage_button.dart';
 
 class TransactionPresetsScreen extends ConsumerWidget {
   const TransactionPresetsScreen({super.key});
@@ -27,19 +28,38 @@ class TransactionPresetsScreen extends ConsumerWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: items.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(child: Text('프리셋을 불러오지 못했습니다: $error')),
-          data: (rows) => rows.isEmpty
-              ? const Center(
-                  child: Text('저장된 프리셋이 없습니다.\n자주 쓰는 내역을 미리 저장해보세요.'),
-                )
-              : ListView.separated(
-                  itemCount: rows.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) =>
-                      _PresetTile(item: rows[index]),
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: BulkManageButton(
+                entity: BulkEntity.presets,
+                items: [
+                  for (final item in items.asData?.value ?? [])
+                    BulkItem(item.preset.id, item.displayName),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: items.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, _) =>
+                    Center(child: Text('프리셋을 불러오지 못했습니다: $error')),
+                data: (rows) => rows.isEmpty
+                    ? const Center(
+                        child: Text('저장된 프리셋이 없습니다.\n자주 쓰는 내역을 미리 저장해보세요.'),
+                      )
+                    : ListView.separated(
+                        itemCount: rows.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (context, index) =>
+                            _PresetTile(item: rows[index]),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
