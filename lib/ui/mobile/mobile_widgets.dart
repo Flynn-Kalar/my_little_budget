@@ -105,10 +105,10 @@ class MobileCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         side: BorderSide(color: theme.dividerColor),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Padding(
-        padding: padding ?? const EdgeInsets.all(14),
+        padding: padding ?? const EdgeInsets.all(18),
         child: child,
       ),
     );
@@ -277,7 +277,7 @@ class _MobileMonthPickerState extends State<_MobileMonthPicker> {
                       : theme.colorScheme.onSurface,
                   shape: RoundedRectangleBorder(
                     side: BorderSide(color: theme.dividerColor),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(22),
                   ),
                 ),
                 child: Text('$month월', maxLines: 1),

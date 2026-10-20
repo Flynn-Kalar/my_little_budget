@@ -27,7 +27,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('my_little_budget'), findsOneWidget);
+    expect(find.text('작은 가계부'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -61,7 +61,7 @@ void main() {
     ];
 
     for (final route in routes) {
-      final context = tester.element(find.text('my_little_budget').first);
+      final context = tester.element(find.text('작은 가계부').first);
       GoRouter.of(context).go(route);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: route);
@@ -98,7 +98,9 @@ void main() {
     ];
 
     for (final route in routes) {
-      final context = tester.element(find.byType(NavigationBar));
+      final context = tester.element(
+        find.byKey(const ValueKey('mobile-bottom-navigation')),
+      );
       GoRouter.of(context).go(route);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: route);
@@ -154,7 +156,7 @@ void main() {
       );
     }
 
-    final context = tester.element(find.text('my_little_budget').first);
+    final context = tester.element(find.text('작은 가계부').first);
     GoRouter.of(context).go('/budget');
     await tester.pumpAndSettle();
 

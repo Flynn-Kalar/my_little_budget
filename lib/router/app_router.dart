@@ -18,6 +18,8 @@ import '../ui/desktop/settings/transaction_presets_screen.dart';
 import '../ui/desktop/stats/stats_screen.dart';
 import '../ui/desktop/stats/yearly_stats_screen.dart';
 import '../ui/desktop/transactions/transactions_screen.dart';
+import '../ui/desktop/home/home_screen.dart';
+import '../ui/mobile/home/mobile_home_screen.dart';
 import '../ui/mobile/accounts/mobile_accounts_screen.dart';
 import '../ui/mobile/accounts/mobile_account_detail_screen.dart';
 import '../ui/mobile/budget/mobile_budget_screen.dart';
@@ -40,11 +42,18 @@ import '../ui/mobile/transactions/mobile_transactions_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/transactions',
+    initialLocation: '/home',
     routes: [
       ShellRoute(
         builder: (context, state, child) => ResponsiveShell(child: child),
         routes: [
+          GoRoute(
+            path: '/home',
+            builder: (context, state) => const ResponsivePage(
+              desktop: HomeScreen(),
+              mobile: MobileHomeScreen(),
+            ),
+          ),
           GoRoute(
             path: '/transactions',
             builder: (context, state) => const ResponsivePage(

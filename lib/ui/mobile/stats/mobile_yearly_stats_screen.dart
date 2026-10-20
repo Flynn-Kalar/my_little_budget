@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import 'package:my_little_budget/features/stats/providers.dart';
 import '../mobile_widgets.dart';
+import '../../shared/stats_period_tabs.dart';
 
 class MobileYearlyStatsScreen extends ConsumerWidget {
   const MobileYearlyStatsScreen({super.key});
@@ -20,6 +21,14 @@ class MobileYearlyStatsScreen extends ConsumerWidget {
 
     return MobilePage(
       title: '연간 통계',
+      actions: [
+        StatsPeriodTabs(
+          yearly: true,
+          onChanged: (yearly) {
+            if (!yearly) context.go('/stats');
+          },
+        ),
+      ],
       children: [
         Align(
           alignment: Alignment.centerLeft,

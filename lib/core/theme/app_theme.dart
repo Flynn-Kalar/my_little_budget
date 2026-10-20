@@ -3,20 +3,20 @@ import 'package:flutter/material.dart';
 import 'theme_colors.dart';
 
 class AppTokens {
-  static const income = Color(0xFF2563EB);
-  static const expense = Color(0xFFDC2626);
+  static const income = Color(0xFF15966A);
+  static const expense = Color(0xFFED7377);
   static const transfer = Color(0xFFFFAE00);
-  static const background = Color(0xFFECFEEF);
-  static const surface = Color(0xFFF5FFF7);
-  static const accent = Color(0xFF646464);
+  static const background = Color(0xFFEEFAF3);
+  static const surface = Color(0xFFFFFFFF);
+  static const accent = Color(0xFF8F7CE8);
   static const warning = Color(0xFF5E00D1);
 
-  static const sidebarBg = Color(0xFFF5FFF7);
-  static const sidebarBorder = Color(0xFFD8E8DC);
-  static const sidebarActive = Color(0xFFE3F5E8);
+  static const sidebarBg = Color(0xFFFFFFFF);
+  static const sidebarBorder = Color(0xFFE0EEE6);
+  static const sidebarActive = Color(0xFFE0F6EA);
 
   static const primaryText = Color(0xFF111827);
-  static const secondaryText = Color(0xFF374151);
+  static const secondaryText = Color(0xFF687486);
   static const titleText = Color(0xFF0F172A);
   static const disabledText = Color(0xFF9CA3AF);
   static const muted = secondaryText;
@@ -167,7 +167,7 @@ ThemeData buildAppTheme({
   ).textTheme.apply(bodyColor: primaryText, displayColor: primaryText);
 
   final inputBorder = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(6),
+    borderRadius: BorderRadius.circular(14),
     borderSide: BorderSide(color: divider),
   );
 
@@ -195,11 +195,13 @@ ThemeData buildAppTheme({
       elevation: 0,
     ),
     cardTheme: CardThemeData(
+      elevation: 0,
+      margin: EdgeInsets.zero,
       color: effectiveColors.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: divider),
-        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: divider.withValues(alpha: .5)),
+        borderRadius: BorderRadius.circular(22),
       ),
     ),
     dialogTheme: DialogThemeData(
@@ -238,8 +240,10 @@ ThemeData buildAppTheme({
       }),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: activeSurface,
-      foregroundColor: primaryText,
+      backgroundColor: effectiveColors.income,
+      foregroundColor: onPrimary,
+      shape: const CircleBorder(),
+      elevation: 3,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -250,7 +254,7 @@ ThemeData buildAppTheme({
       suffixIconColor: secondaryText,
       enabledBorder: inputBorder,
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: effectiveColors.income, width: 1.5),
       ),
       disabledBorder: inputBorder,

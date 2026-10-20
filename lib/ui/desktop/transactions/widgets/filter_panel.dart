@@ -187,7 +187,7 @@ class _FilterPanelState extends ConsumerState<FilterPanel> {
       color: context.desktopSurface,
       shape: RoundedRectangleBorder(
         side: BorderSide(color: context.desktopBorder),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),

@@ -59,6 +59,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
+    await tester.pumpAndSettle();
     return ProviderScope.containerOf(
       tester.element(find.byType(MyLittleBudgetApp)),
     );

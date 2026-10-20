@@ -14,6 +14,7 @@ class _NavItem {
 }
 
 const _topItems = <_NavItem>[
+  _NavItem(path: '/home', label: '홈', icon: Icons.home_outlined),
   _NavItem(
     path: '/transactions',
     label: '내역',
@@ -75,7 +76,7 @@ class SidebarShell extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          compact ? '가계부' : 'my_little_budget',
+                          compact ? '가계부' : '작은 가계부',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -93,12 +94,14 @@ class SidebarShell extends ConsumerWidget {
                   ),
                   SizedBox(height: 16),
                   ..._topItems.map(
-                    (item) => _NavTile(
-                      item: item,
-                      current: location,
-                      badge: badgeFor(item.path),
-                      compact: compact,
-                    ),
+                    (item) => item.path == '/home' && isMobileAppPlatform
+                        ? const SizedBox.shrink()
+                        : _NavTile(
+                            item: item,
+                            current: location,
+                            badge: badgeFor(item.path),
+                            compact: compact,
+                          ),
                   ),
                   const Spacer(),
                   ..._bottomItems.map(
@@ -142,20 +145,19 @@ class _NavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = current == item.path || current.startsWith('${item.path}/');
-    final foreground = Theme.of(context).colorScheme.onSurface;
     final muted = context.desktopMuted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
         color: active ? context.desktopSelectedSurface : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(16),
           onTap: () => context.go(item.path),
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: compact ? 6 : 12,
-              vertical: 8,
+              vertical: 14,
             ),
             child: Row(
               children: [
@@ -164,8 +166,8 @@ class _NavTile extends StatelessWidget {
                   label: Text('$badge'),
                   child: Icon(
                     item.icon,
-                    size: 16,
-                    color: active ? foreground : muted,
+                    size: 22,
+                    color: active ? context.appIncome : muted,
                   ),
                 ),
                 SizedBox(width: compact ? 6 : 12),
@@ -174,8 +176,8 @@ class _NavTile extends StatelessWidget {
                     item.label,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: active ? foreground : muted,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                      color: active ? context.appIncome : muted,
                     ),
                   ),
                 ),

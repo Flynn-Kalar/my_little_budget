@@ -10,6 +10,7 @@ import '../../../data/daos/transactions_dao.dart';
 import 'package:my_little_budget/features/stats/providers.dart';
 import '../mobile_widgets.dart';
 import '../../shared/stats_detail_actions.dart';
+import '../../shared/stats_period_tabs.dart';
 import 'mobile_tag_breakdown_sheet.dart';
 
 class MobileStatsScreen extends ConsumerWidget {
@@ -24,13 +25,12 @@ class MobileStatsScreen extends ConsumerWidget {
     return MobilePage(
       title: '통계',
       actions: [
-        FilledButton.tonalIcon(
+        StatsPeriodTabs(
           key: const ValueKey('mobile-stats-yearly-button'),
-          onPressed: () {
-            context.push('/stats/yearly');
+          yearly: false,
+          onChanged: (yearly) {
+            if (yearly) context.push('/stats/yearly');
           },
-          icon: const Icon(Icons.calendar_view_month_outlined, size: 18),
-          label: const Text('연간'),
         ),
       ],
       children: [
@@ -41,6 +41,7 @@ class MobileStatsScreen extends ConsumerWidget {
         ),
         _MobileMonthlyInsights(breakdown: breakdown, trend: trend),
         StatsDetailActions(month: month),
+        const SizedBox(height: 12),
         MobileAsync(
           value: breakdown,
           builder: (value) => _Breakdown(

@@ -8,6 +8,8 @@ import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
 import 'package:my_little_budget/features/stats/providers.dart';
+import '../../shared/stats_period_tabs.dart';
+import '../desktop_section.dart';
 
 class YearlyStatsScreen extends ConsumerWidget {
   const YearlyStatsScreen({super.key});
@@ -25,15 +27,21 @@ class YearlyStatsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextButton.icon(
-              onPressed: () => context.go('/stats'),
-              icon: Icon(Icons.chevron_left),
-              label: Text('월간 통계'),
-            ),
-            SizedBox(height: 8),
-            Text(
-              '연간 통계',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '연간 통계',
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                StatsPeriodTabs(
+                  yearly: true,
+                  onChanged: (yearly) {
+                    if (!yearly) context.go('/stats');
+                  },
+                ),
+              ],
             ),
             SizedBox(height: 16),
             years.when(
@@ -45,7 +53,10 @@ class YearlyStatsScreen extends ConsumerWidget {
             ),
             SizedBox(height: 16),
             trend.when(
-              data: (rows) => _YearlyMonthlyCard(year: year, rows: rows),
+              data: (rows) => DesktopSection(
+                minWidth: 700,
+                child: _YearlyMonthlyCard(year: year, rows: rows),
+              ),
               loading: () => const _StatsCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
@@ -53,7 +64,10 @@ class YearlyStatsScreen extends ConsumerWidget {
             ),
             SizedBox(height: 16),
             categories.when(
-              data: (rows) => _YearlyCategoryCard(rows: rows),
+              data: (rows) => DesktopSection(
+                minWidth: 700,
+                child: _YearlyCategoryCard(rows: rows),
+              ),
               loading: () => const _StatsCard(
                 child: LinearProgressIndicator(minHeight: 3),
               ),
@@ -533,7 +547,7 @@ class _SummaryTile extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: context.desktopSelectedSurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.desktopBorder),
       ),
       child: Padding(

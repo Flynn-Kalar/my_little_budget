@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_little_budget/app.dart';
+import 'package:my_little_budget/router/app_router.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/shell/sidebar_shell.dart';
@@ -62,6 +63,10 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        ProviderScope.containerOf(
+          tester.element(find.byType(MyLittleBudgetApp)),
+        ).read(appRouterProvider).go('/transactions');
+        await tester.pumpAndSettle();
         expect(find.byType(SidebarShell), findsOneWidget);
         expect(find.byType(TransactionsScreen), findsOneWidget);
         await tester.tap(find.text('검색·필터'));
@@ -111,7 +116,11 @@ void main() {
         ]) {
           router.go(route);
           await tester.pumpAndSettle();
-          expect(find.byType(NavigationBar), findsNothing, reason: route);
+          expect(
+            find.byKey(const ValueKey('mobile-bottom-navigation')),
+            findsNothing,
+            reason: route,
+          );
           expect(tester.takeException(), isNull, reason: route);
         }
         await tester.pumpWidget(const SizedBox());
@@ -140,7 +149,15 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final router = GoRouter.of(tester.element(find.byType(NavigationBar)));
+        ProviderScope.containerOf(
+          tester.element(find.byType(MyLittleBudgetApp)),
+        ).read(appRouterProvider).go('/transactions');
+        await tester.pumpAndSettle();
+        final router = GoRouter.of(
+          tester.element(
+            find.byKey(const ValueKey('mobile-bottom-navigation')),
+          ),
+        );
         for (final route in [
           '/transactions',
           '/stats',
@@ -150,7 +167,10 @@ void main() {
         ]) {
           router.go(route);
           await tester.pumpAndSettle();
-          expect(find.byType(NavigationBar), findsOneWidget);
+          expect(
+            find.byKey(const ValueKey('mobile-bottom-navigation')),
+            findsOneWidget,
+          );
           expect(find.byType(SidebarShell), findsNothing);
           expect(find.byType(TransactionsScreen), findsNothing);
           expect(tester.takeException(), isNull, reason: route);

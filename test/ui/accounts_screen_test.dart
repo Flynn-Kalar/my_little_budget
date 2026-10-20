@@ -8,8 +8,7 @@ import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 
 void main() {
-  testWidgets('/accounts: 총 순자산 + 기본 자산 5개 + 자산 클릭 → 상세 이동',
-      (tester) async {
+  testWidgets('/accounts: 총 순자산 + 기본 자산 5개 + 자산 클릭 → 상세 이동', (tester) async {
     tester.view.physicalSize = const Size(1400, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -39,7 +38,9 @@ void main() {
 
     // "주거래 통장" 행 클릭 → 상세
     await tester.tap(
-      find.ancestor(of: find.text('주거래 통장'), matching: find.byType(InkWell)).first,
+      find
+          .ancestor(of: find.text('주거래 통장'), matching: find.byType(InkWell))
+          .first,
     );
     await tester.pumpAndSettle();
 

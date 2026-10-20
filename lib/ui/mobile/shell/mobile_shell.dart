@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../shell/sidebar_shell.dart';
 import 'package:my_little_budget/features/notes/providers.dart';
 import '../../../shell/layout_policy.dart';
+import '../../../core/theme/app_theme.dart';
 
 class ResponsiveShell extends StatelessWidget {
   const ResponsiveShell({super.key, required this.child});
@@ -15,10 +16,14 @@ class ResponsiveShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (!usesMobileLayout(constraints.maxWidth)) {
-          return SidebarShell(child: child);
-        }
-        return MobileShell(child: child);
+        final mobile = usesMobileLayout(constraints.maxWidth);
+        return ShellLayoutScope(
+          mobile: mobile,
+          viewportWidth: constraints.maxWidth,
+          child: mobile
+              ? MobileShell(child: child)
+              : SidebarShell(child: child),
+        );
       },
     );
   }
@@ -60,22 +65,77 @@ class MobileShell extends ConsumerWidget {
       ),
       bottomNavigationBar: SafeArea(
         top: false,
-        child: NavigationBar(
-          selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          onDestinationSelected: (index) => context.go(_items[index].path),
-          destinations: [
-            for (final item in _items)
-              NavigationDestination(
-                icon: item.path == '/notes' && pendingReminders > 0
-                    ? Badge(
-                        label: Text('$pendingReminders'),
-                        child: Icon(item.icon),
-                      )
-                    : Icon(item.icon),
-                label: item.label,
-              ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+          child: Material(
+            key: const ValueKey('mobile-bottom-navigation'),
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(26),
+            clipBehavior: Clip.antiAlias,
+            child: Row(
+              children: [
+                for (var index = 0; index < _items.length; index++)
+                  Expanded(
+                    child: Semantics(
+                      selected: index == selectedIndex,
+                      button: true,
+                      child: InkWell(
+                        key: ValueKey(
+                          'mobile-tab-${_items[index].path.substring(1)}',
+                        ),
+                        onTap: () => context.go(_items[index].path),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: index == selectedIndex
+                                      ? context.appIncome.withValues(alpha: .12)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Badge(
+                                  isLabelVisible:
+                                      _items[index].path == '/notes' &&
+                                      pendingReminders > 0,
+                                  label: Text('$pendingReminders'),
+                                  child: Icon(
+                                    _items[index].icon,
+                                    size: 24,
+                                    color: index == selectedIndex
+                                        ? context.appIncome
+                                        : context.desktopMuted,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                _items[index].label,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: index == selectedIndex
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: index == selectedIndex
+                                      ? context.appIncome
+                                      : context.desktopMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

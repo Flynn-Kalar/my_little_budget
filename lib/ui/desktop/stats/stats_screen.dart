@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/date.dart';
 import '../desktop_section.dart';
 import '../../shared/stats_detail_actions.dart';
+import '../../shared/stats_period_tabs.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
@@ -39,16 +40,14 @@ class StatsScreen extends ConsumerWidget {
                 const Expanded(
                   child: Text(
                     '통계',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800),
                   ),
                 ),
-                FilledButton.tonalIcon(
-                  onPressed: () => context.go('/stats/yearly'),
-                  icon: const Icon(
-                    Icons.calendar_view_month_outlined,
-                    size: 18,
-                  ),
-                  label: const Text('연간'),
+                StatsPeriodTabs(
+                  yearly: false,
+                  onChanged: (yearly) {
+                    if (yearly) context.go('/stats/yearly');
+                  },
                 ),
               ],
             ),
@@ -56,6 +55,7 @@ class StatsScreen extends ConsumerWidget {
             StatsMonthNav(month: month),
             SizedBox(height: 16),
             MonthlyInsightCard(breakdown: breakdown, trend: trend),
+            const SizedBox(height: 12),
             SizedBox(width: 360, child: StatsDetailActions(month: month)),
             SizedBox(height: 16),
             breakdown.when(
@@ -466,9 +466,9 @@ class _BreakdownRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
         color: selected ? context.desktopSelectedSurface : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
@@ -534,9 +534,9 @@ class _TagBreakdownRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
         color: selected ? context.desktopSelectedSurface : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
@@ -1126,7 +1126,7 @@ class _TrendSummaryTile extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: context.desktopSelectedSurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.desktopBorder),
       ),
       child: Padding(
@@ -1184,7 +1184,7 @@ class _TrendMonthChip extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: context.desktopSelectedSurface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

@@ -35,7 +35,7 @@ void main() {
   }
 
   void goTo(WidgetTester tester, String route) {
-    final context = tester.element(find.text('my_little_budget'));
+    final context = tester.element(find.text('작은 가계부'));
     GoRouter.of(context).go(route);
   }
 

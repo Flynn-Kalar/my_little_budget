@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:my_little_budget/app.dart';
+import 'package:my_little_budget/router/app_router.dart';
 import 'package:my_little_budget/core/date.dart';
 import 'package:my_little_budget/core/money.dart';
 import 'package:my_little_budget/data/database.dart';
@@ -43,6 +44,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     // 필터 패널 존재
@@ -139,6 +144,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
+    await tester.pumpAndSettle();
 
     expect(
       await db.transactionsDao.listTransactionsByMonth(currentMonthKey()),
@@ -180,6 +189,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     final tagField = find.byKey(
@@ -231,6 +244,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     expect(find.byType(MonthNav), findsOneWidget);
@@ -296,6 +313,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     final filterButton = find.widgetWithText(OutlinedButton, '검색·필터');
@@ -400,6 +421,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     final mainColumn = find.byKey(
@@ -526,6 +551,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
+    await tester.pumpAndSettle();
 
     expect(_desktopDailyIncome(firstDate, 3000), findsOneWidget);
     expect(_desktopDailyExpense(firstDate, 1000), findsOneWidget);
@@ -585,6 +614,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
+    await tester.pumpAndSettle();
 
     final scrollFinder = find.byKey(
       const ValueKey('desktop-transactions-list-scroll'),
@@ -643,6 +676,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     final container = ProviderScope.containerOf(
@@ -727,6 +764,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     expect(

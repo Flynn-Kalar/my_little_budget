@@ -33,7 +33,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final context = tester.element(find.text('my_little_budget'));
+    final context = tester.element(find.text('작은 가계부'));
     GoRouter.of(context).go(route);
     await tester.pumpAndSettle();
     return db;
@@ -55,7 +55,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(tester.element(find.text('my_little_budget'))).go('/budget');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/budget');
     await tester.pumpAndSettle();
 
     expect(find.text('Food Fixed'), findsOneWidget);
@@ -91,9 +91,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      GoRouter.of(
-        tester.element(find.text('my_little_budget')),
-      ).go('/investments');
+      GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
       await tester.pumpAndSettle();
 
       expect(find.text('BUY'), findsWidgets);
@@ -140,9 +138,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      GoRouter.of(
-        tester.element(find.text('my_little_budget')),
-      ).go('/investments');
+      GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
       await tester.pumpAndSettle();
 
       await _openInvestmentEdit(tester, seeded.buyId);
@@ -192,9 +188,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(
-      tester.element(find.text('my_little_budget')),
-    ).go('/investments');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
     await tester.pumpAndSettle();
 
     final ticker = find.text('ABCD').first;
@@ -245,9 +239,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(
-      tester.element(find.text('my_little_budget')),
-    ).go('/investments');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
     await tester.pumpAndSettle();
 
     expect(find.byKey(ValueKey('investment-edit-$yearlyId')), findsNothing);
@@ -277,7 +269,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(tester.element(find.text('my_little_budget'))).go('/stats');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/stats');
     await tester.pumpAndSettle();
 
     await tester.tap(find.text(seeded.categoryName).first);
@@ -313,9 +305,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(
-      tester.element(find.text('my_little_budget')),
-    ).go('/stats/yearly');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/stats/yearly');
     await tester.pumpAndSettle();
 
     expect(
@@ -330,7 +320,7 @@ void main() {
     expect(find.text(seeded.expenseCategoryName), findsWidgets);
 
     final container = ProviderScope.containerOf(
-      tester.element(find.text('my_little_budget')),
+      tester.element(find.text('작은 가계부')),
     );
     container.read(statsYearProvider.notifier).state = seeded.emptyYear;
     await tester.pumpAndSettle();
@@ -355,9 +345,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(
-      tester.element(find.text('my_little_budget')),
-    ).go('/transactions');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/transactions');
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('검색·필터').first);
@@ -396,9 +384,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(
-      tester.element(find.text('my_little_budget')),
-    ).go('/investments');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -427,9 +413,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(
-      tester.element(find.text('my_little_budget')),
-    ).go('/investments');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
     await tester.pumpAndSettle();
 
     await _openInvestmentEdit(tester, seeded.buyId);
@@ -497,7 +481,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     GoRouter.of(
-      tester.element(find.text('my_little_budget')),
+      tester.element(find.text('작은 가계부')),
     ).go('/accounts/${seeded.accountId}');
     await tester.pumpAndSettle();
 
@@ -530,9 +514,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      GoRouter.of(
-        tester.element(find.text('my_little_budget')),
-      ).go('/accounts');
+      GoRouter.of(tester.element(find.text('작은 가계부'))).go('/accounts');
       await tester.pumpAndSettle();
 
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -594,7 +576,7 @@ void main() {
       expect(find.text('Guarded Archive'), findsOneWidget);
 
       GoRouter.of(
-        tester.element(find.text('my_little_budget')),
+        tester.element(find.text('작은 가계부')),
       ).go('/accounts/${seeded.investmentAccountId}');
       await tester.pumpAndSettle();
 
@@ -618,9 +600,7 @@ void main() {
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Dark'), findsOneWidget);
 
-    GoRouter.of(
-      tester.element(find.text('my_little_budget')),
-    ).go('/settings/backup');
+    GoRouter.of(tester.element(find.text('작은 가계부'))).go('/settings/backup');
     await tester.pumpAndSettle();
 
     expect(

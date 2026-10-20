@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:my_little_budget/app.dart';
+import 'package:my_little_budget/router/app_router.dart';
 import 'package:my_little_budget/core/date.dart';
 import 'package:my_little_budget/core/money.dart';
 import 'package:my_little_budget/data/database.dart';
@@ -119,6 +120,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
+    await tester.pumpAndSettle();
 
     expect(_dailyIncome(firstDate, 3000), findsOneWidget);
     expect(_dailyExpense(firstDate, 1000), findsOneWidget);
@@ -127,7 +132,7 @@ void main() {
     expect(_dailyExpense(secondDate, 4000), findsOneWidget);
 
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(NavigationBar)),
+      tester.element(find.byKey(const ValueKey('mobile-bottom-navigation'))),
     );
     container.read(typeFilterProvider.notifier).state = 'expense';
     await tester.pumpAndSettle();
@@ -173,9 +178,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
+    await tester.pumpAndSettle();
 
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(NavigationBar)),
+      tester.element(find.byKey(const ValueKey('mobile-bottom-navigation'))),
     );
     container.read(selectedMonthProvider.notifier).state = toMonthKey(future);
     await tester.pumpAndSettle();

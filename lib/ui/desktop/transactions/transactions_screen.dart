@@ -118,7 +118,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       children: [
         ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: (availableHeight - 160).clamp(100.0, double.infinity),
+            maxHeight: (availableHeight - 208).clamp(100.0, double.infinity),
           ),
           child: SingleChildScrollView(
             primary: false,
@@ -128,8 +128,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               children: [
                 if (!_isHeaderCollapsed) ...[
                   const Text(
-                    '내역',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    '거래 내역',
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -253,7 +253,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         ),
         const SizedBox(height: 8),
         const Expanded(
-          child: DesktopSection(minWidth: 720, child: TransactionList()),
+          child: Card(
+            margin: EdgeInsets.zero,
+            child: DesktopSection(minWidth: 720, child: TransactionList()),
+          ),
         ),
       ],
     );

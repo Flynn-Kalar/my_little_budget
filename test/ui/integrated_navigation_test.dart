@@ -25,6 +25,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(
+      find
+              .byKey(const ValueKey('mobile-tab-transactions'))
+              .evaluate()
+              .isNotEmpty
+          ? find.byKey(const ValueKey('mobile-tab-transactions'))
+          : find.text('내역'),
+    );
+    await tester.pumpAndSettle();
 
     expect(
       find.descendant(of: find.byType(InkWell), matching: find.text('캘린더')),
@@ -38,7 +47,7 @@ void main() {
     await tester.tap(find.byKey(budgetButton));
     await tester.pumpAndSettle();
 
-    final router = GoRouter.of(tester.element(find.text('my_little_budget')));
+    final router = GoRouter.of(tester.element(find.text('작은 가계부')));
     expect(find.byType(BudgetScreen), findsOneWidget);
     expect(
       GoRouterState.of(
@@ -81,20 +90,26 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-
-    final destinations = tester.widgetList<NavigationDestination>(
-      find.byType(NavigationDestination),
+    await tester.tap(
+      find
+              .byKey(const ValueKey('mobile-tab-transactions'))
+              .evaluate()
+              .isNotEmpty
+          ? find.byKey(const ValueKey('mobile-tab-transactions'))
+          : find.text('내역'),
     );
-    expect(destinations.map((item) => item.label), isNot(contains('예산')));
-    expect(destinations.map((item) => item.label), isNot(contains('투자')));
-    expect(destinations.map((item) => item.label), isNot(contains('캘린더')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('mobile-tab-home')), findsNothing);
 
     const budgetButton = ValueKey('mobile-transactions-budget-button');
     expect(find.byKey(budgetButton), findsOneWidget);
     await tester.tap(find.byKey(budgetButton));
     await tester.pumpAndSettle();
 
-    final navigationBar = find.byType(NavigationBar);
+    final navigationBar = find.byKey(
+      const ValueKey('mobile-bottom-navigation'),
+    );
     final router = GoRouter.of(tester.element(navigationBar));
     expect(
       find.byKey(const ValueKey('mobile-budget-copy-previous-button')),
@@ -128,7 +143,9 @@ void main() {
 
     const yearlyButton = ValueKey('mobile-stats-yearly-button');
     expect(find.byKey(yearlyButton), findsOneWidget);
-    await tester.tap(find.byKey(yearlyButton));
+    await tester.tap(
+      find.descendant(of: find.byKey(yearlyButton), matching: find.text('연간')),
+    );
     await tester.pumpAndSettle();
     expect(find.text('연간 통계'), findsOneWidget);
     expect(router.canPop(), isTrue);
@@ -152,7 +169,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    final router = GoRouter.of(tester.element(find.text('my_little_budget')));
+    final router = GoRouter.of(tester.element(find.text('작은 가계부')));
     router.go('/notes');
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -184,7 +201,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    final router = GoRouter.of(tester.element(find.byType(NavigationBar)));
+    final router = GoRouter.of(
+      tester.element(find.byKey(const ValueKey('mobile-bottom-navigation'))),
+    );
     router.go('/notes');
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));

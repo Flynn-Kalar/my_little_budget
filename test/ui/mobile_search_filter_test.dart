@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:my_little_budget/app.dart';
+import 'package:my_little_budget/router/app_router.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/features/investments/providers.dart';
@@ -24,6 +25,10 @@ void main() {
         child: const MyLittleBudgetApp(),
       ),
     );
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
     const searchKey = ValueKey('mobile-transactions-search-field');
@@ -87,7 +92,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    GoRouter.of(tester.element(find.byType(NavigationBar))).go('/investments');
+    ProviderScope.containerOf(
+      tester.element(find.byType(MyLittleBudgetApp)),
+    ).read(appRouterProvider).go('/transactions');
+    await tester.pumpAndSettle();
+    GoRouter.of(
+      tester.element(find.byKey(const ValueKey('mobile-bottom-navigation'))),
+    ).go('/investments');
     await tester.pumpAndSettle();
 
     const searchKey = ValueKey('mobile-investments-search-field');

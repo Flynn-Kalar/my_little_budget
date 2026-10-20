@@ -163,12 +163,12 @@ class ThemePalettes {
 
 /// SPEC §2.2 의 기본값.
 const defaultTheme = ThemeColors(
-  income: Color(0xFF2563EB),
-  expense: Color(0xFFDC2626),
+  income: Color(0xFF15966A),
+  expense: Color(0xFFED7377),
   transfer: Color(0xFFFFAE00),
-  background: Color(0xFFECFEEF),
-  surface: Color(0xFFF5FFF7),
-  accent: Color(0xFF646464),
+  background: Color(0xFFEEFAF3),
+  surface: Color(0xFFFFFFFF),
+  accent: Color(0xFF8F7CE8),
   warning: Color(0xFF5E00D1),
 );
 
