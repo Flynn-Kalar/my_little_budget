@@ -7,6 +7,7 @@ import 'defaults.dart';
 import 'sync_metadata.dart';
 import 'sync_models.dart';
 import 'tag_category_links.dart';
+import '../features/notes/reminder_store.dart';
 
 class LocalSyncStore {
   LocalSyncStore(this._db);
@@ -132,6 +133,34 @@ WHERE uuid = ?
     }
 
     switch (entity) {
+      case 'notes':
+        final noteId = row.read<int>('id');
+        final items = await _db
+            .customSelect(
+              'SELECT text,is_checked,sort_order FROM note_checklist_items WHERE note_id=? ORDER BY sort_order,id',
+              variables: [Variable(noteId)],
+            )
+            .get();
+        payload['checklist_items'] = [
+          for (final item in items)
+            {
+              'text': item.read<String>('text'),
+              'is_checked': item.read<int>('is_checked') == 1,
+            },
+        ];
+        final series = await _db
+            .customSelect(
+              'SELECT * FROM reminder_series WHERE note_id=?',
+              variables: [Variable(noteId)],
+            )
+            .getSingleOrNull();
+        payload['series'] = series == null
+            ? null
+            : {
+                for (final column in noteSeriesSyncColumns)
+                  column: series.data[column],
+              };
+        break;
       case 'tags':
         final categoryIds = readTagCategoryIds(
           row.read<String>('category_ids_json'),
@@ -472,7 +501,61 @@ WHERE uuid = ?
     QueryRow stored,
     Map<String, Object?> payload,
   ) async {
-    if (entity == 'transactions') {
+    if (entity == 'notes') {
+      final noteId = stored.read<int>('id');
+      final items = payload['checklist_items'];
+      if (items is! List || !payload.containsKey('series')) {
+        throw const FormatException('메모 체크리스트 또는 반복 설정이 없습니다.');
+      }
+      await _db.customStatement(
+        'DELETE FROM note_checklist_items WHERE note_id=?',
+        [noteId],
+      );
+      for (var index = 0; index < items.length; index++) {
+        final item = items[index];
+        if (item is! Map ||
+            item['text'] is! String ||
+            item['is_checked'] is! bool) {
+          throw const FormatException('메모 체크리스트 형식이 올바르지 않습니다.');
+        }
+        await _db
+            .into(_db.noteChecklistItems)
+            .insert(
+              NoteChecklistItemsCompanion.insert(
+                noteId: noteId,
+                itemText: item['text'] as String,
+                isChecked: Value(item['is_checked'] as bool),
+                sortOrder: Value(index),
+              ),
+            );
+      }
+      final series = payload['series'];
+      if (series != null) {
+        if (series is! Map ||
+            noteSeriesSyncColumns.any((c) => !series.containsKey(c))) {
+          throw const FormatException('메모 반복 설정 형식이 올바르지 않습니다.');
+        }
+        // The full-screen alarm mode belongs to this device, like notification_enabled.
+        await _db.customStatement(
+          '''
+INSERT INTO reminder_series(note_id,time_zone,anchor_date,due_date,repeat_every,until_date,alarm_mode)
+VALUES(?,?,?,?,?,?,0)
+ON CONFLICT(note_id) DO UPDATE SET time_zone=excluded.time_zone,
+  anchor_date=excluded.anchor_date,due_date=excluded.due_date,
+  repeat_every=excluded.repeat_every,until_date=excluded.until_date
+''',
+          [noteId, for (final c in noteSeriesSyncColumns) series[c]],
+        );
+      }
+      final note = (await _db.notesDao.getNote(noteId))!;
+      final next = note.scheduleType == 'none'
+          ? null
+          : await ReminderStore(_db).nextReset(note, DateTime.now());
+      await _db.customStatement('UPDATE notes SET next_reset_at=? WHERE id=?', [
+        next?.toUtc().toIso8601String(),
+        noteId,
+      ]);
+    } else if (entity == 'transactions') {
       final transactionId = stored.data['id']! as int;
       await _db.customStatement(
         'DELETE FROM transaction_tags WHERE transaction_id = ?',
@@ -717,6 +800,7 @@ const _primaryKeys = <String, String>{
   'transaction_presets': 'id',
   'tags': 'id',
   'calendar_events': 'id',
+  'notes': 'id',
 };
 
 const _naturalKeys = <String, List<String>>{
@@ -728,6 +812,7 @@ const _naturalKeys = <String, List<String>>{
 };
 
 const _payloadColumns = <String, List<String>>{
+  'notes': noteSyncColumns,
   'accounts': [
     'name',
     'kind',
@@ -833,6 +918,7 @@ const _payloadColumns = <String, List<String>>{
 };
 
 const _boolColumns = <String, Set<String>>{
+  'notes': {'show_on_calendar', 'completed', 'pinned'},
   'accounts': {'exclude_from_total', 'is_investment'},
   'categories': {},
   'transactions': {},

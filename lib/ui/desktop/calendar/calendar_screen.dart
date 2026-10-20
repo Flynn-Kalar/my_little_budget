@@ -16,6 +16,7 @@ import '../../shared/calendar_schedule_options.dart';
 import '../../shared/calendar_occurrence_actions.dart';
 import '../../shared/calendar_event_status.dart';
 import '../../shared/calendar_entries.dart';
+import '../../shared/calendar_event_details.dart';
 import '../../shared/calendar_day_agenda.dart';
 import '../../shared/calendar_dday_list.dart';
 import '../../../features/calendar/calendar_dday.dart';
@@ -45,7 +46,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     if (event == null) return;
     _openedRequest = widget.openRequest;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _CalendarEventDialog.show(context, event: event);
+      if (mounted) {
+        _openCalendarEventDetails(
+          context,
+          CalendarOccurrence(event: event, start: calendarEventStart(event)),
+          editSeries: true,
+        );
+      }
     });
   }
 
@@ -129,8 +136,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 return SingleChildScrollView(
                   child: CalendarDdayList(
                     events: value,
-                    onOpen: (event) =>
-                        _CalendarEventDialog.show(context, event: event),
+                    onOpen: (event) => _openCalendarEventDetails(
+                      context,
+                      CalendarOccurrence(
+                        event: event,
+                        start: calendarEventStart(event),
+                      ),
+                      editSeries: true,
+                    ),
                     onAdd: () =>
                         _CalendarEventDialog.show(context, initialDday: true),
                   ),
@@ -638,10 +651,7 @@ class _CalendarEntry {
   Future<void> open(BuildContext context) async {
     final event = eventEntry?.event;
     if (event != null) {
-      if (await calendarOccurrenceActions(context, eventEntry!) &&
-          context.mounted) {
-        await _CalendarEventDialog.show(context, event: event);
-      }
+      await _openCalendarEventDetails(context, eventEntry!);
       return;
     }
     if (holiday != null) return;
@@ -682,6 +692,42 @@ Map<String, List<_CalendarEntry>> _combineCalendarEntries(
     });
   }
   return result;
+}
+
+Future<void> _openCalendarEventDetails(
+  BuildContext context,
+  CalendarOccurrence occurrence, {
+  bool editSeries = false,
+}) async {
+  final edit = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('일정 상세'),
+      scrollable: true,
+      content: SizedBox(
+        width: 500,
+        child: CalendarEventDetails(occurrence: occurrence),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('닫기'),
+        ),
+        FilledButton.icon(
+          key: const ValueKey('calendar-event-edit'),
+          onPressed: () => Navigator.pop(context, true),
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('수정'),
+        ),
+      ],
+    ),
+  );
+  if (edit != true || !context.mounted) return;
+  final openEditor =
+      editSeries || await calendarOccurrenceActions(context, occurrence);
+  if (openEditor && context.mounted) {
+    await _CalendarEventDialog.show(context, event: occurrence.event);
+  }
 }
 
 class _CalendarEventDialog extends ConsumerStatefulWidget {

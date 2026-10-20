@@ -17,6 +17,7 @@ const syncPullOrder = <String>[
   'recurring_transactions',
   'transaction_presets',
   'calendar_events',
+  'notes',
 ];
 
 final supabaseSyncGatewayProvider = Provider<SupabaseSyncGateway>((ref) {
@@ -330,6 +331,10 @@ class SupabaseIncrementalSyncService {
 
   static String _describeError(Object error) {
     if (error is PostgrestException) {
+      if (['PGRST205', '42P01'].contains(error.code) &&
+          error.message.contains('mlb_notes')) {
+        return '서버에 메모 동기화 테이블이 없습니다. 설정의 Supabase 안내에서 최신 SQL 전체를 실행하고 11 / 11을 확인한 뒤 다시 동기화하세요.';
+      }
       final code = error.code == null ? '' : ' (${error.code})';
       return '${error.message}$code';
     }

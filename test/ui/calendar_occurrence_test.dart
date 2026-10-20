@@ -65,6 +65,9 @@ void main() {
           await tester.pumpWidget(app());
           await tester.pumpAndSettle();
           await tap(find.text('월세 회차').first);
+          expect(find.byType(TextField), findsNothing);
+          expect(find.text('이번 일정만 수정'), findsNothing);
+          await tap(find.byKey(const ValueKey('calendar-event-edit')));
           await tap(find.text('이번 일정만 수정'));
           final title = find.byWidgetPredicate(
             (w) => w is TextField && w.decoration?.labelText == '제목',
@@ -80,6 +83,8 @@ void main() {
             '이번만 변경',
           );
           await tap(find.text('이번만 변경').first);
+          expect(find.byType(TextField), findsNothing);
+          await tap(find.byKey(const ValueKey('calendar-event-edit')));
           await tap(find.text('이번 일정 건너뛰기'));
           await tap(find.widgetWithText(FilledButton, '건너뛰기'));
           await waitForSave();
@@ -92,6 +97,8 @@ void main() {
           );
           await tester.pumpWidget(app(request: 'restore'));
           await tester.pumpAndSettle();
+          expect(find.byType(TextField), findsNothing);
+          await tap(find.byKey(const ValueKey('calendar-event-edit')));
           await tap(find.text('변경·건너뛴 회차'));
           await tap(find.text('원래대로'));
           await tap(find.widgetWithText(FilledButton, '저장'));

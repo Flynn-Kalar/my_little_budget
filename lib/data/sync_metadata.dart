@@ -18,6 +18,38 @@ const localSyncTableNames = <String>[
   'transaction_presets',
   'tags',
   'calendar_events',
+  'notes',
+];
+
+/// Alarm preferences and runtime reminder state deliberately stay on-device.
+const noteSyncColumns = <String>[
+  'title',
+  'content',
+  'rich_content',
+  'goal_target_amount',
+  'goal_current_amount',
+  'goal_start_date',
+  'goal_due_date',
+  'reminder_at',
+  'schedule_type',
+  'reset_time',
+  'reset_weekday',
+  'reset_weekdays',
+  'reset_day_of_month',
+  'interval_days',
+  'anchor_date',
+  'show_on_calendar',
+  'completed',
+  'pinned',
+  'created_at',
+];
+
+const noteSeriesSyncColumns = <String>[
+  'time_zone',
+  'anchor_date',
+  'due_date',
+  'repeat_every',
+  'until_date',
 ];
 
 final Random _secureRandom = Random.secure();

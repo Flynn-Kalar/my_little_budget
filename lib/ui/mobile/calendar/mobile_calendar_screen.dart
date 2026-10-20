@@ -16,6 +16,7 @@ import '../../shared/calendar_schedule_options.dart';
 import '../../shared/calendar_occurrence_actions.dart';
 import '../../shared/calendar_event_status.dart';
 import '../../shared/calendar_entries.dart';
+import '../../shared/calendar_event_details.dart';
 import '../../shared/calendar_day_agenda.dart';
 import '../../shared/calendar_dday_list.dart';
 import '../../../features/calendar/calendar_dday.dart';
@@ -47,7 +48,13 @@ class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
     if (event == null) return;
     _openedRequest = widget.openRequest;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _MobileCalendarEventSheet.show(context, event: event);
+      if (mounted) {
+        _openMobileCalendarEventDetails(
+          context,
+          CalendarOccurrence(event: event, start: calendarEventStart(event)),
+          editSeries: true,
+        );
+      }
     });
   }
 
@@ -103,8 +110,14 @@ class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
             if (_showDday) {
               return CalendarDdayList(
                 events: value,
-                onOpen: (event) =>
-                    _MobileCalendarEventSheet.show(context, event: event),
+                onOpen: (event) => _openMobileCalendarEventDetails(
+                  context,
+                  CalendarOccurrence(
+                    event: event,
+                    start: calendarEventStart(event),
+                  ),
+                  editSeries: true,
+                ),
                 onAdd: () =>
                     _MobileCalendarEventSheet.show(context, initialDday: true),
               );
@@ -492,6 +505,61 @@ class _EmptyCalendarCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+Future<void> _openMobileCalendarEventDetails(
+  BuildContext context,
+  CalendarOccurrence occurrence, {
+  bool editSeries = false,
+}) async {
+  final edit = await showModalBottomSheet<bool>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .8,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('일정 상세', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 20),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: CalendarEventDetails(occurrence: occurrence),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('닫기'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    key: const ValueKey('calendar-event-edit'),
+                    onPressed: () => Navigator.pop(context, true),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('수정'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  if (edit != true || !context.mounted) return;
+  final openEditor =
+      editSeries || await calendarOccurrenceActions(context, occurrence);
+  if (openEditor && context.mounted) {
+    await _MobileCalendarEventSheet.show(context, event: occurrence.event);
   }
 }
 
@@ -1053,10 +1121,7 @@ class _MobileCalendarEntry {
   Future<void> open(BuildContext context) async {
     final event = eventEntry?.event;
     if (event != null) {
-      if (await calendarOccurrenceActions(context, eventEntry!) &&
-          context.mounted) {
-        await _MobileCalendarEventSheet.show(context, event: event);
-      }
+      await _openMobileCalendarEventDetails(context, eventEntry!);
       return;
     }
     if (holiday != null) return;

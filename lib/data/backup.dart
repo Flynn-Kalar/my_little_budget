@@ -228,6 +228,7 @@ Map<String, Object?> _recurringJson(Map<String, dynamic> m) {
 }
 
 Map<String, Object?> _noteJson(Map<String, dynamic> m) {
+  _withSyncFields(m);
   m['scheduleType'] ??= m['reminderAt'] == null ? 'none' : 'once';
   m['notificationEnabled'] ??= m['reminderAt'] != null;
   m['notificationDaysBefore'] ??= 0;

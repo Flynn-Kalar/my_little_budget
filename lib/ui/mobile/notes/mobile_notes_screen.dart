@@ -1063,7 +1063,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
                               title: const Text('Android 시스템 알림'),
                               subtitle: Text(
                                 notificationSupported
-                                    ? '꺼두면 날짜만 저장하고 알림은 울리지 않습니다.'
+                                    ? '이 기기에서만 알림을 보냅니다. 알람 설정은 동기화하지 않습니다.'
                                     : 'Android 기기에서만 지원합니다.',
                               ),
                             ),
@@ -1190,7 +1190,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
                               title: const Text('Android 시스템 알림'),
                               subtitle: Text(
                                 notificationSupported
-                                    ? '정확한 알람 권한이 필요합니다.'
+                                    ? '이 기기에서만 알림을 보냅니다. 정확한 알람 권한이 필요합니다.'
                                     : 'Android 기기에서만 지원합니다.',
                               ),
                             ),

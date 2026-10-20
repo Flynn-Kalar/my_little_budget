@@ -14,7 +14,7 @@
 
 ## 스키마 설치와 기존 스키마 마이그레이션
 
-SQL Editor의 새 쿼리 하나에 `table_sync_v2_schema.sql` 전체를 붙여넣고 한 번에 실행한다. 이 단일 스크립트가 10개 테이블 설치·마이그레이션, PostgREST 스키마 캐시 갱신, 설치 개수 확인까지 모두 처리한다. 마지막 결과의 `installed_table_count`와 `expected_table_count`가 모두 `10`이면 완료다. 별도의 `to_regclass` 또는 `NOTIFY pgrst` 쿼리를 만들 필요가 없다.
+SQL Editor의 새 쿼리 하나에 `table_sync_v2_schema.sql` 전체를 붙여넣고 한 번에 실행한다. 이 단일 스크립트가 11개 테이블 설치·마이그레이션, PostgREST 스키마 캐시 갱신, 설치 개수 확인까지 모두 처리한다. 마지막 결과의 `installed_table_count`와 `expected_table_count`가 모두 `11`이면 완료다. 별도의 `to_regclass` 또는 `NOTIFY pgrst` 쿼리를 만들 필요가 없다.
 
 스크립트는 하나의 트랜잭션으로 동작하므로 설치 중 실패하면 변경사항이 롤백된다. 같은 프로젝트에서 다시 실행해도 기존 revision을 유지하며 누락된 설정만 보완한다.
 
@@ -41,6 +41,11 @@ SQL Editor의 새 쿼리 하나에 `table_sync_v2_schema.sql` 전체를 붙여�
 - `mlb_transaction_presets`
 - `mlb_tags`
 - `mlb_calendar_events`
+- `mlb_notes`
+
+메모 동기화를 추가한 버전에서는 기존 프로젝트에도 최신 SQL 전체를 다시 실행해야 합니다. 기존 데이터는 유지하며 `mlb_notes` 테이블과 같은 소유자 보호 정책을 추가합니다.
+
+메모는 제목·본문·서식·체크리스트와 완료 상태·목표·고정·캘린더 표시·반복 일정을 공유합니다. 알림 켜기, 알림 시각과 사전 알림, 소리·진동·다시 알림 및 전체 화면 알람 모드는 각 기기에만 저장합니다. 다른 기기에서 받은 새 메모는 알림이 꺼진 상태로 시작하고, 기존 메모의 기기별 알람 설정은 원격 내용 변경 시에도 유지합니다. 알림 예약·발송 이력과 편집 중 임시 저장은 동기화하지 않습니다.
 
 각 테이블은 다음 공통 열을 사용한다.
 

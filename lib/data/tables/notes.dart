@@ -1,10 +1,15 @@
 import 'package:drift/drift.dart';
+import '../sync_metadata.dart';
 
 @DataClassName('Note')
 @TableIndex(name: 'idx_notes_reminder_at', columns: {#reminderAt})
 @TableIndex(name: 'idx_notes_pinned', columns: {#pinned})
 class Notes extends Table {
   IntColumn get id => integer().autoIncrement()();
+  TextColumn get uuid => text().clientDefault(newSyncUuid).unique()();
+  TextColumn get deletedAt => text().nullable()();
+  TextColumn get syncStatus =>
+      text().withDefault(const Constant(syncStatusPending))();
   TextColumn get title => text().withLength(min: 1, max: 120)();
   TextColumn get content => text().withDefault(const Constant(''))();
   TextColumn get richContent => text().nullable()();

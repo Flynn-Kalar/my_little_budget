@@ -1183,7 +1183,7 @@ class _AutoSyncSetupSteps extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '10. SQL 스키마 설치: 앱에서 설정 저장을 눌러 Auth 로그인을 완료한 뒤 Supabase 대시보드의 SQL Editor에서 새 쿼리 하나를 만듭니다. 아래 SQL 전체를 그대로 붙여넣고 한 번만 실행합니다. 이 SQL이 10개 테이블 설치, 스키마 캐시 갱신, 설치 개수 확인까지 모두 처리합니다. 마지막 결과가 10 / 10인지 확인합니다.',
+          '10. SQL 스키마 설치: 앱에서 설정 저장을 눌러 Auth 로그인을 완료한 뒤 Supabase 대시보드의 SQL Editor에서 새 쿼리 하나를 만듭니다. 아래 SQL 전체를 그대로 붙여넣고 한 번만 실행합니다. 이 SQL이 11개 테이블 설치, 스키마 캐시 갱신, 설치 개수 확인까지 모두 처리합니다. 마지막 결과가 11 / 11인지 확인합니다.',
           style: style,
         ),
         const SizedBox(height: 10),

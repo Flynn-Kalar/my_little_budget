@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -184,6 +184,11 @@ WHERE reminder_at IS NOT NULL
           recurringTransactions.sortOrder,
         );
       }
+      if (from < 25 &&
+          await _tableExists('notes') &&
+          !await _columnExists('notes', 'uuid')) {
+        await _addSyncMetadataColumns(tableName: 'notes', idColumn: 'id');
+      }
     },
     beforeOpen: (details) async {
       // SPEC §3 의 외래키 제약을 실제 SQLite 에서 강제하려면 PRAGMA 필요.
@@ -195,6 +200,7 @@ WHERE reminder_at IS NOT NULL
         await transaction(() => createCalendarReminderSchema(this));
       }
       await _ensureSyncInfrastructure();
+      await _ensureNoteSyncTracking();
       await _repairRequiredTagFields();
       await _repairCategoryUpdatedAt();
       // SPEC §5.3 — 첫 생성 시 기본 자산·카테고리 시드.
@@ -299,6 +305,11 @@ CREATE TABLE IF NOT EXISTS sync_state (
       await customStatement('DROP TRIGGER IF EXISTS sync_${tableName}_insert');
       await customStatement('DROP TRIGGER IF EXISTS sync_${tableName}_update');
       await customStatement('DROP TRIGGER IF EXISTS sync_${tableName}_delete');
+      // Derived reset times and local alarm updates must not continuously
+      // supersede an in-flight note upload's generation.
+      final updateColumns = tableName == 'notes'
+          ? ' OF ${[...noteSyncColumns, 'sync_status', 'updated_at'].join(',')}'
+          : '';
       await customStatement('''
 CREATE TRIGGER sync_${tableName}_insert
 AFTER INSERT ON $tableName
@@ -320,7 +331,7 @@ END
 ''');
       await customStatement('''
 CREATE TRIGGER sync_${tableName}_update
-AFTER UPDATE ON $tableName
+AFTER UPDATE$updateColumns ON $tableName
 WHEN NEW.uuid IS NOT NULL AND NEW.sync_status = '$syncStatusPending'
 BEGIN
   INSERT INTO sync_outbox(
@@ -380,6 +391,46 @@ WHERE uuid IS NOT NULL AND sync_status = '$syncStatusPending'
       await customStatement(
         "UPDATE $tableName SET sync_status = '$syncStatusPending'",
       );
+    }
+  }
+
+  Future<void> _ensureNoteSyncTracking() async {
+    if (!await _tableExists('notes') || !await _columnExists('notes', 'uuid')) {
+      return;
+    }
+    final changed = noteSyncColumns
+        .map((c) => 'OLD.$c IS NOT NEW.$c')
+        .join(' OR ');
+    await customStatement('DROP TRIGGER IF EXISTS notes_sync_content_update');
+    await customStatement('''
+CREATE TRIGGER notes_sync_content_update AFTER UPDATE ON notes
+WHEN NEW.sync_status NOT IN ('$syncStatusRemote', '$syncStatusRemoteDelete')
+  AND ($changed)
+BEGIN
+  UPDATE notes SET sync_status='$syncStatusPending' WHERE id=NEW.id;
+END
+''');
+    for (final table in ['note_checklist_items', 'reminder_series']) {
+      if (!await _tableExists(table)) continue;
+      final columns = table == 'reminder_series'
+          ? noteSeriesSyncColumns
+          : ['text', 'is_checked', 'sort_order'];
+      for (final operation in ['INSERT', 'UPDATE', 'DELETE']) {
+        final row = operation == 'DELETE' ? 'OLD' : 'NEW';
+        final condition = operation == 'UPDATE'
+            ? 'WHEN (${columns.map((c) => 'OLD.$c IS NOT NEW.$c').join(' OR ')})'
+            : '';
+        final trigger = 'notes_sync_${table}_${operation.toLowerCase()}';
+        await customStatement('DROP TRIGGER IF EXISTS $trigger');
+        await customStatement('''
+CREATE TRIGGER $trigger AFTER $operation ON $table $condition
+BEGIN
+  UPDATE notes SET sync_status='$syncStatusPending',
+    updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+  WHERE id=$row.note_id AND sync_status NOT IN ('$syncStatusRemote', '$syncStatusRemoteDelete');
+END
+''');
+      }
     }
   }
 

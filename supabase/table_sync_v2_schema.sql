@@ -130,7 +130,8 @@ declare
     'mlb_recurring_transactions',
     'mlb_transaction_presets',
     'mlb_tags',
-    'mlb_calendar_events'
+    'mlb_calendar_events',
+    'mlb_notes'
   ];
 begin
   select id into strict sync_owner_id
@@ -337,8 +338,8 @@ commit;
 -- makes this single script sufficient even when its schema cache is stale.
 notify pgrst, 'reload schema';
 
--- A successful installation finishes with installed_table_count = 10 and
--- expected_table_count = 10. No separate verification query is required.
+-- A successful installation finishes with installed_table_count = 11 and
+-- expected_table_count = 11. No separate verification query is required.
 with expected(table_name) as (
   values
     ('mlb_accounts'),
@@ -350,7 +351,8 @@ with expected(table_name) as (
     ('mlb_recurring_transactions'),
     ('mlb_transaction_presets'),
     ('mlb_tags'),
-    ('mlb_calendar_events')
+    ('mlb_calendar_events'),
+    ('mlb_notes')
 )
 select
   count(*) filter (

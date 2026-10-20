@@ -7120,6 +7120,40 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+    clientDefault: newSyncUuid,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<String> deletedAt = GeneratedColumn<String>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(syncStatusPending),
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -7514,6 +7548,9 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    uuid,
+    deletedAt,
+    syncStatus,
     title,
     content,
     richContent,
@@ -7562,6 +7599,24 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -7848,6 +7903,18 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      )!,
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -7991,6 +8058,9 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
 
 class Note extends DataClass implements Insertable<Note> {
   final int id;
+  final String uuid;
+  final String? deletedAt;
+  final String syncStatus;
   final String title;
   final String content;
   final String? richContent;
@@ -8026,6 +8096,9 @@ class Note extends DataClass implements Insertable<Note> {
   final String updatedAt;
   const Note({
     required this.id,
+    required this.uuid,
+    this.deletedAt,
+    required this.syncStatus,
     required this.title,
     required this.content,
     this.richContent,
@@ -8064,6 +8137,11 @@ class Note extends DataClass implements Insertable<Note> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<String>(deletedAt);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
     map['title'] = Variable<String>(title);
     map['content'] = Variable<String>(content);
     if (!nullToAbsent || richContent != null) {
@@ -8141,6 +8219,11 @@ class Note extends DataClass implements Insertable<Note> {
   NotesCompanion toCompanion(bool nullToAbsent) {
     return NotesCompanion(
       id: Value(id),
+      uuid: Value(uuid),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      syncStatus: Value(syncStatus),
       title: Value(title),
       content: Value(content),
       richContent: richContent == null && nullToAbsent
@@ -8218,6 +8301,9 @@ class Note extends DataClass implements Insertable<Note> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Note(
       id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      deletedAt: serializer.fromJson<String?>(json['deletedAt']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
       title: serializer.fromJson<String>(json['title']),
       content: serializer.fromJson<String>(json['content']),
       richContent: serializer.fromJson<String?>(json['richContent']),
@@ -8268,6 +8354,9 @@ class Note extends DataClass implements Insertable<Note> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'deletedAt': serializer.toJson<String?>(deletedAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
       'title': serializer.toJson<String>(title),
       'content': serializer.toJson<String>(content),
       'richContent': serializer.toJson<String?>(richContent),
@@ -8310,6 +8399,9 @@ class Note extends DataClass implements Insertable<Note> {
 
   Note copyWith({
     int? id,
+    String? uuid,
+    Value<String?> deletedAt = const Value.absent(),
+    String? syncStatus,
     String? title,
     String? content,
     Value<String?> richContent = const Value.absent(),
@@ -8345,6 +8437,9 @@ class Note extends DataClass implements Insertable<Note> {
     String? updatedAt,
   }) => Note(
     id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    syncStatus: syncStatus ?? this.syncStatus,
     title: title ?? this.title,
     content: content ?? this.content,
     richContent: richContent.present ? richContent.value : this.richContent,
@@ -8403,6 +8498,11 @@ class Note extends DataClass implements Insertable<Note> {
   Note copyWithCompanion(NotesCompanion data) {
     return Note(
       id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
       title: data.title.present ? data.title.value : this.title,
       content: data.content.present ? data.content.value : this.content,
       richContent: data.richContent.present
@@ -8495,6 +8595,9 @@ class Note extends DataClass implements Insertable<Note> {
   String toString() {
     return (StringBuffer('Note(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('syncStatus: $syncStatus, ')
           ..write('title: $title, ')
           ..write('content: $content, ')
           ..write('richContent: $richContent, ')
@@ -8535,6 +8638,9 @@ class Note extends DataClass implements Insertable<Note> {
   @override
   int get hashCode => Object.hashAll([
     id,
+    uuid,
+    deletedAt,
+    syncStatus,
     title,
     content,
     richContent,
@@ -8574,6 +8680,9 @@ class Note extends DataClass implements Insertable<Note> {
       identical(this, other) ||
       (other is Note &&
           other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.deletedAt == this.deletedAt &&
+          other.syncStatus == this.syncStatus &&
           other.title == this.title &&
           other.content == this.content &&
           other.richContent == this.richContent &&
@@ -8612,6 +8721,9 @@ class Note extends DataClass implements Insertable<Note> {
 
 class NotesCompanion extends UpdateCompanion<Note> {
   final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> deletedAt;
+  final Value<String> syncStatus;
   final Value<String> title;
   final Value<String> content;
   final Value<String?> richContent;
@@ -8647,6 +8759,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
   final Value<String> updatedAt;
   const NotesCompanion({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
     this.title = const Value.absent(),
     this.content = const Value.absent(),
     this.richContent = const Value.absent(),
@@ -8683,6 +8798,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
   });
   NotesCompanion.insert({
     this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
     required String title,
     this.content = const Value.absent(),
     this.richContent = const Value.absent(),
@@ -8719,6 +8837,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
   }) : title = Value(title);
   static Insertable<Note> custom({
     Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? deletedAt,
+    Expression<String>? syncStatus,
     Expression<String>? title,
     Expression<String>? content,
     Expression<String>? richContent,
@@ -8755,6 +8876,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
       if (title != null) 'title': title,
       if (content != null) 'content': content,
       if (richContent != null) 'rich_content': richContent,
@@ -8798,6 +8922,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
 
   NotesCompanion copyWith({
     Value<int>? id,
+    Value<String>? uuid,
+    Value<String?>? deletedAt,
+    Value<String>? syncStatus,
     Value<String>? title,
     Value<String>? content,
     Value<String?>? richContent,
@@ -8834,6 +8961,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
   }) {
     return NotesCompanion(
       id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      deletedAt: deletedAt ?? this.deletedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
       title: title ?? this.title,
       content: content ?? this.content,
       richContent: richContent ?? this.richContent,
@@ -8879,6 +9009,15 @@ class NotesCompanion extends UpdateCompanion<Note> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<String>(deletedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -8994,6 +9133,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
   String toString() {
     return (StringBuffer('NotesCompanion(')
           ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('syncStatus: $syncStatus, ')
           ..write('title: $title, ')
           ..write('content: $content, ')
           ..write('richContent: $richContent, ')
@@ -18732,6 +18874,9 @@ typedef $$TransactionTagsTableProcessedTableManager =
 typedef $$NotesTableCreateCompanionBuilder =
     NotesCompanion Function({
       Value<int> id,
+      Value<String> uuid,
+      Value<String?> deletedAt,
+      Value<String> syncStatus,
       required String title,
       Value<String> content,
       Value<String?> richContent,
@@ -18769,6 +18914,9 @@ typedef $$NotesTableCreateCompanionBuilder =
 typedef $$NotesTableUpdateCompanionBuilder =
     NotesCompanion Function({
       Value<int> id,
+      Value<String> uuid,
+      Value<String?> deletedAt,
+      Value<String> syncStatus,
       Value<String> title,
       Value<String> content,
       Value<String?> richContent,
@@ -18861,6 +19009,21 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19094,6 +19257,21 @@ class $$NotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -19271,6 +19449,17 @@ class $$NotesTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -19507,6 +19696,9 @@ class $$NotesTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                Value<String?> deletedAt = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String> content = const Value.absent(),
                 Value<String?> richContent = const Value.absent(),
@@ -19543,6 +19735,9 @@ class $$NotesTableTableManager
                 Value<String> updatedAt = const Value.absent(),
               }) => NotesCompanion(
                 id: id,
+                uuid: uuid,
+                deletedAt: deletedAt,
+                syncStatus: syncStatus,
                 title: title,
                 content: content,
                 richContent: richContent,
@@ -19580,6 +19775,9 @@ class $$NotesTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<String> uuid = const Value.absent(),
+                Value<String?> deletedAt = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
                 required String title,
                 Value<String> content = const Value.absent(),
                 Value<String?> richContent = const Value.absent(),
@@ -19616,6 +19814,9 @@ class $$NotesTableTableManager
                 Value<String> updatedAt = const Value.absent(),
               }) => NotesCompanion.insert(
                 id: id,
+                uuid: uuid,
+                deletedAt: deletedAt,
+                syncStatus: syncStatus,
                 title: title,
                 content: content,
                 richContent: richContent,

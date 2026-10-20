@@ -213,6 +213,8 @@ NoteWithChecklist _entry({
   return NoteWithChecklist(
     note: Note(
       id: 42,
+      uuid: '00000000-0000-4000-8000-000000000042',
+      syncStatus: 'pending',
       title: '일일 미션',
       content: '비공개 내용',
       scheduleType: 'daily',

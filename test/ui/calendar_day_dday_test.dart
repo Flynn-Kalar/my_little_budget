@@ -103,6 +103,12 @@ void main() {
       expect(find.text('기념일'), findsOneWidget);
       await tap(tester, find.text('기념일'));
       expect(
+        find.byKey(const ValueKey('calendar-event-details')),
+        findsOneWidget,
+      );
+      expect(find.byType(TextField), findsNothing);
+      await tap(tester, find.byKey(const ValueKey('calendar-event-edit')));
+      expect(
         tester
             .widget<SwitchListTile>(
               find.byKey(const ValueKey('calendar-dday-switch')),
@@ -137,7 +143,14 @@ void main() {
       final now = DateTime.now(),
           date = DateTime(DateTime.now().year, DateTime.now().month, 8, 9);
       for (final title in ['오전 약속', '오후 약속']) {
-        await db.calendarEventsDao.saveEvent(title: title, startAt: date);
+        await db.calendarEventsDao.saveEvent(
+          title: title,
+          startAt: date,
+          endAt: date.add(const Duration(hours: 1)),
+          description: '약속 상세 내용\n준비물 확인',
+          location: '회의실',
+          linkUrl: 'https://example.com/meeting',
+        );
       }
       await db.calendarEventsDao.saveEvent(
         title: '다음 해 D-day',
@@ -173,6 +186,28 @@ void main() {
         ),
       );
       expect(
+        find.byKey(const ValueKey('calendar-event-details')),
+        findsOneWidget,
+      );
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('약속 상세 내용\n준비물 확인'), findsOneWidget);
+      expect(find.text('회의실'), findsOneWidget);
+      final beforeClose = await db.calendarEventsDao.listEvents();
+      await tap(tester, find.text('닫기').last);
+      expect(await db.calendarEventsDao.listEvents(), beforeClose);
+      await tap(
+        tester,
+        find.byKey(ValueKey('$prefix-calendar-cell-${toDateKey(date)}')),
+      );
+      await tap(
+        tester,
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('오전 약속'),
+        ),
+      );
+      await tap(tester, find.byKey(const ValueKey('calendar-event-edit')));
+      expect(
         find.byWidgetPredicate(
           (w) => w is TextField && w.controller?.text == '오전 약속',
         ),
@@ -193,6 +228,8 @@ void main() {
       expect(find.text('다음 해 D-day'), findsOneWidget);
       expect(find.text('오전 약속'), findsNothing);
       await tap(tester, find.text('다음 해 D-day'));
+      expect(find.byType(TextField), findsNothing);
+      await tap(tester, find.byKey(const ValueKey('calendar-event-edit')));
       expect(
         find.byWidgetPredicate(
           (w) => w is TextField && w.controller?.text == '다음 해 D-day',

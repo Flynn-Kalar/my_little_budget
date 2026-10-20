@@ -85,6 +85,11 @@ void main() {
         pinned: true,
       );
       final original = (await oldDb.notesDao.getNote(id))!;
+      // Reconstruct v18 before it had the v25 note-content sync triggers.
+      await oldDb.customStatement(
+        'DROP TRIGGER IF EXISTS notes_sync_content_update',
+      );
+      await oldDb.customStatement('DROP TRIGGER IF EXISTS sync_notes_update');
       for (final column in [
         'goal_target_amount',
         'goal_current_amount',

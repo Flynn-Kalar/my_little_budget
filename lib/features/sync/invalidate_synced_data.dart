@@ -7,10 +7,16 @@ import '../investments/providers.dart' as investments;
 import '../settings/providers.dart' as settings;
 import '../stats/providers.dart' as stats;
 import '../transactions/providers.dart' as transactions;
+import '../notes/providers.dart' as notes;
+import '../calendar/providers.dart' as calendar;
 
 /// FutureProviders do not react to raw Drift writes. Call this after a remote
 /// pull so an already-open screen observes the newly applied rows.
 void invalidateSyncedData(WidgetRef ref) {
+  ref.invalidate(notes.notesProvider);
+  ref.invalidate(notes.pendingReminderCountProvider);
+  ref.invalidate(notes.missedReminderCountProvider);
+  ref.invalidate(calendar.calendarEventsProvider);
   ref.invalidate(accounts.accountBalancesProvider);
   ref.invalidate(accounts.archivedAccountsProvider);
   ref.invalidate(accounts.accountByIdProvider);
