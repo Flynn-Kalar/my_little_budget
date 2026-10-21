@@ -12,8 +12,21 @@ import '../../../features/investments/validation.dart';
 import 'package:my_little_budget/features/investments/providers.dart';
 import '../../shared/amount_input_formatter.dart';
 import '../page_back_button.dart';
+import '../desktop_section.dart';
 import 'widgets/investment_summary_card.dart';
+import 'widgets/investment_portfolio_table.dart';
 import '../../shared/bulk_manage_button.dart';
+
+final _desktopHoldingsProvider =
+    FutureProvider.autoDispose<List<CurrentHolding>>((ref) async {
+      final accountId = ref.watch(
+        investmentFilterProvider.select((f) => f.accountId),
+      );
+      final dao = ref.watch(investmentsDaoProvider);
+      final all = await ref.watch(currentHoldingsProvider.future);
+      if (accountId == null) return all;
+      return dao.listCurrentHoldings(accountId: accountId);
+    });
 
 class InvestmentsScreen extends ConsumerStatefulWidget {
   const InvestmentsScreen({super.key});
@@ -24,6 +37,7 @@ class InvestmentsScreen extends ConsumerStatefulWidget {
 
 class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> {
   bool _yearly = false;
+  int _tab = 0;
   int _year = DateTime.now().year;
 
   @override
@@ -33,7 +47,7 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> {
     final summary = _yearly
         ? ref.watch(investmentYearlySummaryProvider(_year))
         : ref.watch(investmentMonthlySummaryProvider);
-    final holdings = ref.watch(currentHoldingsProvider);
+    final holdings = ref.watch(_desktopHoldingsProvider);
     final rows = _yearly
         ? ref.watch(investmentYearlyRowsProvider(_year))
         : ref.watch(investmentRowsProvider);
@@ -41,93 +55,222 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> {
         ? ref.watch(investmentYearlyRealizedPnlProvider(_year))
         : ref.watch(realizedPnlProvider);
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 1100),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                PageBackButton(),
-                Text(
-                  '투자',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1440),
+        child: SingleChildScrollView(
+          key: const ValueKey('desktop-investments-scroll'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DesktopSection(
+                minWidth: 840,
+                child: Row(
+                  children: [
+                    const PageBackButton(),
+                    const Text(
+                      '투자',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    _InvestmentPeriodNav(
+                      yearly: _yearly,
+                      month: month,
+                      year: _year,
+                      onModeChanged: (yearly) => setState(() {
+                        _yearly = yearly;
+                        if (yearly) _year = parseMonthKey(month).year;
+                      }),
+                      onMonthChanged: (value) =>
+                          ref.read(investmentMonthProvider.notifier).state =
+                              value,
+                      onYearChanged: (value) => setState(() => _year = value),
+                    ),
+                    const SizedBox(width: 20),
+                    const _AddInvestmentButton(),
+                  ],
                 ),
-              ],
-            ),
-            SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                _InvestmentPeriodNav(
-                  yearly: _yearly,
-                  month: month,
-                  year: _year,
-                  onModeChanged: (yearly) => setState(() {
-                    _yearly = yearly;
-                    if (yearly) _year = parseMonthKey(month).year;
-                  }),
-                  onMonthChanged: (value) =>
-                      ref.read(investmentMonthProvider.notifier).state = value,
-                  onYearChanged: (value) => setState(() => _year = value),
+              ),
+              const SizedBox(height: 22),
+              summary.when(
+                data: (value) => DesktopSection(
+                  minWidth: 800,
+                  child: InvestmentSummaryCard(summary: value),
                 ),
-                const _AddInvestmentButton(),
-              ],
-            ),
-            SizedBox(height: 12),
-            const _InvestmentFilterBar(),
-            SizedBox(height: 16),
-            account.when(
-              data: (value) => _InvestmentAccountBanner(account: value),
-              loading: () => const _InvestmentCard(
-                child: LinearProgressIndicator(minHeight: 3),
+                loading: () => const _InvestmentCard(
+                  child: LinearProgressIndicator(minHeight: 3),
+                ),
+                error: (error, _) => _ErrorCard(message: error.toString()),
               ),
-              error: (error, _) => _ErrorCard(message: error.toString()),
-            ),
-            SizedBox(height: 12),
-            summary.when(
-              data: (value) => InvestmentSummaryCard(summary: value),
-              loading: () => const _InvestmentCard(
-                child: LinearProgressIndicator(minHeight: 3),
+              const SizedBox(height: 20),
+              _InvestmentCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    DesktopSection(
+                      minWidth: 480,
+                      child: Row(
+                        children: [
+                          for (final (index, title) in [
+                            (0, '보유 종목'),
+                            (1, '거래 내역'),
+                            (2, '실현손익'),
+                          ])
+                            SizedBox(
+                              width: 160,
+                              child: InkWell(
+                                key: ValueKey('desktop-investments-tab-$index'),
+                                onTap: () => setState(() => _tab = index),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 18,
+                                  ),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        width: 3,
+                                        color: _tab == index
+                                            ? context.desktopIncome
+                                            : Colors.transparent,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: _tab == index
+                                          ? context.desktopIncome
+                                          : context.desktopMuted,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    const SizedBox(height: 16),
+                    _InvestmentFilterBar(showTradeFilters: _tab != 0),
+                    const SizedBox(height: 24),
+                    if (_tab == 0)
+                      holdings.when(
+                        data: (value) {
+                          final filter = ref.watch(investmentFilterProvider);
+                          final query =
+                              filter.ticker?.trim().toLowerCase() ?? '';
+                          return InvestmentPortfolioTable(
+                            searching:
+                                query.isNotEmpty || filter.accountId != null,
+                            holdings: value
+                                .where(
+                                  (h) => h.ticker.toLowerCase().contains(query),
+                                )
+                                .toList(),
+                            accountName: account.asData?.value?.name,
+                            pnlRows: realizedPnl.asData?.value ?? const [],
+                            onBuy: (holding) => _InvestmentCreateDialog.show(
+                              context,
+                              initialSide: 'buy',
+                              initialTicker: holding.ticker,
+                              lockSide: true,
+                            ),
+                            buildTradeForm: (holding, side, onSaved) =>
+                                _HoldingInlineForm(
+                                  key: ValueKey('${holding.ticker}-$side'),
+                                  holding: holding,
+                                  side: side,
+                                  onSaved: onSaved,
+                                ),
+                          );
+                        },
+                        loading: () => const _InvestmentCard(
+                          child: LinearProgressIndicator(minHeight: 3),
+                        ),
+                        error: (error, _) =>
+                            _ErrorCard(message: error.toString()),
+                      ),
+                    if (_tab == 1)
+                      DesktopSection(
+                        minWidth: 900,
+                        child: rows.when(
+                          data: (value) => _InvestmentRowsCard(
+                            rows: value,
+                            filterActive: ref
+                                .watch(investmentFilterProvider)
+                                .isActive,
+                            yearly: _yearly,
+                          ),
+                          loading: () => const _InvestmentCard(
+                            child: LinearProgressIndicator(minHeight: 3),
+                          ),
+                          error: (error, _) =>
+                              _ErrorCard(message: error.toString()),
+                        ),
+                      ),
+                    if (_tab == 2)
+                      DesktopSection(
+                        minWidth: 1000,
+                        child: realizedPnl.when(
+                          data: (value) {
+                            final visibleIds =
+                                rows.asData?.value.map((r) => r.id).toSet() ??
+                                <int>{};
+                            return _RealizedPnlCard(
+                              rows: value
+                                  .where((r) => visibleIds.contains(r.id))
+                                  .toList(),
+                              yearly: _yearly,
+                            );
+                          },
+                          loading: () => const _InvestmentCard(
+                            child: LinearProgressIndicator(minHeight: 3),
+                          ),
+                          error: (error, _) =>
+                              _ErrorCard(message: error.toString()),
+                        ),
+                      ),
+                    if (account.hasError)
+                      Text(
+                        '투자 계좌를 불러오지 못했습니다.',
+                        style: TextStyle(color: context.desktopExpense),
+                      ),
+                  ],
+                ),
               ),
-              error: (error, _) => _ErrorCard(message: error.toString()),
-            ),
-            SizedBox(height: 16),
-            holdings.when(
-              data: (value) => _HoldingsCard(holdings: value),
-              loading: () => const _InvestmentCard(
-                child: LinearProgressIndicator(minHeight: 3),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: context.desktopMuted,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '거래 내역에서 항목을 길게 누르면 여러 건을 선택할 수 있어요.',
+                      style: TextStyle(
+                        color: context.desktopMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              error: (error, _) => _ErrorCard(message: error.toString()),
-            ),
-            SizedBox(height: 16),
-            rows.when(
-              data: (value) => _InvestmentRowsCard(
-                rows: value,
-                filterActive: ref.watch(investmentFilterProvider).isActive,
-                yearly: _yearly,
-              ),
-              loading: () => const _InvestmentCard(
-                child: LinearProgressIndicator(minHeight: 3),
-              ),
-              error: (error, _) => _ErrorCard(message: error.toString()),
-            ),
-            SizedBox(height: 16),
-            realizedPnl.when(
-              data: (value) => _RealizedPnlCard(rows: value, yearly: _yearly),
-              loading: () => const _InvestmentCard(
-                child: LinearProgressIndicator(minHeight: 3),
-              ),
-              error: (error, _) => _ErrorCard(message: error.toString()),
-            ),
-            SizedBox(height: 40),
-          ],
+              SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
-    );
+    ).bulkSelectionViewport(BulkEntity.investments);
   }
 }
 
@@ -149,7 +292,8 @@ class _AddInvestmentButton extends StatelessWidget {
 }
 
 class _InvestmentFilterBar extends ConsumerStatefulWidget {
-  const _InvestmentFilterBar();
+  const _InvestmentFilterBar({required this.showTradeFilters});
+  final bool showTradeFilters;
 
   @override
   ConsumerState<_InvestmentFilterBar> createState() =>
@@ -158,6 +302,7 @@ class _InvestmentFilterBar extends ConsumerStatefulWidget {
 
 class _InvestmentFilterBarState extends ConsumerState<_InvestmentFilterBar> {
   final _tickerCtrl = TextEditingController();
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -206,82 +351,102 @@ class _InvestmentFilterBarState extends ConsumerState<_InvestmentFilterBar> {
     final accounts =
         ref.watch(investmentFilterAccountsProvider).asData?.value ?? const [];
 
-    return _InvestmentCard(
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        crossAxisAlignment: WrapCrossAlignment.center,
+    return DesktopSection(
+      minWidth: 700,
+      child: Column(
         children: [
-          SegmentedButton<String>(
-            key: const ValueKey('investment-side-filter'),
-            segments: const [
-              ButtonSegment(value: 'all', label: Text('전체')),
-              ButtonSegment(value: 'buy', label: Text('BUY')),
-              ButtonSegment(value: 'sell', label: Text('SELL')),
-              ButtonSegment(value: 'dividend', label: Text('DIVIDEND')),
-            ],
-            selected: {filter.side ?? 'all'},
-            emptySelectionAllowed: false,
-            onSelectionChanged: (values) {
-              final side = values.first == 'all' ? null : values.first;
-              _setFilter(filter.copyWith(side: side));
-            },
-          ),
-          SizedBox(
-            width: 240,
-            child: DropdownButtonFormField<int>(
-              key: const ValueKey('investment-account-filter'),
-              initialValue: filter.accountId ?? -1,
-              decoration: const InputDecoration(
-                labelText: '계좌',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                const DropdownMenuItem(value: -1, child: Text('전체 계좌')),
-                for (final account in accounts)
-                  DropdownMenuItem(
-                    value: account.id,
-                    child: Text(account.name),
+          Row(
+            children: [
+              SizedBox(
+                width: 360,
+                child: TextField(
+                  key: const ValueKey('investment-ticker-filter'),
+                  controller: _tickerCtrl,
+                  decoration: const InputDecoration(
+                    hintText: '종목명·티커 검색',
+                    prefixIcon: Icon(Icons.search),
+                    isDense: true,
                   ),
+                  onChanged: (value) =>
+                      _setFilter(filter.copyWith(ticker: value.trim())),
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<int>(
+                  key: const ValueKey('investment-account-filter'),
+                  initialValue: filter.accountId ?? -1,
+                  isExpanded: true,
+                  decoration: const InputDecoration(isDense: true),
+                  items: [
+                    const DropdownMenuItem(value: -1, child: Text('전체 계좌')),
+                    for (final account in accounts)
+                      DropdownMenuItem(
+                        value: account.id,
+                        child: Text(account.name),
+                      ),
+                  ],
+                  onChanged: (value) => _setFilter(
+                    filter.copyWith(accountId: value == -1 ? null : value),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                key: const ValueKey('desktop-investment-filter-toggle'),
+                onPressed: () => setState(() => _expanded = !_expanded),
+                icon: const Icon(Icons.filter_alt_outlined, size: 18),
+                label: Text(_expanded ? '필터 접기' : '필터'),
+              ),
+            ],
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (widget.showTradeFilters)
+                  SegmentedButton<String>(
+                    key: const ValueKey('investment-side-filter'),
+                    segments: const [
+                      ButtonSegment(value: 'all', label: Text('전체')),
+                      ButtonSegment(value: 'buy', label: Text('매수')),
+                      ButtonSegment(value: 'sell', label: Text('매도')),
+                      ButtonSegment(value: 'dividend', label: Text('배당')),
+                    ],
+                    selected: {filter.side ?? 'all'},
+                    emptySelectionAllowed: false,
+                    onSelectionChanged: (values) {
+                      final side = values.first == 'all' ? null : values.first;
+                      _setFilter(filter.copyWith(side: side));
+                    },
+                  ),
+                if (widget.showTradeFilters)
+                  OutlinedButton.icon(
+                    key: const ValueKey('investment-from-filter'),
+                    onPressed: () => _pickDate(true),
+                    icon: Icon(Icons.calendar_today, size: 14),
+                    label: Text(filter.fromDate ?? '시작일'),
+                  ),
+                if (widget.showTradeFilters)
+                  OutlinedButton.icon(
+                    key: const ValueKey('investment-to-filter'),
+                    onPressed: () => _pickDate(false),
+                    icon: Icon(Icons.calendar_today, size: 14),
+                    label: Text(filter.toDate ?? '종료일'),
+                  ),
+                TextButton.icon(
+                  key: const ValueKey('investment-filter-reset'),
+                  onPressed: filter.isActive ? _reset : null,
+                  icon: Icon(Icons.refresh, size: 16),
+                  label: Text('초기화'),
+                ),
               ],
-              onChanged: (value) => _setFilter(
-                filter.copyWith(accountId: value == -1 ? null : value),
-              ),
             ),
-          ),
-          SizedBox(
-            width: 160,
-            child: TextField(
-              key: const ValueKey('investment-ticker-filter'),
-              controller: _tickerCtrl,
-              decoration: const InputDecoration(
-                labelText: '종목',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) =>
-                  _setFilter(filter.copyWith(ticker: value.trim())),
-            ),
-          ),
-          OutlinedButton.icon(
-            key: const ValueKey('investment-from-filter'),
-            onPressed: () => _pickDate(true),
-            icon: Icon(Icons.calendar_today, size: 14),
-            label: Text(filter.fromDate ?? '시작일'),
-          ),
-          OutlinedButton.icon(
-            key: const ValueKey('investment-to-filter'),
-            onPressed: () => _pickDate(false),
-            icon: Icon(Icons.calendar_today, size: 14),
-            label: Text(filter.toDate ?? '종료일'),
-          ),
-          TextButton.icon(
-            key: const ValueKey('investment-filter-reset'),
-            onPressed: filter.isActive ? _reset : null,
-            icon: Icon(Icons.refresh, size: 16),
-            label: Text('초기화'),
-          ),
+          ],
         ],
       ),
     );
@@ -320,6 +485,17 @@ class _InvestmentPeriodNav extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        SegmentedButton<bool>(
+          key: const ValueKey('investment-period-mode'),
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: false, label: Text('월별')),
+            ButtonSegment(value: true, label: Text('연별')),
+          ],
+          selected: {yearly},
+          onSelectionChanged: (values) => onModeChanged(values.first),
+        ),
+        const SizedBox(width: 12),
         IconButton(
           onPressed: () => shift(-1),
           icon: Icon(Icons.chevron_left),
@@ -342,389 +518,22 @@ class _InvestmentPeriodNav extends StatelessWidget {
           tooltip: yearly ? '다음 연도' : '다음 달',
         ),
         SizedBox(width: 8),
-        SegmentedButton<bool>(
-          key: const ValueKey('investment-period-mode'),
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: false, label: Text('월')),
-            ButtonSegment(value: true, label: Text('연')),
-          ],
-          selected: {yearly},
-          onSelectionChanged: (values) => onModeChanged(values.first),
+        const SizedBox(width: 12),
+        TextButton(
+          onPressed: () {
+            onMonthChanged(currentMonthKey());
+            onYearChanged(DateTime.now().year);
+          },
+          child: const Text('오늘'),
         ),
       ],
-    );
-  }
-}
-
-class _InvestmentAccountBanner extends StatelessWidget {
-  const _InvestmentAccountBanner({required this.account});
-
-  final Account? account;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasAccount = account != null;
-
-    return _InvestmentCard(
-      child: Row(
-        children: [
-          Icon(
-            hasAccount
-                ? Icons.account_balance_wallet_outlined
-                : Icons.info_outline,
-            color: hasAccount ? context.desktopIncome : context.desktopWarning,
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hasAccount ? '투자 계좌 연결됨' : '투자 계좌 없음',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  hasAccount
-                      ? '${account!.name} 계좌에 투자 거래가 연결됩니다.'
-                      : '활성 투자 자산이 없으면 투자 거래는 계좌 없이 저장됩니다.',
-                  style: TextStyle(color: context.desktopMuted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HoldingsCard extends ConsumerStatefulWidget {
-  const _HoldingsCard({required this.holdings});
-
-  final List<CurrentHolding> holdings;
-
-  @override
-  ConsumerState<_HoldingsCard> createState() => _HoldingsCardState();
-}
-
-class _HoldingsCardState extends ConsumerState<_HoldingsCard> {
-  String? _expandedTicker;
-
-  @override
-  Widget build(BuildContext context) {
-    final holdings = widget.holdings;
-    final totalCost = holdings.fold<int>(0, (sum, row) => sum + row.totalCost);
-
-    return _InvestmentCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '현재 보유 종목',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Text(
-                formatKRW(totalCost),
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          if (holdings.isEmpty)
-            const _EmptyState(message: '보유 종목이 없습니다. BUY 거래를 추가하면 여기에 표시됩니다.')
-          else
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 560;
-                return Column(
-                  children: [
-                    _HoldingsHeader(compact: compact),
-                    if (!compact) const Divider(height: 1),
-                    for (final holding in holdings) ...[
-                      _HoldingRow(
-                        holding: holding,
-                        expanded: _expandedTicker == holding.ticker,
-                        compact: compact,
-                        onTap: () {
-                          setState(() {
-                            _expandedTicker = _expandedTicker == holding.ticker
-                                ? null
-                                : holding.ticker;
-                          });
-                        },
-                      ),
-                      if (_expandedTicker == holding.ticker)
-                        _HoldingInlineActions(
-                          holding: holding,
-                          compact: compact,
-                          onSaved: () => setState(() => _expandedTicker = null),
-                        ),
-                    ],
-                  ],
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HoldingsHeader extends StatelessWidget {
-  const _HoldingsHeader({required this.compact});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    if (compact) return const SizedBox.shrink();
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(flex: 3, child: Text('종목')),
-          Expanded(flex: 2, child: Text('수량', textAlign: TextAlign.right)),
-          Expanded(flex: 3, child: Text('평단', textAlign: TextAlign.right)),
-          Expanded(flex: 3, child: Text('원가', textAlign: TextAlign.right)),
-        ],
-      ),
-    );
-  }
-}
-
-class _HoldingRow extends StatelessWidget {
-  const _HoldingRow({
-    required this.holding,
-    required this.expanded,
-    required this.compact,
-    required this.onTap,
-  });
-
-  final CurrentHolding holding;
-  final bool expanded;
-  final bool compact;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final title = Row(
-      children: [
-        Icon(
-          expanded ? Icons.expand_less : Icons.expand_more,
-          size: 18,
-          color: context.desktopMuted,
-        ),
-        SizedBox(width: 4),
-        Expanded(
-          child: Tooltip(
-            message: holding.ticker,
-            waitDuration: const Duration(milliseconds: 500),
-            child: Text(
-              holding.ticker,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      ],
-    );
-
-    if (compact) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              title,
-              SizedBox(height: 6),
-              Wrap(
-                spacing: 14,
-                runSpacing: 4,
-                children: [
-                  _MiniMetric(
-                    label: '수량',
-                    value: _formatQuantity(holding.quantity),
-                  ),
-                  _MiniMetric(
-                    label: '평단',
-                    value: formatKRW(holding.avgCost.round()),
-                  ),
-                  _MiniMetric(label: '원가', value: formatKRW(holding.totalCost)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        child: Row(
-          children: [
-            Expanded(flex: 3, child: title),
-            Expanded(
-              flex: 2,
-              child: Text(
-                _formatQuantity(holding.quantity),
-                textAlign: TextAlign.right,
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Text(
-                formatKRW(holding.avgCost.round()),
-                textAlign: TextAlign.right,
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Text(
-                formatKRW(holding.totalCost),
-                textAlign: TextAlign.right,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HoldingInlineActions extends StatelessWidget {
-  const _HoldingInlineActions({
-    required this.holding,
-    required this.compact,
-    required this.onSaved,
-  });
-
-  final CurrentHolding holding;
-  final bool compact;
-  final VoidCallback onSaved;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(compact ? 0 : 22, 4, 0, 12),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: context.desktopSelectedSurface,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: context.desktopBorder),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${holding.ticker} · ${_formatQuantity(holding.quantity)} 보유',
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    key: ValueKey('holding-add-buy-${holding.ticker}'),
-                    onPressed: () => _InvestmentCreateDialog.show(
-                      context,
-                      initialSide: 'buy',
-                      initialTicker: holding.ticker,
-                      lockSide: true,
-                    ),
-                    icon: Icon(Icons.add, size: 16),
-                    label: Text('추가 매수'),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final narrow = constraints.maxWidth < 720;
-                  final forms = [
-                    _HoldingInlineForm(
-                      side: 'sell',
-                      holding: holding,
-                      onSaved: onSaved,
-                    ),
-                    _HoldingInlineForm(
-                      side: 'dividend',
-                      holding: holding,
-                      onSaved: onSaved,
-                    ),
-                  ];
-                  if (narrow) {
-                    return Column(
-                      children: [forms[0], SizedBox(height: 12), forms[1]],
-                    );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: forms[0]),
-                      SizedBox(width: 12),
-                      Expanded(child: forms[1]),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniMetric extends StatelessWidget {
-  const _MiniMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 180),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label ',
-            style: TextStyle(fontSize: 12, color: context.desktopMuted),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
 
 class _HoldingInlineForm extends ConsumerStatefulWidget {
   const _HoldingInlineForm({
+    super.key,
     required this.side,
     required this.holding,
     required this.onSaved,
@@ -946,6 +755,7 @@ class _InvestmentRowsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _InvestmentCard(
+      framed: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -965,7 +775,7 @@ class _InvestmentRowsCard extends StatelessWidget {
           else
             Column(
               children: [
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.investments,
                   items: [
                     for (final row in rows)
@@ -1072,7 +882,7 @@ class _InvestmentRow extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ).bulkSelectable(BulkEntity.investments, row.id);
   }
 }
 
@@ -1183,6 +993,7 @@ class _RealizedPnlCard extends StatelessWidget {
         .fold<int>(0, (sum, row) => sum + row.sellAmount);
 
     return _InvestmentCard(
+      framed: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1570,9 +1381,9 @@ class _InvestmentCreateDialogState
                 SegmentedButton<String>(
                   key: const ValueKey('investment-dialog-side'),
                   segments: const [
-                    ButtonSegment(value: 'buy', label: Text('BUY')),
-                    ButtonSegment(value: 'sell', label: Text('SELL')),
-                    ButtonSegment(value: 'dividend', label: Text('DIVIDEND')),
+                    ButtonSegment(value: 'buy', label: Text('매수')),
+                    ButtonSegment(value: 'sell', label: Text('매도')),
+                    ButtonSegment(value: 'dividend', label: Text('배당')),
                   ],
                   selected: {_side},
                   onSelectionChanged: _busy
@@ -1755,15 +1566,21 @@ class _ErrorCard extends StatelessWidget {
 }
 
 class _InvestmentCard extends StatelessWidget {
-  const _InvestmentCard({required this.child});
+  const _InvestmentCard({required this.child, this.framed = true});
 
   final Widget child;
+  final bool framed;
 
   @override
   Widget build(BuildContext context) {
+    if (!framed) return child;
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: context.desktopBorder),
+      ),
+      child: Padding(padding: const EdgeInsets.all(24), child: child),
     );
   }
 }
@@ -1776,9 +1593,9 @@ String _formatPercent(double value) => '${(value * 100).toStringAsFixed(1)}%';
 
 String _sideLabel(String side) {
   return switch (side) {
-    'buy' => 'BUY',
-    'sell' => 'SELL',
-    'dividend' => 'DIVIDEND',
+    'buy' => '매수',
+    'sell' => '매도',
+    'dividend' => '배당',
     _ => side,
   };
 }

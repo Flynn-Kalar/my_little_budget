@@ -164,7 +164,7 @@ class _MobileNotesScreenState extends ConsumerState<MobileNotesScreen> {
             }
             return Column(
               children: [
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.notes,
                   items: [
                     for (final entry in filtered)
@@ -177,7 +177,7 @@ class _MobileNotesScreenState extends ConsumerState<MobileNotesScreen> {
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.notes);
   }
 }
 
@@ -338,7 +338,7 @@ class _MobileNoteCard extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.notes, note.id);
   }
 }
 

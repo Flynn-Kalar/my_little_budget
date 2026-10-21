@@ -1,34 +1,69 @@
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:my_little_budget/core/date.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/data/tag_category_links.dart';
-import 'package:my_little_budget/features/categories/validation.dart';
+import 'package:my_little_budget/features/calendar/calendar_schedule.dart';
 import 'package:my_little_budget/features/investments/validation.dart';
-import 'package:my_little_budget/core/date.dart';
-import 'package:my_little_budget/ui/desktop/settings/categories_screen.dart';
-import 'package:my_little_budget/ui/desktop/settings/tags_screen.dart';
 import 'package:my_little_budget/ui/desktop/accounts/accounts_screen.dart';
-import 'package:my_little_budget/ui/mobile/settings/mobile_categories_screen.dart';
-import 'package:my_little_budget/ui/mobile/settings/mobile_tags_screen.dart';
+import 'package:my_little_budget/ui/desktop/budget/budget_screen.dart';
+import 'package:my_little_budget/ui/desktop/calendar/calendar_screen.dart';
+import 'package:my_little_budget/ui/desktop/investments/investments_screen.dart';
+import 'package:my_little_budget/ui/desktop/notes/notes_screen.dart';
+import 'package:my_little_budget/ui/desktop/settings/categories_screen.dart';
+import 'package:my_little_budget/ui/desktop/settings/recurring_screen.dart';
+import 'package:my_little_budget/ui/desktop/settings/tags_screen.dart';
+import 'package:my_little_budget/ui/desktop/settings/transaction_presets_screen.dart';
 import 'package:my_little_budget/ui/mobile/accounts/mobile_accounts_screen.dart';
+import 'package:my_little_budget/ui/mobile/budget/mobile_budget_screen.dart';
+import 'package:my_little_budget/ui/mobile/calendar/mobile_calendar_screen.dart';
 import 'package:my_little_budget/ui/mobile/investments/mobile_investments_screen.dart';
+import 'package:my_little_budget/ui/mobile/notes/mobile_notes_screen.dart';
+import 'package:my_little_budget/ui/mobile/settings/mobile_categories_screen.dart';
+import 'package:my_little_budget/ui/mobile/settings/mobile_recurring_screen.dart';
+import 'package:my_little_budget/ui/mobile/settings/mobile_tags_screen.dart';
+import 'package:my_little_budget/ui/mobile/settings/mobile_transaction_presets_screen.dart';
+import 'package:my_little_budget/ui/mobile/responsive_page.dart';
 import 'package:my_little_budget/ui/shared/bulk_manage_button.dart';
 
-Future<void> tap(WidgetTester tester, Finder finder) async {
-  await tester.ensureVisible(finder);
+Future<void> reveal(WidgetTester tester, Finder finder) async {
+  for (var i = 0; i < 20 && finder.evaluate().isEmpty; i++) {
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
+  }
+  await tester.ensureVisible(finder.first);
   await tester.pumpAndSettle();
+}
+
+Future<void> tap(WidgetTester tester, Finder finder) async {
+  await reveal(tester, finder);
   await tester.tap(finder);
   await tester.pumpAndSettle();
 }
 
-Future<void> settleMutation(WidgetTester tester) async {
-  for (var i = 0; i < 10; i++) {
-    await tester.pump(const Duration(milliseconds: 20));
-  }
+Future<void> hold(WidgetTester tester, BulkEntity entity, int id) async {
+  final row = find.byKey(ValueKey('bulk-row-${entity.name}-$id'));
+  await reveal(tester, row);
+  final rect = tester.getRect(row.first);
+  await tester.longPressAt(
+    rect.topLeft +
+        Offset(
+          rect.width > 160 ? 80 : rect.width / 2,
+          rect.height > 50 ? 26 : rect.height / 2,
+        ),
+  );
   await tester.pumpAndSettle();
+  expect(find.byType(AlertDialog), findsNothing);
+  expect(
+    find.byKey(ValueKey('bulk-selection-toolbar-${entity.name}')),
+    findsOneWidget,
+  );
+  expect(find.text('1개 선택'), findsOneWidget);
 }
 
 Future<void> mount(
@@ -57,36 +92,346 @@ Future<void> cleanup(WidgetTester tester, AppDatabase db) async {
   await tester.binding.setSurfaceSize(null);
 }
 
+Future<void> saveWait(WidgetTester tester) async {
+  for (var i = 0; i < 15; i++) {
+    await tester.pump(const Duration(milliseconds: 20));
+  }
+  await tester.pumpAndSettle();
+}
+
+Future<int> seed(AppDatabase db, BulkEntity entity) async {
+  return switch (entity) {
+    BulkEntity.categories =>
+      db
+          .into(db.categories)
+          .insert(
+            CategoriesCompanion.insert(
+              name: '선택 카테고리',
+              type: 'expense',
+              color: const Value('#123456'),
+            ),
+          ),
+    BulkEntity.tags => db.tagsDao.createTag('선택 태그', '#123456'),
+    BulkEntity.accounts => (await db.accountsDao.getActiveAccounts()).first.id,
+    BulkEntity.notes => db.notesDao.saveNote(title: '선택 메모', content: '읽을 내용'),
+    BulkEntity.calendar => db.calendarEventsDao.saveEvent(
+      title: '선택 일정',
+      startAt: DateTime.now().add(const Duration(days: 2)),
+      settings: const CalendarScheduleSettings(isDday: true),
+    ),
+    BulkEntity.budgets => db.budgetDao.createBudgetGroup(
+      name: '선택 예산',
+      month: currentMonthKey(),
+      amount: 1000,
+    ),
+    BulkEntity.presets =>
+      db
+          .into(db.transactionPresets)
+          .insert(
+            TransactionPresetsCompanion.insert(
+              name: const Value('선택 프리셋'),
+              type: 'expense',
+              amount: 100,
+            ),
+          ),
+    BulkEntity.recurring =>
+      db
+          .into(db.recurringTransactions)
+          .insert(
+            RecurringTransactionsCompanion.insert(
+              name: '선택 반복',
+              accountId: Value(
+                (await db.accountsDao.getActiveAccounts()).first.id,
+              ),
+              categoryId: Value(
+                (await db.categoriesDao.getActiveCategories(
+                  'expense',
+                )).first.id,
+              ),
+              type: 'expense',
+              amount: 100,
+              frequency: 'monthly',
+              startDate: currentDateKey(),
+              dayOfMonth: const Value(1),
+            ),
+          ),
+    BulkEntity.investments => db.investmentsDao.saveInvestment(
+      draft: InvestmentDraft(
+        side: 'buy',
+        ticker: 'SELECTTEST',
+        quantity: 1,
+        totalAmount: 100,
+        occurredOn: currentDateKey(),
+        occurredTime: '09:00',
+      ),
+    ),
+  };
+}
+
+Widget screenFor(BulkEntity entity, bool mobile) => switch ((entity, mobile)) {
+  (BulkEntity.categories, false) => const CategoriesScreen(),
+  (BulkEntity.categories, true) => const MobileCategoriesScreen(),
+  (BulkEntity.tags, false) => const TagsScreen(),
+  (BulkEntity.tags, true) => const MobileTagsScreen(),
+  (BulkEntity.accounts, false) => const AccountsScreen(),
+  (BulkEntity.accounts, true) => const MobileAccountsScreen(),
+  (BulkEntity.notes, false) => const NotesScreen(),
+  (BulkEntity.notes, true) => const MobileNotesScreen(),
+  (BulkEntity.calendar, false) => const CalendarScreen(),
+  (BulkEntity.calendar, true) => const MobileCalendarScreen(),
+  (BulkEntity.budgets, false) => const BudgetScreen(),
+  (BulkEntity.budgets, true) => const MobileBudgetScreen(),
+  (BulkEntity.presets, false) => const TransactionPresetsScreen(),
+  (BulkEntity.presets, true) => const MobileTransactionPresetsScreen(),
+  (BulkEntity.recurring, false) => const RecurringScreen(),
+  (BulkEntity.recurring, true) => const MobileRecurringScreen(),
+  (BulkEntity.investments, false) => const InvestmentsScreen(),
+  (BulkEntity.investments, true) => const MobileInvestmentsScreen(),
+};
 void main() {
+  for (final mobile in [false, true]) {
+    for (final entity in BulkEntity.values) {
+      testWidgets(
+        '${mobile ? 'mobile' : 'PC'} ${entity.name} long-press selects actual row without opening a route',
+        (tester) async {
+          final db = AppDatabase.forTesting(NativeDatabase.memory());
+          try {
+            final id = await seed(db, entity);
+            if (entity == BulkEntity.calendar) {
+              await db.calendarEventsDao.saveEvent(
+                title: '숨겨진 다음 해 일정',
+                startAt: DateTime(DateTime.now().year + 1, 2, 1),
+              );
+            }
+            await mount(tester, db, screenFor(entity, mobile), mobile);
+            if (entity == BulkEntity.calendar) {
+              await tap(tester, find.text('D-day').first);
+            }
+            if (entity == BulkEntity.investments) {
+              await tap(
+                tester,
+                mobile
+                    ? find.text('거래내역')
+                    : find.byKey(const ValueKey('desktop-investments-tab-1')),
+              );
+            }
+            expect(find.byKey(ValueKey('bulk-item-$id')), findsNothing);
+            await hold(tester, entity, id);
+            expect(
+              tester
+                  .widget<Checkbox>(find.byKey(ValueKey('bulk-item-$id')).first)
+                  .value,
+              isTrue,
+            );
+            await tap(
+              tester,
+              find.byKey(ValueKey('bulk-row-${entity.name}-$id')).first,
+            );
+            expect(find.text('0개 선택'), findsOneWidget);
+            expect(find.byType(AlertDialog), findsNothing);
+            expect(
+              find
+                  .byType(TextField)
+                  .evaluate()
+                  .where(
+                    (e) =>
+                        (e.widget as TextField).decoration?.labelText == '제목',
+                  ),
+              isEmpty,
+            );
+            await tap(
+              tester,
+              find.byKey(const ValueKey('bulk-cancel-selection')),
+            );
+            expect(find.byKey(ValueKey('bulk-item-$id')), findsNothing);
+            expect(
+              find.byKey(ValueKey('bulk-selection-toolbar-${entity.name}')),
+              findsNothing,
+            );
+            if (entity == BulkEntity.accounts) {
+              final before = (await db.accountsDao.getActiveAccounts()).length;
+              await hold(tester, entity, id);
+              await tap(tester, find.widgetWithText(FilledButton, '보관'));
+              await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
+              await saveWait(tester);
+              expect(
+                (await db.accountsDao.getActiveAccounts()).length,
+                before - 1,
+              );
+            }
+            if (entity == BulkEntity.calendar) {
+              await tap(tester, find.text('월간').first);
+              await hold(tester, entity, id);
+              await tap(tester, find.byKey(const ValueKey('bulk-select-all')));
+              await tap(tester, find.byKey(const ValueKey('bulk-select-all')));
+              expect(find.text('1개 선택'), findsOneWidget);
+              await tap(
+                tester,
+                find.byKey(const ValueKey('bulk-cancel-selection')),
+              );
+            }
+            expect(tester.takeException(), isNull);
+          } finally {
+            await cleanup(tester, db);
+          }
+        },
+      );
+    }
+    testWidgets(
+      '${mobile ? 'mobile' : 'PC'} categories delete exactly the inline selection and retain it on confirmation cancel',
+      (tester) async {
+        final db = AppDatabase.forTesting(NativeDatabase.memory());
+        try {
+          final a = await seed(db, BulkEntity.categories);
+          final b = await db
+              .into(db.categories)
+              .insert(
+                CategoriesCompanion.insert(
+                  name: '선택 카테고리 B',
+                  type: 'expense',
+                  color: const Value('#654321'),
+                ),
+              );
+          final count = (await db.categoriesDao.getAllCategories()).length;
+          await mount(
+            tester,
+            db,
+            screenFor(BulkEntity.categories, mobile),
+            mobile,
+          );
+          await hold(tester, BulkEntity.categories, a);
+          await tap(tester, find.byKey(ValueKey('bulk-item-$b')));
+          expect(find.text('2개 선택'), findsOneWidget);
+          await tap(tester, find.widgetWithText(FilledButton, '삭제'));
+          await tap(tester, find.text('취소'));
+          expect(find.text('2개 선택'), findsOneWidget);
+          expect((await db.categoriesDao.getAllCategories()).length, count);
+          await tap(tester, find.widgetWithText(FilledButton, '삭제'));
+          await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
+          await saveWait(tester);
+          expect((await db.categoriesDao.getAllCategories()).length, count - 2);
+          expect(find.byType(AlertDialog), findsNothing);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await cleanup(tester, db);
+        }
+      },
+    );
+    testWidgets(
+      '${mobile ? 'mobile' : 'PC'} inline tag category assignment exits selection and stays on tag page',
+      (tester) async {
+        final db = AppDatabase.forTesting(NativeDatabase.memory());
+        try {
+          final a = await seed(db, BulkEntity.tags),
+              b = await db.tagsDao.createTag('둘째 태그', '#654321');
+          final category = (await db.categoriesDao.getActiveCategories(
+            'expense',
+          )).first;
+          await mount(tester, db, screenFor(BulkEntity.tags, mobile), mobile);
+          await hold(tester, BulkEntity.tags, a);
+          await tap(tester, find.byKey(ValueKey('bulk-item-$b')));
+          await tap(tester, find.widgetWithText(FilledButton, '카테고리 지정'));
+          await tap(
+            tester,
+            find.byKey(ValueKey('tag-category-${category.id}')),
+          );
+          await tap(tester, find.widgetWithText(FilledButton, '적용'));
+          await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
+          await saveWait(tester);
+          expect(
+            (await db.tagsDao.getTags()).every(
+              (t) =>
+                  readTagCategoryIds(t.categoryIdsJson).contains(category.id),
+            ),
+            isTrue,
+          );
+          expect(
+            find.byKey(const ValueKey('bulk-selection-toolbar-tags')),
+            findsNothing,
+          );
+          expect(find.text('태그 관리'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await cleanup(tester, db);
+        }
+      },
+    );
+  }
   testWidgets(
-    'mobile investment last-item batch deletion refreshes annual data as well as monthly data',
+    'narrow fixed toolbar stays reachable after scrolling and failed batch retains all selections',
     (tester) async {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
       try {
-        await db.investmentsDao.saveInvestment(
-          draft: InvestmentDraft(
-            side: 'buy',
-            occurredOn: currentDateKey(),
-            occurredTime: '09:00',
-            ticker: 'BULKTEST',
-            quantity: 1,
-            totalAmount: 100,
+        final categories = (await db.categoriesDao.getActiveCategories(
+          'expense',
+        )).take(2).toList();
+        await db.budgetDao.createBudgetGroup(
+          name: '사용 중',
+          month: currentMonthKey(),
+          amount: 100,
+          categoryIds: [categories.last.id],
+        );
+        await tester.binding.setSurfaceSize(const Size(320, 600));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            child: MaterialApp(
+              home: Scaffold(
+                body: ListView(
+                  children: [
+                    BulkSelectionToolbar(
+                      entity: BulkEntity.categories,
+                      items: [
+                        for (final c in categories) BulkItem(c.id, c.name),
+                      ],
+                    ),
+                    const SizedBox(height: 1000),
+                    for (final c in categories)
+                      ListTile(
+                        title: Text(c.name),
+                      ).bulkSelectable(BulkEntity.categories, c.id),
+                  ],
+                ),
+              ),
+            ),
           ),
         );
-        await mount(tester, db, const MobileInvestmentsScreen(), true);
-        await tap(tester, find.text('거래내역'));
-        await tap(
-          tester,
-          find.byKey(const ValueKey('bulk-select-investments')),
-        );
+        await tester.pumpAndSettle();
+        await hold(tester, BulkEntity.categories, categories.first.id);
         await tap(tester, find.byKey(const ValueKey('bulk-select-all')));
         await tap(tester, find.widgetWithText(FilledButton, '삭제'));
         await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
-        await settleMutation(tester);
-        await tester.drag(find.byType(ListView).first, const Offset(0, 1500));
+        await saveWait(tester);
+        expect(find.text('2개 선택'), findsOneWidget);
+        expect(find.textContaining('선택한 항목은 모두 유지했습니다.'), findsOneWidget);
+        expect(
+          (await db.categoriesDao.getAllCategories())
+              .where((c) => categories.any((before) => before.id == c.id))
+              .length,
+          2,
+        );
+        expect(tester.takeException(), isNull);
+      } finally {
+        await cleanup(tester, db);
+      }
+    },
+  );
+  testWidgets(
+    'mobile last investment inline deletion refreshes annual results',
+    (tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      try {
+        final id = await seed(db, BulkEntity.investments);
+        await mount(tester, db, const MobileInvestmentsScreen(), true);
+        await tap(tester, find.text('거래내역'));
+        await hold(tester, BulkEntity.investments, id);
+        await tap(tester, find.widgetWithText(FilledButton, '삭제'));
+        await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
+        await saveWait(tester);
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, 1500));
         await tester.pumpAndSettle();
         await tap(tester, find.text('연'));
-        expect(find.text('BULKTEST'), findsNothing);
+        expect(find.text('SELECTTEST'), findsNothing);
         expect(
           await db.investmentsDao.listInvestmentsByYear(DateTime.now().year),
           isEmpty,
@@ -97,248 +442,51 @@ void main() {
       }
     },
   );
-  for (final mobile in [false, true]) {
-    final platform = mobile ? 'mobile' : 'PC';
-    testWidgets(
-      '$platform categories select filtered results, cancel and delete only selected',
-      (tester) async {
-        final db = AppDatabase.forTesting(NativeDatabase.memory());
-        try {
-          for (final name in ['일괄 카테고리 A', '일괄 카테고리 B']) {
-            await db.categoriesDao.saveCategory(
-              draft: CategoryDraft(
-                name: name,
-                type: 'expense',
-                color: '#123456',
-              ),
-            );
-          }
-          final before = (await db.categoriesDao.getAllCategories()).length;
-          await mount(
-            tester,
-            db,
-            mobile ? const MobileCategoriesScreen() : const CategoriesScreen(),
-            mobile,
-          );
-          await tap(
-            tester,
-            find.byKey(const ValueKey('bulk-select-categories')),
-          );
-          await tester.enterText(find.byType(TextField).last, '일괄 카테고리');
-          await tester.pumpAndSettle();
-          await tap(tester, find.byKey(const ValueKey('bulk-select-all')));
-          expect(find.text('2개 선택'), findsOneWidget);
-          await tap(tester, find.widgetWithText(FilledButton, '삭제'));
-          await tap(tester, find.text('취소'));
-          expect((await db.categoriesDao.getAllCategories()).length, before);
-          await tap(tester, find.widgetWithText(FilledButton, '삭제'));
-          await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
-          await settleMutation(tester);
-          expect(
-            (await db.categoriesDao.getAllCategories()).length,
-            before - 2,
-          );
-          expect(find.text('일괄 카테고리 A'), findsNothing);
-          expect(tester.takeException(), isNull);
-        } finally {
-          await cleanup(tester, db);
-        }
-      },
-    );
 
-    testWidgets(
-      '$platform tags assign categories to selected tags and delete without touching others',
-      (tester) async {
-        final db = AppDatabase.forTesting(NativeDatabase.memory());
-        try {
-          final categories = await db.categoriesDao.getActiveCategories(
-            'expense',
-          );
-          final a = await db.tagsDao.createTag(
-            'A',
-            '#123456',
-            categoryIds: [categories[0].id],
-          );
-          final b = await db.tagsDao.createTag('B', '#654321');
-          await db.tagsDao.createTag('C', '#456789');
-          await mount(
-            tester,
-            db,
-            mobile ? const MobileTagsScreen() : const TagsScreen(),
-            mobile,
-          );
-          await tap(tester, find.byKey(const ValueKey('bulk-select-tags')));
-          for (final id in [a, b]) {
-            await tap(tester, find.byKey(ValueKey('bulk-item-$id')));
-          }
-          await tap(tester, find.widgetWithText(FilledButton, '카테고리 지정'));
-          await tap(
-            tester,
-            find.byKey(ValueKey('tag-category-${categories[1].id}')),
-          );
-          await tap(tester, find.widgetWithText(FilledButton, '적용'));
-          await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
-          await settleMutation(tester);
-          final tags = await db.tagsDao.getTags();
-          expect(
-            readTagCategoryIds(
-              tags.firstWhere((t) => t.id == a).categoryIdsJson,
-            ),
-            unorderedEquals([categories[0].id, categories[1].id]),
-          );
-          expect(
-            readTagCategoryIds(
-              tags.firstWhere((t) => t.id == b).categoryIdsJson,
-            ),
-            [categories[1].id],
-          );
-          expect(tags.singleWhere((t) => t.name == 'C').categoryIdsJson, '[]');
-          await tap(tester, find.byKey(const ValueKey('bulk-select-tags')));
-          for (final id in [a, b]) {
-            await tap(tester, find.byKey(ValueKey('bulk-item-$id')));
-          }
-          await tap(tester, find.widgetWithText(FilledButton, '삭제'));
-          await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
-          await settleMutation(tester);
-          expect((await db.tagsDao.getTags()).single.name, 'C');
-          expect(find.text('#A'), findsNothing);
-          expect(tester.takeException(), isNull);
-        } finally {
-          await cleanup(tester, db);
-        }
-      },
-    );
-
-    testWidgets(
-      '$platform accounts archive selected items and refresh active and archived lists',
-      (tester) async {
-        final db = AppDatabase.forTesting(NativeDatabase.memory());
-        try {
-          final accounts = await db.accountsDao.getActiveAccounts();
-          await mount(
-            tester,
-            db,
-            mobile ? const MobileAccountsScreen() : const AccountsScreen(),
-            mobile,
-          );
-          await tap(tester, find.byKey(const ValueKey('bulk-select-accounts')));
-          for (final account in accounts.take(2)) {
-            await tap(tester, find.byKey(ValueKey('bulk-item-${account.id}')));
-          }
-          expect(find.widgetWithText(FilledButton, '삭제'), findsNothing);
-          await tap(tester, find.widgetWithText(FilledButton, '보관'));
-          await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
-          await settleMutation(tester);
-          expect(
-            (await db.accountsDao.getActiveAccounts()).length,
-            accounts.length - 2,
-          );
-          expect(find.text(mobile ? '보관된 자산' : '보관된 자산 (2)'), findsOneWidget);
-          expect(tester.takeException(), isNull);
-        } finally {
-          await cleanup(tester, db);
-        }
-      },
-    );
-  }
-
-  testWidgets(
-    'narrow selection preserves hidden selections, limits select-all to search, and cancels without writes',
-    (tester) async {
-      final db = AppDatabase.forTesting(NativeDatabase.memory());
-      try {
-        final a = await db.tagsDao.createTag('Alpha', '#123456');
-        final b = await db.tagsDao.createTag('Beta', '#654321');
-        await tester.binding.setSurfaceSize(const Size(320, 600));
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [appDatabaseProvider.overrideWithValue(db)],
-            child: MaterialApp(
-              home: Scaffold(
-                body: BulkManageButton(
-                  entity: BulkEntity.tags,
-                  items: [BulkItem(a, 'Alpha'), BulkItem(b, 'Beta')],
-                ),
-              ),
-            ),
+  testWidgets('mobile back cancels inline selection before navigating home', (
+    tester,
+  ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    final id = await seed(db, BulkEntity.notes);
+    final router = GoRouter(
+      initialLocation: '/notes',
+      routes: [
+        GoRoute(
+          path: '/home',
+          builder: (_, _) => const Scaffold(body: Text('홈 테스트')),
+        ),
+        GoRoute(
+          path: '/notes',
+          builder: (_, _) => const ResponsivePage(
+            desktop: NotesScreen(),
+            mobile: MobileNotesScreen(),
           ),
-        );
-        await tap(tester, find.byKey(const ValueKey('bulk-select-tags')));
-        await tap(tester, find.byKey(ValueKey('bulk-item-$a')));
-        await tester.enterText(find.byType(TextField).last, 'Beta');
-        await tester.pumpAndSettle();
-        await tap(tester, find.byKey(const ValueKey('bulk-select-all')));
-        expect(find.text('2개 선택'), findsOneWidget);
-        await tap(tester, find.byKey(const ValueKey('bulk-select-all')));
-        expect(find.text('1개 선택'), findsOneWidget);
-        await tap(tester, find.text('닫기'));
-        expect((await db.tagsDao.getTags()).length, 2);
-        await tap(tester, find.byKey(const ValueKey('bulk-select-tags')));
-        expect(find.text('0개 선택'), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      } finally {
-        await cleanup(tester, db);
-      }
-    },
-  );
-
-  testWidgets(
-    'used category error retains the whole selection and fits with a narrow keyboard',
-    (tester) async {
-      final db = AppDatabase.forTesting(NativeDatabase.memory());
-      try {
-        final categories = await db.categoriesDao.getActiveCategories(
-          'expense',
-        );
-        await db.budgetDao.createBudgetGroup(
-          name: '보호할 예산',
-          month: '2026-10',
-          amount: 100,
-          categoryIds: [categories[1].id],
-        );
-        await tester.binding.setSurfaceSize(const Size(320, 600));
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [appDatabaseProvider.overrideWithValue(db)],
-            child: MaterialApp(
-              builder: (context, child) => MediaQuery(
-                data: MediaQuery.of(
-                  context,
-                ).copyWith(viewInsets: const EdgeInsets.only(bottom: 200)),
-                child: child!,
-              ),
-              home: Scaffold(
-                body: BulkManageButton(
-                  entity: BulkEntity.categories,
-                  items: [
-                    for (final category in categories.take(2))
-                      BulkItem(category.id, category.name),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-        await tap(tester, find.byKey(const ValueKey('bulk-select-categories')));
-        await tap(tester, find.byKey(const ValueKey('bulk-select-all')));
-        await tap(tester, find.widgetWithText(FilledButton, '삭제'));
-        await tap(tester, find.byKey(const ValueKey('bulk-confirm')));
-        await settleMutation(tester);
-        expect(find.textContaining('선택한 항목은 모두 유지했습니다.'), findsOneWidget);
-        expect(find.text('2개 선택'), findsOneWidget);
-        final remaining = await db.categoriesDao.getAllCategories();
-        expect(
-          remaining.any((category) => category.id == categories[0].id),
-          isTrue,
-        );
-        expect(
-          remaining.any((category) => category.id == categories[1].id),
-          isTrue,
-        );
-        expect(tester.takeException(), isNull);
-      } finally {
-        await cleanup(tester, db);
-      }
-    },
-  );
+        ),
+      ],
+    );
+    try {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await hold(tester, BulkEntity.notes, id);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/notes');
+      expect(
+        find.byKey(const ValueKey('bulk-selection-toolbar-notes')),
+        findsNothing,
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/home');
+    } finally {
+      await cleanup(tester, db);
+      router.dispose();
+    }
+  });
 }

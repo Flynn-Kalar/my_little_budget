@@ -5,6 +5,7 @@ import '../../core/date.dart';
 import '../../core/money.dart';
 import '../../core/theme/app_theme.dart';
 import '../shared/amount_input_formatter.dart';
+import '../shared/bulk_manage_button.dart';
 
 double mobileBottomPadding(BuildContext context, {double spacing = 0}) {
   final mediaQuery = MediaQuery.of(context);
@@ -30,27 +31,35 @@ class MobilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return ListView(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+    // Keep selection controls mounted even when a restored scroll position
+    // starts below the first list child.
+    final selectionBars = children.whereType<BulkSelectionToolbar>().toList();
+    return Stack(
       children: [
-        Row(
+        ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: [
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
                 ),
-              ),
+                ...actions,
+              ],
             ),
-            ...actions,
+            const SizedBox(height: 16),
+            ...children.where((child) => child is! BulkSelectionToolbar),
+            const SizedBox(height: 24),
           ],
         ),
-        const SizedBox(height: 16),
-        ...children,
-        const SizedBox(height: 24),
+        ...selectionBars,
       ],
     );
   }

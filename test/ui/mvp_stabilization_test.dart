@@ -94,23 +94,27 @@ void main() {
       GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
       await tester.pumpAndSettle();
 
-      expect(find.text('BUY'), findsWidgets);
-      expect(find.text('SELL'), findsWidgets);
-      expect(find.text('DIVIDEND'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('desktop-investments-tab-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('매수'), findsWidgets);
+      expect(find.text('매도'), findsWidgets);
+      expect(find.text('배당'), findsWidgets);
       expect(find.text('0.3333'), findsOneWidget);
       expect(find.text('0.1111'), findsWidgets);
-      expect(find.text('0.2222'), findsOneWidget);
       expect(find.text(formatKRW(15000)), findsWidgets);
       expect(find.text(formatKRW(500)), findsWidgets);
 
+      await tester.tap(find.byKey(const ValueKey('desktop-investments-tab-0')));
+      await tester.pumpAndSettle();
+      expect(find.text('0.2222'), findsOneWidget);
       final ticker = find.text('ABCD').first;
       await tester.ensureVisible(ticker);
       await tester.tap(ticker);
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('holding-sell-ABCD')));
+      await tester.pumpAndSettle();
 
-      expect(find.textContaining('0.2222'), findsAtLeastNWidgets(2));
-      expect(find.byIcon(Icons.north_east), findsWidgets);
-      expect(find.byIcon(Icons.payments_outlined), findsWidgets);
+      expect(find.textContaining('0.2222'), findsOneWidget);
       final inlineSellTotal = find.byKey(
         const ValueKey('holding-sell-total-amount-field'),
       );
@@ -242,14 +246,18 @@ void main() {
     GoRouter.of(tester.element(find.text('작은 가계부'))).go('/investments');
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const ValueKey('desktop-investments-tab-1')));
+    await tester.pumpAndSettle();
     expect(find.byKey(ValueKey('investment-edit-$yearlyId')), findsNothing);
     expect(find.text('월간 투자 거래'), findsOneWidget);
 
-    await tester.tap(find.text('연'));
+    await tester.tap(find.text('연별'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(ValueKey('investment-edit-$yearlyId')), findsOneWidget);
     expect(find.text('연간 투자 거래'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('desktop-investments-tab-2')));
+    await tester.pumpAndSettle();
     expect(find.text('연간 실현손익'), findsOneWidget);
   });
 
@@ -393,7 +401,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('필터 결과가 없습니다.'), findsOneWidget);
+    expect(find.text('검색 결과가 없습니다.'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'NOPE'), findsOneWidget);
   });
 
@@ -417,21 +425,21 @@ void main() {
     await tester.pumpAndSettle();
 
     await _openInvestmentEdit(tester, seeded.buyId);
-    expect(find.text('BUY'), findsWidgets);
+    expect(find.text('매수'), findsWidgets);
     expect(find.widgetWithText(TextField, 'ABCD'), findsOneWidget);
     expect(find.widgetWithText(TextField, '0.3333'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('investment-cancel-button')));
     await tester.pumpAndSettle();
 
     await _openInvestmentEdit(tester, seeded.sellId);
-    expect(find.text('SELL'), findsWidgets);
+    expect(find.text('매도'), findsWidgets);
     expect(find.widgetWithText(TextField, '0.1111'), findsOneWidget);
     expect(find.widgetWithText(TextField, '15000'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('investment-cancel-button')));
     await tester.pumpAndSettle();
 
     await _openInvestmentEdit(tester, seeded.dividendId);
-    expect(find.text('DIVIDEND'), findsWidgets);
+    expect(find.text('배당'), findsWidgets);
     expect(find.widgetWithText(TextField, '500'), findsOneWidget);
     await tester.enterText(
       find.byKey(const ValueKey('investment-total-amount-field')),
@@ -1043,6 +1051,10 @@ Future<({int buyId, int sellId, int dividendId})> _seedInvestments(
 }
 
 Future<void> _openInvestmentEdit(WidgetTester tester, int id) async {
+  final tab = find.byKey(const ValueKey('desktop-investments-tab-1'));
+  await tester.ensureVisible(tab);
+  await tester.tap(tab);
+  await tester.pumpAndSettle();
   final button = find.byKey(ValueKey('investment-edit-$id'));
   await tester.ensureVisible(button);
   await tester.tap(button);

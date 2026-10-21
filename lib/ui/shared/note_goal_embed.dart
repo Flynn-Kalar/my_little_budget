@@ -3,30 +3,39 @@ import 'package:flutter_quill/flutter_quill.dart';
 
 import '../../features/notes/note_amount_goal.dart';
 import '../../features/notes/note_goal_block.dart';
+import '../../shell/layout_policy.dart';
 import 'note_amount_goal.dart';
 
 Future<void> editNoteGoalBlock(
   BuildContext context,
   QuillController controller, {
   NoteGoalBlock? block,
-}) => showDialog<void>(
-  context: context,
-  builder: (context) => _GoalBlockDialog(
-    controller: controller,
-    block: block,
-    selection: controller.selection,
-  ),
-);
+}) {
+  final showAdditionControls =
+      ShellLayoutScope.maybeOf(context)?.mobile ??
+      usesMobileLayout(MediaQuery.sizeOf(context).width);
+  return showDialog<void>(
+    context: context,
+    builder: (context) => _GoalBlockDialog(
+      controller: controller,
+      block: block,
+      selection: controller.selection,
+      showAdditionControls: showAdditionControls,
+    ),
+  );
+}
 
 class _GoalBlockDialog extends StatefulWidget {
   const _GoalBlockDialog({
     required this.controller,
     required this.selection,
     this.block,
+    required this.showAdditionControls,
   });
   final QuillController controller;
   final TextSelection selection;
   final NoteGoalBlock? block;
+  final bool showAdditionControls;
   @override
   State<_GoalBlockDialog> createState() => _GoalBlockDialogState();
 }
@@ -69,7 +78,11 @@ class _GoalBlockDialogState extends State<_GoalBlockDialog> {
                 controller: title,
                 decoration: const InputDecoration(labelText: '목표 이름 (선택사항)'),
               ),
-              NoteGoalForm(draft: draft, showType: false),
+              NoteGoalForm(
+                draft: draft,
+                showType: false,
+                showAdditionControls: widget.showAdditionControls,
+              ),
               if (error != null)
                 Text(
                   error!,

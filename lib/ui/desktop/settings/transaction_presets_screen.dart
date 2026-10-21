@@ -33,7 +33,7 @@ class TransactionPresetsScreen extends ConsumerWidget {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: BulkManageButton(
+              child: BulkSelectionToolbar(
                 entity: BulkEntity.presets,
                 items: [
                   for (final item in items.asData?.value ?? [])
@@ -62,7 +62,7 @@ class TransactionPresetsScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectionViewport(BulkEntity.presets);
   }
 }
 
@@ -121,6 +121,6 @@ class _PresetTile extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.presets, item.preset.id);
   }
 }

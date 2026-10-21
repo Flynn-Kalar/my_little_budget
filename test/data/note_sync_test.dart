@@ -60,6 +60,25 @@ void main() {
     );
   }
 
+  test('negative note goal amounts sync between devices', () async {
+    final id = await a.notesDao.saveNote(
+      title: '음수 목표',
+      content: '',
+      amountGoal: Value(
+        NoteAmountGoal(
+          targetAmount: -3000000,
+          currentAmount: -24500,
+          startDate: DateTime(2026),
+        ),
+      ),
+    );
+    final uuid = (await a.notesDao.getNote(id))!.uuid;
+    await transfer(a, sa, sb, uuid, 1);
+    final received = (await b.notesDao.listNotes()).single;
+    expect(received.goalTargetAmount, -3000000);
+    expect(received.goalCurrentAmount, -24500);
+  });
+
   test(
     'two devices sync rich notes, goals, checklist changes and deletion without copying alarms',
     () async {

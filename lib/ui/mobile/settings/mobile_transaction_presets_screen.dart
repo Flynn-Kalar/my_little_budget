@@ -20,7 +20,7 @@ class MobileTransactionPresetsScreen extends ConsumerWidget {
       onAdd: () => MobileTransactionPresetSheet.show(context),
       addTooltip: '새 프리셋',
       children: [
-        BulkManageButton(
+        BulkSelectionToolbar(
           entity: BulkEntity.presets,
           items: [
             for (final item in items.asData?.value ?? [])
@@ -39,7 +39,7 @@ class MobileTransactionPresetsScreen extends ConsumerWidget {
                 ),
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.presets);
   }
 }
 
@@ -88,6 +88,6 @@ class _PresetCard extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.presets, item.preset.id);
   }
 }

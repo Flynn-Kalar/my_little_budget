@@ -60,6 +60,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final events = ref.watch(calendarEventsProvider);
     final notes = ref.watch(notesProvider);
+    final visibleEventIds = calendarVisibleEventIds(
+      events.asData?.value ?? [],
+      _month,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -88,12 +92,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        BulkManageButton(
+        BulkSelectionToolbar(
           entity: BulkEntity.calendar,
           items: [
             for (final event in events.asData?.value ?? [])
-              if (!_showDday ||
-                  CalendarScheduleSettings.fromEvent(event).isDday)
+              if (_showDday
+                  ? CalendarScheduleSettings.fromEvent(event).isDday
+                  : visibleEventIds.contains(event.id))
                 BulkItem(
                   event.id,
                   event.title,
@@ -213,7 +218,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.calendar);
   }
 }
 
@@ -347,6 +352,7 @@ class _DayCell extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: () => _openCalendarDay(context, day, entries),
       child: IgnorePointer(
+        ignoring: false,
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -378,12 +384,18 @@ class _DayCell extends StatelessWidget {
               for (final entry in oneTime.take(visibleOneTimeCount))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: _EntryPill(entry: entry),
+                  child: _EntryPill(
+                    entry: entry,
+                    onTap: () => _openCalendarDay(context, day, entries),
+                  ),
                 ),
               if (repeating.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: _RepeatingPill(entries: repeating),
+                  child: _RepeatingPill(
+                    entries: repeating,
+                    onTap: () => _openCalendarDay(context, day, entries),
+                  ),
                 ),
               if (entries.length >
                   visibleOneTimeCount + (repeating.isEmpty ? 0 : 1))
@@ -404,6 +416,12 @@ Future<void> _openCalendarDay(
   DateTime date,
   List<_CalendarEntry> entries,
 ) async {
+  if (ProviderScope.containerOf(
+        context,
+      ).read(bulkSelectionProvider(BulkEntity.calendar)) !=
+      null) {
+    return;
+  }
   if (entries.isEmpty) {
     await _CalendarEventDialog.show(context, initialDate: date);
     return;
@@ -426,15 +444,16 @@ Future<void> _openCalendarDay(
 }
 
 class _EntryPill extends StatelessWidget {
-  const _EntryPill({required this.entry});
+  const _EntryPill({required this.entry, this.onTap});
 
   final _CalendarEntry entry;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = entry.color(context);
     return InkWell(
-      onTap: () => entry.open(context),
+      onTap: onTap ?? () => entry.open(context),
       borderRadius: BorderRadius.circular(6),
       child: Container(
         width: double.infinity,
@@ -454,21 +473,22 @@ class _EntryPill extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.calendar, entry.event?.id, compact: true);
   }
 }
 
 class _RepeatingPill extends StatelessWidget {
-  const _RepeatingPill({required this.entries});
+  const _RepeatingPill({required this.entries, this.onTap});
 
   final List<_CalendarEntry> entries;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = context.desktopAccent;
     final first = entries.first;
     return InkWell(
-      onTap: () => first.open(context),
+      onTap: onTap ?? () => first.open(context),
       borderRadius: BorderRadius.circular(6),
       child: Container(
         width: double.infinity,
@@ -496,7 +516,7 @@ class _RepeatingPill extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.calendar, first.event?.id, compact: true);
   }
 }
 
@@ -541,7 +561,7 @@ class _AgendaList extends StatelessWidget {
               subtitle: Text(entry.subtitle),
               onTap: () => entry.open(context),
             ),
-          ),
+          ).bulkSelectable(BulkEntity.calendar, entry.event?.id),
         );
       }
       sections.add(const SizedBox(height: 8));

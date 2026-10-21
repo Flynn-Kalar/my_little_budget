@@ -37,7 +37,7 @@ class MobileTagsScreen extends ConsumerWidget {
             if (items.isEmpty) return const EmptyMobileCard('태그가 없습니다.');
             return Column(
               children: [
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.tags,
                   items: [for (final tag in items) BulkItem(tag.id, tag.name)],
                 ),
@@ -48,7 +48,7 @@ class MobileTagsScreen extends ConsumerWidget {
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.tags);
   }
 
   Future<void> _showTagSheet(BuildContext context, {Tag? tag}) async {
@@ -164,7 +164,7 @@ class _TagCard extends ConsumerWidget {
           ).showSnackBar(SnackBar(content: Text(message)));
         },
       ),
-    );
+    ).bulkSelectable(BulkEntity.tags, tag.id);
   }
 }
 

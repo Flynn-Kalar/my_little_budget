@@ -48,7 +48,7 @@ class BudgetScreen extends ConsumerWidget {
                 _BudgetMonthNav(month: month),
                 _CopyPreviousMonthButton(month: month),
                 _AddBudgetGroupButton(month: month),
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.budgets,
                   key: ValueKey('bulk-budgets-$month'),
                   items: [
@@ -90,7 +90,7 @@ class BudgetScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectionViewport(BulkEntity.budgets);
   }
 }
 

@@ -85,6 +85,16 @@ String calendarMonthLabel(String monthKey) {
   return '${month.year}년 ${month.month}월';
 }
 
+Set<int> calendarVisibleEventIds(List<CalendarEvent> events, String monthKey) {
+  final days = calendarVisibleDays(monthKey);
+  final last = days.last;
+  final until = DateTime(last.year, last.month, last.day + 1);
+  return {
+    for (final event in events)
+      if (calendarInstances(event, days.first, until).isNotEmpty) event.id,
+  };
+}
+
 String calendarDayLabel(DateTime date) {
   const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
   return '${date.month}.${date.day} (${weekdays[date.weekday % 7]})';

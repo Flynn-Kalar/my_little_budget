@@ -170,7 +170,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: BulkManageButton(
+                    child: BulkSelectionToolbar(
                       entity: BulkEntity.notes,
                       items: [
                         for (final entry in filtered)
@@ -198,7 +198,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           ),
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.notes);
   }
 }
 
@@ -340,7 +340,7 @@ class _NoteCard extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.notes, note.id);
   }
 }
 
@@ -1071,7 +1071,11 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
                 decoration: InputDecoration(labelText: '제목', errorText: _error),
               ),
               const SizedBox(height: 8),
-              NoteGoalForm(draft: _goalDraft, busy: _busy),
+              NoteGoalForm(
+                draft: _goalDraft,
+                busy: _busy,
+                showAdditionControls: false,
+              ),
               RichNoteEditor(
                 controller: _richController,
                 focusNode: _richFocus,

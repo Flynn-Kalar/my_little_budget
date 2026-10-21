@@ -34,23 +34,29 @@ class NoteGoalDraft extends ChangeNotifier {
       ? null
       : NoteAmountGoal(
           targetAmount: parseNoteAmount(target.text) ?? 0,
-          currentAmount: parseNoteAmount(current.text) ?? -1,
+          currentAmount: parseNoteAmount(current.text) ?? 0,
           startDate: start,
           dueDate: due,
         );
 
-  String? get validationError => goal?.validationError;
+  String? get validationError {
+    if (!enabled) return null;
+    if (parseNoteAmount(target.text) == null) return '목표 금액을 숫자로 입력하세요.';
+    if (parseNoteAmount(current.text) == null) return '현재 금액을 숫자로 입력하세요.';
+    return goal?.validationError;
+  }
 
   void refresh() => notifyListeners();
 
   void addAmount(int? amount) {
     final existing = parseNoteAmount(current.text);
     if (amount == null ||
-        amount <= 0 ||
+        amount == 0 ||
         existing == null ||
-        amount > maxNoteGoalAmount ||
-        existing > maxNoteGoalAmount - amount) {
-      additionError = '현재 금액과 추가 금액을 확인하세요. 추가 금액은 1원 이상이어야 합니다.';
+        amount.abs() > maxNoteGoalAmount ||
+        existing.abs() > maxNoteGoalAmount ||
+        (existing + amount).abs() > maxNoteGoalAmount) {
+      additionError = '현재 금액과 추가 금액을 확인하세요. 0원이 아닌 금액을 입력하고 허용 범위를 넘지 않아야 합니다.';
       notifyListeners();
       return;
     }
@@ -75,10 +81,12 @@ class NoteGoalForm extends StatelessWidget {
     required this.draft,
     this.busy = false,
     this.showType = true,
+    this.showAdditionControls = true,
   });
   final NoteGoalDraft draft;
   final bool busy;
   final bool showType;
+  final bool showAdditionControls;
 
   Future<void> _pickDate(BuildContext context, {required bool due}) async {
     final value = await showDatePicker(
@@ -124,7 +132,7 @@ class NoteGoalForm extends StatelessWidget {
           TextField(
             controller: draft.target,
             enabled: !busy,
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(signed: true),
             decoration: const InputDecoration(
               labelText: '목표 금액',
               suffixText: '원',
@@ -133,56 +141,62 @@ class NoteGoalForm extends StatelessWidget {
           TextField(
             controller: draft.current,
             enabled: !busy,
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(signed: true),
             decoration: const InputDecoration(
               labelText: '현재 금액',
               suffixText: '원',
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              for (final amount in [100000, 200000, 400000])
+          if (showAdditionControls) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                for (final amount in [100000, 200000, 400000])
+                  Expanded(
+                    child: TextButton(
+                      onPressed: busy ? null : () => draft.addAmount(amount),
+                      child: Text('+${formatNoteAmount(amount)}'),
+                    ),
+                  ),
+              ],
+            ),
+            Row(
+              children: [
                 Expanded(
-                  child: TextButton(
-                    onPressed: busy ? null : () => draft.addAmount(amount),
-                    child: Text('+${formatNoteAmount(amount)}'),
+                  child: TextField(
+                    controller: draft.addition,
+                    enabled: !busy,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      signed: true,
+                    ),
+                    onSubmitted: busy
+                        ? null
+                        : (_) => draft.addAmount(
+                            parseNoteAmount(draft.addition.text),
+                          ),
+                    decoration: const InputDecoration(
+                      labelText: '추가 금액',
+                      helperText: '음수를 입력하면 현재 금액에서 차감합니다.',
+                      suffixText: '원',
+                    ),
                   ),
                 ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: draft.addition,
-                  enabled: !busy,
-                  keyboardType: TextInputType.number,
-                  onSubmitted: busy
+                TextButton(
+                  onPressed: busy
                       ? null
-                      : (_) => draft.addAmount(
+                      : () => draft.addAmount(
                           parseNoteAmount(draft.addition.text),
                         ),
-                  decoration: const InputDecoration(
-                    labelText: '추가 금액',
-                    suffixText: '원',
-                  ),
+                  child: const Text('금액 추가'),
                 ),
-              ),
-              TextButton(
-                onPressed: busy
-                    ? null
-                    : () =>
-                          draft.addAmount(parseNoteAmount(draft.addition.text)),
-                child: const Text('금액 추가'),
-              ),
-            ],
-          ),
-          if (draft.additionError != null)
-            Text(
-              draft.additionError!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ],
             ),
+            if (draft.additionError != null)
+              Text(
+                draft.additionError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+          ],
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('시작일'),

@@ -6,6 +6,20 @@ import 'package:my_little_budget/features/notes/note_goal_block.dart';
 import 'package:my_little_budget/features/notes/rich_note.dart';
 
 void main() {
+  test('embedded goals preserve negative target and current amounts', () {
+    final block = newNoteGoalBlock(
+      '차감 목표',
+      NoteAmountGoal(
+        targetAmount: -3000000,
+        currentAmount: -24500,
+        startDate: DateTime(2026),
+      ),
+    );
+    final restored = NoteGoalBlock.decode(block.encode())!;
+    expect(restored.goal.targetAmount, -3000000);
+    expect(restored.goal.currentAmount, -24500);
+    expect(restored.plainText, contains('-24,500 / -3,000,000원'));
+  });
   test(
     'multiple goal blocks coexist with text and checklist, edit by identity, undo and round-trip',
     () {

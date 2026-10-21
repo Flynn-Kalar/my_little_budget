@@ -57,7 +57,7 @@ class CategoriesScreen extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    BulkManageButton(
+                    BulkSelectionToolbar(
                       entity: BulkEntity.categories,
                       items: [
                         for (final item in all)
@@ -96,7 +96,7 @@ class CategoriesScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectionViewport(BulkEntity.categories);
   }
 
   List<Category> _active(List<Category> all, String type) {

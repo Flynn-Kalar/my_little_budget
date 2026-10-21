@@ -41,7 +41,7 @@ class MobileCategoriesScreen extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.categories,
                   items: [
                     for (final item in items)
@@ -65,7 +65,7 @@ class MobileCategoriesScreen extends ConsumerWidget {
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.categories);
   }
 
   List<Category> _active(List<Category> all, String type) {
@@ -252,7 +252,7 @@ class _CategoryCard extends ConsumerWidget {
         ),
         onTap: archived ? null : () => _CategorySheet.show(context, item: item),
       ),
-    );
+    ).bulkSelectable(BulkEntity.categories, item.id);
   }
 }
 

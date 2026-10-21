@@ -1,3 +1,4 @@
+import '../../../shared/bulk_manage_button.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -257,7 +258,7 @@ class _RecurringRow extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).bulkSelectable(BulkEntity.recurring, r.id);
   }
 }
 

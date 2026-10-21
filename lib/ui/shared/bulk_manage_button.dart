@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../data/bulk_management.dart';
 import '../../data/providers.dart';
 import '../../features/accounts/providers.dart' as accounts;
@@ -20,8 +21,97 @@ class BulkItem {
   final String? subtitle;
 }
 
-class BulkManageButton extends StatelessWidget {
-  const BulkManageButton({
+final bulkSelectionProvider = StateProvider.autoDispose
+    .family<Set<int>?, BulkEntity>((ref, entity) => null);
+final _bulkBusyProvider = StateProvider.autoDispose.family<bool, BulkEntity>(
+  (ref, entity) => false,
+);
+
+bool bulkSelectionIsBusy(WidgetRef ref, BulkEntity entity) =>
+    ref.read(_bulkBusyProvider(entity));
+
+extension BulkSelectableWidget on Widget {
+  Widget bulkSelectionViewport(BulkEntity entity) =>
+      _BulkSelectionViewport(entity: entity, child: this);
+  Widget bulkSelectable(BulkEntity entity, int? id, {bool compact = false}) =>
+      id == null
+      ? this
+      : BulkSelectable(entity: entity, id: id, compact: compact, child: this);
+}
+
+class _BulkSelectionViewport extends ConsumerWidget {
+  const _BulkSelectionViewport({required this.entity, required this.child});
+  final BulkEntity entity;
+  final Widget child;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+    padding: EdgeInsets.only(
+      bottom: ref.watch(bulkSelectionProvider(entity)) == null ? 0 : 160,
+    ),
+    child: child,
+  );
+}
+
+class BulkSelectable extends ConsumerWidget {
+  const BulkSelectable({
+    super.key,
+    required this.entity,
+    required this.id,
+    required this.child,
+    this.compact = false,
+  });
+  final BulkEntity entity;
+  final int id;
+  final Widget child;
+  final bool compact;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(bulkSelectionProvider(entity));
+    final busy = ref.watch(_bulkBusyProvider(entity));
+    void toggle() {
+      final next = Set<int>.of(selected ?? {});
+      if (!next.add(id)) next.remove(id);
+      ref.read(bulkSelectionProvider(entity).notifier).state = next;
+    }
+
+    return Semantics(
+      selected: selected?.contains(id),
+      child: GestureDetector(
+        key: ValueKey('bulk-row-${entity.name}-$id'),
+        behavior: HitTestBehavior.opaque,
+        onLongPress: busy
+            ? null
+            : selected == null
+            ? () =>
+                  ref.read(bulkSelectionProvider(entity).notifier).state = {id}
+            : toggle,
+        onTap: busy || selected == null ? null : toggle,
+        child: selected == null
+            ? child
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: compact ? 20 : 44,
+                    height: compact ? 20 : null,
+                    child: Checkbox(
+                      key: ValueKey('bulk-item-$id'),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      value: selected.contains(id),
+                      onChanged: busy ? null : (_) => toggle(),
+                    ),
+                  ),
+                  Expanded(child: IgnorePointer(child: child)),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class BulkSelectionToolbar extends ConsumerStatefulWidget {
+  const BulkSelectionToolbar({
     super.key,
     required this.entity,
     required this.items,
@@ -31,50 +121,93 @@ class BulkManageButton extends StatelessWidget {
   final List<BulkItem> items;
   final VoidCallback? onChanged;
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
-    key: ValueKey('bulk-select-${entity.name}'),
-    onPressed: items.isEmpty
-        ? null
-        : () async {
-            await showDialog<bool>(
-              context: context,
-              builder: (_) => _BulkDialog(
-                entity: entity,
-                items: items,
-                onChanged: onChanged,
-              ),
-            );
-          },
-    icon: const Icon(Icons.checklist_rounded, size: 18),
-    label: const Text('다중 선택'),
-  );
+  ConsumerState<BulkSelectionToolbar> createState() =>
+      _BulkSelectionToolbarState();
 }
 
-class _BulkDialog extends ConsumerStatefulWidget {
-  const _BulkDialog({
-    required this.entity,
-    required this.items,
-    this.onChanged,
-  });
-  final BulkEntity entity;
-  final List<BulkItem> items;
-  final VoidCallback? onChanged;
+class _BulkSelectionToolbarState extends ConsumerState<BulkSelectionToolbar>
+    with AutomaticKeepAliveClientMixin {
+  OverlayEntry? _overlay;
+  Widget? _panel;
   @override
-  ConsumerState<_BulkDialog> createState() => _BulkDialogState();
-}
+  bool get wantKeepAlive => true;
 
-class _BulkDialogState extends ConsumerState<_BulkDialog> {
-  final _selected = <int>{};
-  String _query = '';
+  @override
+  void dispose() {
+    _overlay?.remove();
+    _overlay?.dispose();
+    super.dispose();
+  }
+
+  Widget _host(Widget? panel) {
+    final active = panel != null;
+    _panel = panel;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_panel == null) {
+        _overlay?.remove();
+        _overlay?.dispose();
+        _overlay = null;
+      } else if (_overlay != null) {
+        _overlay!.markNeedsBuild();
+      } else {
+        _overlay = OverlayEntry(
+          builder: (context) => Positioned(
+            left: 12,
+            right: 12,
+            bottom:
+                MediaQuery.viewInsetsOf(context).bottom +
+                MediaQuery.paddingOf(context).bottom +
+                12,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(16),
+                color: Theme.of(context).colorScheme.surface,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: _panel,
+                ),
+              ),
+            ),
+          ),
+        );
+        Overlay.of(context, rootOverlay: true).insert(_overlay!);
+      }
+    });
+    return PopScope(
+      canPop: !active,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && !_busy) {
+          ref.read(bulkSelectionProvider(widget.entity).notifier).state = null;
+        }
+      },
+      child: const SizedBox.shrink(),
+    );
+  }
+
+  Set<int> get _selected =>
+      ref.read(bulkSelectionProvider(widget.entity)) ?? {};
   String? _error;
   bool _busy = false;
-  List<BulkItem> get _visible => widget.items
-      .where(
-        (item) => '${item.title} ${item.subtitle ?? ''}'.toLowerCase().contains(
-          _query.trim().toLowerCase(),
-        ),
-      )
-      .toList();
+  @override
+  void didUpdateWidget(covariant BulkSelectionToolbar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_busy) return;
+    final ids = widget.items.map((item) => item.id).toSet();
+    if (_selected.any((id) => !ids.contains(id))) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _busy) return;
+        final remaining = _selected.intersection(
+          widget.items.map((i) => i.id).toSet(),
+        );
+        ref.read(bulkSelectionProvider(widget.entity).notifier).state =
+            remaining.isEmpty ? null : remaining;
+      });
+    }
+  }
+
   Future<bool> _confirm(String action, String detail) async =>
       await showDialog<bool>(
         context: context,
@@ -150,6 +283,7 @@ class _BulkDialogState extends ConsumerState<_BulkDialog> {
   }
 
   Future<void> _run(Future<void> Function() operation) async {
+    ref.read(_bulkBusyProvider(widget.entity).notifier).state = true;
     setState(() {
       _busy = true;
       _error = null;
@@ -157,9 +291,9 @@ class _BulkDialogState extends ConsumerState<_BulkDialog> {
     try {
       await operation();
       if (!mounted) return;
+      ref.read(bulkSelectionProvider(widget.entity).notifier).state = null;
       widget.onChanged?.call();
       await _refresh();
-      if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) {
         setState(
@@ -170,7 +304,10 @@ class _BulkDialogState extends ConsumerState<_BulkDialog> {
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        ref.read(_bulkBusyProvider(widget.entity).notifier).state = false;
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -214,10 +351,15 @@ class _BulkDialogState extends ConsumerState<_BulkDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final visible = _visible;
+    super.build(context);
+    final selected = ref.watch(bulkSelectionProvider(widget.entity));
+    if (selected == null) {
+      _error = null;
+      return _host(null);
+    }
     final all =
-        visible.isNotEmpty &&
-        visible.every((item) => _selected.contains(item.id));
+        widget.items.isNotEmpty &&
+        widget.items.every((item) => selected.contains(item.id));
     final entity = widget.entity;
     final actions = <Widget>[
       if (entity == BulkEntity.tags) _action('카테고리 지정', _categories),
@@ -234,111 +376,58 @@ class _BulkDialogState extends ConsumerState<_BulkDialog> {
       else
         _action('삭제', () => _apply(BulkOperation.delete, '삭제')),
     ];
-    return PopScope(
-      canPop: !_busy,
-      child: AlertDialog(
-        scrollable: true,
-        title: Column(
+
+    return _host(
+      ConstrainedBox(
+        key: ValueKey('bulk-selection-toolbar-${entity.name}'),
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${entity.label} 다중 선택'),
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Checkbox(
+                  key: const ValueKey('bulk-select-all'),
+                  value: all,
+                  onChanged: _busy
+                      ? null
+                      : (value) {
+                          ref
+                              .read(bulkSelectionProvider(entity).notifier)
+                              .state = value == true
+                              ? widget.items.map((item) => item.id).toSet()
+                              : <int>{};
+                        },
+                ),
+                Text('${selected.length}개 선택'),
+                TextButton(
+                  key: const ValueKey('bulk-cancel-selection'),
+                  onPressed: _busy
+                      ? null
+                      : () {
+                          ref
+                                  .read(bulkSelectionProvider(entity).notifier)
+                                  .state =
+                              null;
+                          setState(() => _error = null);
+                        },
+                  child: const Text('선택 취소'),
+                ),
+              ],
+            ),
             if (_error != null)
               Text(
                 _error!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.error,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
+            if (_busy) const LinearProgressIndicator(),
+            Wrap(spacing: 8, runSpacing: 4, children: actions),
+            const SizedBox(height: 8),
           ],
         ),
-        content: SizedBox(
-          width: 600,
-          height:
-              (MediaQuery.sizeOf(context).height -
-                      MediaQuery.viewInsetsOf(context).vertical -
-                      220)
-                  .clamp(180.0, 520.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                enabled: !_busy,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: '목록에서 검색',
-                ),
-                onChanged: (value) => setState(() => _query = value),
-              ),
-              Row(
-                children: [
-                  Checkbox(
-                    key: const ValueKey('bulk-select-all'),
-                    value: all,
-                    onChanged: _busy || visible.isEmpty
-                        ? null
-                        : (value) => setState(() {
-                            if (value == true) {
-                              _selected.addAll(visible.map((item) => item.id));
-                            } else {
-                              _selected.removeAll(
-                                visible.map((item) => item.id),
-                              );
-                            }
-                          }),
-                  ),
-                  const Expanded(child: Text('검색 결과 전체 선택')),
-                  const SizedBox(width: 8),
-                  Text('${_selected.length}개 선택'),
-                ],
-              ),
-              if (_busy) const LinearProgressIndicator(),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: visible.length,
-                  itemBuilder: (context, index) {
-                    final item = visible[index];
-                    return CheckboxListTile(
-                      key: ValueKey('bulk-item-${item.id}'),
-                      value: _selected.contains(item.id),
-                      title: Text(item.title),
-                      subtitle: item.subtitle == null
-                          ? null
-                          : Text(item.subtitle!),
-                      onChanged: _busy
-                          ? null
-                          : (value) => setState(() {
-                              if (value == true) {
-                                _selected.add(item.id);
-                              } else {
-                                _selected.remove(item.id);
-                              }
-                            }),
-                    );
-                  },
-                ),
-              ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final action in actions)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: action,
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: _busy ? null : () => Navigator.pop(context, false),
-            child: const Text('닫기'),
-          ),
-        ],
       ),
     );
   }

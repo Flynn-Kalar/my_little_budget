@@ -86,8 +86,10 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// 종목별 잔량/원가 스냅샷. = Tauri listCurrentHoldings. 순수 walker 재사용.
-  Future<List<CurrentHolding>> listCurrentHoldings() async {
-    final all = await select(investments).get();
+  Future<List<CurrentHolding>> listCurrentHoldings({int? accountId}) async {
+    final query = select(investments);
+    if (accountId != null) query.where((i) => i.accountId.equals(accountId));
+    final all = await query.get();
     return currentHoldings(all.map(toInvestmentEntry).toList());
   }
 

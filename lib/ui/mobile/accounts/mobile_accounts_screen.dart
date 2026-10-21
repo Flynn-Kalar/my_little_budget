@@ -43,7 +43,7 @@ class MobileAccountsScreen extends ConsumerWidget {
             final expense = context.appExpense;
             return Column(
               children: [
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.accounts,
                   items: [
                     for (final item in value)
@@ -98,7 +98,7 @@ class MobileAccountsScreen extends ConsumerWidget {
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.accounts);
   }
 }
 
@@ -298,7 +298,7 @@ class _AccountCard extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.accounts, account.accountId);
   }
 }
 

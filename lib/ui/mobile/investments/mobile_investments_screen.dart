@@ -142,7 +142,7 @@ class _MobileInvestmentsScreenState
             }
             return Column(
               children: [
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.investments,
                   items: [
                     for (final row in filteredRows)
@@ -177,7 +177,7 @@ class _MobileInvestmentsScreenState
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.investments);
   }
 }
 
@@ -984,7 +984,7 @@ class _InvestmentCard extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ).bulkSelectable(BulkEntity.investments, row.id);
   }
 }
 

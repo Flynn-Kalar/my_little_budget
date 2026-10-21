@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
+import 'package:my_little_budget/shell/layout_policy.dart';
 import 'package:my_little_budget/features/notes/note_draft_store.dart';
 import 'package:my_little_budget/features/notes/rich_note.dart';
 import 'package:my_little_budget/ui/desktop/notes/notes_screen.dart';
@@ -56,6 +57,11 @@ Future<void> pumpScreen(
     ProviderScope(
       overrides: [appDatabaseProvider.overrideWithValue(db)],
       child: MaterialApp(
+        builder: (context, child) => ShellLayoutScope(
+          mobile: mobile,
+          viewportWidth: mobile ? 390 : 1200,
+          child: child!,
+        ),
         localizationsDelegates: const [
           FlutterQuillLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -240,7 +246,18 @@ void main() {
         await insert('여행', '2000000');
         expect(find.byTooltip('금액 목표 수정'), findsNWidgets(2));
         await tapVisible(tester, find.byTooltip('금액 목표 수정').first);
-        await tapVisible(tester, find.text('+400,000'));
+        if (mobile) {
+          await tapVisible(tester, find.text('+400,000'));
+        } else {
+          expect(find.text('+400,000'), findsNothing);
+          expect(find.text('금액 추가'), findsNothing);
+          await tester.enterText(
+            find.byWidgetPredicate(
+              (w) => w is TextField && w.decoration?.labelText == '현재 금액',
+            ),
+            '1,400,000',
+          );
+        }
         await tapVisible(tester, find.widgetWithText(FilledButton, '적용'));
         expect(
           plainTextFromDocument(editor.controller.document),

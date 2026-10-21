@@ -9,6 +9,36 @@ import 'package:my_little_budget/features/notes/note_amount_goal.dart';
 
 void main() {
   test(
+    'negative goal amounts survive database and backup round trips',
+    () async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      for (final target in [3000000, -3000000]) {
+        final id = await db.notesDao.saveNote(
+          title: '음수 금액',
+          content: '',
+          amountGoal: Value(
+            NoteAmountGoal(
+              targetAmount: target,
+              currentAmount: -24500,
+              startDate: DateTime(2026),
+            ),
+          ),
+        );
+        final backup = parseBackup(
+          (await db.backupDao.exportBackup()).toJsonString(),
+        );
+        expect(backup.error, isNull);
+        await db.backupDao.importBackup(backup.backup!);
+        final restored = NoteAmountGoal.fromNote(
+          (await db.notesDao.getNote(id))!,
+        )!;
+        expect(restored.targetAmount, target);
+        expect(restored.currentAmount, -24500);
+      }
+    },
+  );
+  test(
     'normal notes and goals round-trip, edits preserve omitted goals and backup data',
     () async {
       final db = AppDatabase.forTesting(NativeDatabase.memory());

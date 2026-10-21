@@ -1,3 +1,4 @@
+import '../../../shared/bulk_manage_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/money.dart';
@@ -333,7 +334,7 @@ class BudgetGroupCard extends StatelessWidget {
           ],
         ],
       ),
-    );
+    ).bulkSelectable(BulkEntity.budgets, row.groupId);
   }
 }
 

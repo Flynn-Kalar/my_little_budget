@@ -36,7 +36,7 @@ class InvestmentSummaryCard extends StatelessWidget {
             label: '배당',
             amount: summary.dividend,
             icon: Icons.payments_outlined,
-            color: context.desktopWarning,
+            color: const Color(0xFFD79A21),
           ),
         ),
         const SizedBox(width: 12),
@@ -72,25 +72,47 @@ class _SummaryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: context.desktopBorder),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Row(
           children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 12),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: .12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: TextStyle(color: context.desktopMuted)),
-                  const SizedBox(height: 4),
                   Text(
-                    formatKRW(amount),
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    label,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${label == '실현손익' && amount > 0 ? '+' : ''}${formatKRW(amount)}',
+                      style: TextStyle(
+                        color: label == '실현손익'
+                            ? (amount < 0
+                                  ? context.desktopExpense
+                                  : context.desktopIncome)
+                            : null,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],

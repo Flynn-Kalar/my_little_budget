@@ -62,18 +62,23 @@ class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
   Widget build(BuildContext context) {
     final events = ref.watch(calendarEventsProvider);
     final notes = ref.watch(notesProvider);
+    final visibleEventIds = calendarVisibleEventIds(
+      events.asData?.value ?? [],
+      _month,
+    );
     return MobilePageScaffold(
       title: '캘린더',
       onAdd: () =>
           _MobileCalendarEventSheet.show(context, initialDday: _showDday),
       addTooltip: '일정 추가',
       children: [
-        BulkManageButton(
+        BulkSelectionToolbar(
           entity: BulkEntity.calendar,
           items: [
             for (final event in events.asData?.value ?? [])
-              if (!_showDday ||
-                  CalendarScheduleSettings.fromEvent(event).isDday)
+              if (_showDday
+                  ? CalendarScheduleSettings.fromEvent(event).isDday
+                  : visibleEventIds.contains(event.id))
                 BulkItem(
                   event.id,
                   event.title,
@@ -163,7 +168,7 @@ class _MobileCalendarScreenState extends ConsumerState<MobileCalendarScreen> {
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.calendar);
   }
 }
 
@@ -317,6 +322,12 @@ Future<void> _openCalendarDay(
   DateTime date,
   List<_MobileCalendarEntry> entries,
 ) async {
+  if (ProviderScope.containerOf(
+        context,
+      ).read(bulkSelectionProvider(BulkEntity.calendar)) !=
+      null) {
+    return;
+  }
   if (entries.isEmpty) {
     await _MobileCalendarEventSheet.show(context, initialDate: date);
     return;
@@ -375,7 +386,7 @@ class _CalendarEntryPill extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.calendar, entry.event?.id, compact: true);
   }
 }
 
@@ -452,7 +463,7 @@ class _AgendaDaySection extends StatelessWidget {
                 ],
               ),
             ),
-          ),
+          ).bulkSelectable(BulkEntity.calendar, entry.event?.id),
       ],
     );
   }

@@ -110,7 +110,7 @@ class _TagManagerState extends ConsumerState<TagManager> {
       children: [
         Align(
           alignment: Alignment.centerLeft,
-          child: BulkManageButton(
+          child: BulkSelectionToolbar(
             entity: BulkEntity.tags,
             items: [for (final tag in widget.tags) BulkItem(tag.id, tag.name)],
           ),
@@ -197,7 +197,7 @@ class _TagManagerState extends ConsumerState<TagManager> {
                   ),
                 ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.tags);
   }
 }
 
@@ -258,7 +258,7 @@ class _TagRow extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).bulkSelectable(BulkEntity.tags, tag.id);
   }
 }
 

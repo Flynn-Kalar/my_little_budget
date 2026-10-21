@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'transaction_spacing.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,11 +42,25 @@ class TransactionsScreen extends ConsumerStatefulWidget {
 
 class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   bool _isHeaderCollapsed = false;
+  bool _isSummaryCollapsed = false;
   bool _isFilterExpanded = false;
   final _filterPanelKey = GlobalKey();
   final _mainColumnKey = GlobalKey();
   TransactionPresetDraft? _selectedPreset;
   int _presetRevision = 0;
+
+  bool _onListScroll(UserScrollNotification notification) {
+    if (notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical ||
+        notification.direction == ScrollDirection.idle) {
+      return false;
+    }
+    final collapsed = notification.direction == ScrollDirection.reverse;
+    if (!_isHeaderCollapsed && collapsed != _isSummaryCollapsed) {
+      setState(() => _isSummaryCollapsed = collapsed);
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -202,9 +217,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             : null,
                         padding: compact ? EdgeInsets.zero : null,
                         tooltip: _isHeaderCollapsed ? '상단 펼치기' : '상단 접기',
-                        onPressed: () => setState(
-                          () => _isHeaderCollapsed = !_isHeaderCollapsed,
-                        ),
+                        onPressed: () => setState(() {
+                          _isHeaderCollapsed = !_isHeaderCollapsed;
+                          _isSummaryCollapsed = false;
+                        }),
                         icon: Icon(
                           _isHeaderCollapsed
                               ? Icons.keyboard_arrow_down
@@ -215,8 +231,17 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   ),
                 ),
                 if (!_isHeaderCollapsed) ...[
-                  const SizedBox(height: 10),
-                  const SummaryBar(),
+                  AnimatedSize(
+                    key: const ValueKey('desktop-transactions-summary-reveal'),
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInOut,
+                    alignment: Alignment.topCenter,
+                    child: _isSummaryCollapsed
+                        ? const SizedBox(width: double.infinity)
+                        : const Column(
+                            children: [SizedBox(height: 10), SummaryBar()],
+                          ),
+                  ),
                   if (expanded) ...[
                     const SizedBox(height: 8),
                     const CompactTransactionsOverview(),
@@ -262,10 +287,16 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        const Expanded(
+        Expanded(
           child: Card(
             margin: EdgeInsets.zero,
-            child: DesktopSection(minWidth: 720, child: TransactionList()),
+            child: DesktopSection(
+              minWidth: 720,
+              child: NotificationListener<UserScrollNotification>(
+                onNotification: _onListScroll,
+                child: const TransactionList(),
+              ),
+            ),
           ),
         ),
       ],

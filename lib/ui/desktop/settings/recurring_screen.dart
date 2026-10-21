@@ -46,7 +46,7 @@ class RecurringScreen extends ConsumerWidget {
             ),
             SizedBox(height: 24),
             RecurringOrderButton(items: items.asData?.value ?? const []),
-            BulkManageButton(
+            BulkSelectionToolbar(
               entity: BulkEntity.recurring,
               items: [
                 for (final item in items.asData?.value ?? [])
@@ -73,6 +73,6 @@ class RecurringScreen extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectionViewport(BulkEntity.recurring);
   }
 }

@@ -27,7 +27,7 @@ class MobileBudgetScreen extends ConsumerWidget {
       onAdd: () => _BudgetGroupSheet.show(context, month: month),
       addTooltip: '예산 추가',
       children: [
-        BulkManageButton(
+        BulkSelectionToolbar(
           entity: BulkEntity.budgets,
           key: ValueKey('bulk-budgets-$month'),
           items: [
@@ -78,7 +78,7 @@ class MobileBudgetScreen extends ConsumerWidget {
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.budgets);
   }
 }
 
@@ -249,7 +249,7 @@ class _BudgetCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.budgets, row.groupId);
   }
 }
 

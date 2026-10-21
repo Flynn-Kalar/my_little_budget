@@ -42,7 +42,7 @@ class MobileRecurringScreen extends ConsumerWidget {
             return Column(
               children: [
                 RecurringOrderButton(items: value),
-                BulkManageButton(
+                BulkSelectionToolbar(
                   entity: BulkEntity.recurring,
                   items: [
                     for (final item in value)
@@ -55,7 +55,7 @@ class MobileRecurringScreen extends ConsumerWidget {
           },
         ),
       ],
-    );
+    ).bulkSelectionViewport(BulkEntity.recurring);
   }
 }
 
@@ -121,7 +121,7 @@ class _RecurringCard extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.recurring, recurring.id);
   }
 }
 

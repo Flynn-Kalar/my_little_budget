@@ -170,9 +170,20 @@ void main() {
             final form = tester.widget<NoteGoalForm>(find.byType(NoteGoalForm));
             form.draft.target.text = '2,681,630';
             form.draft.current.text = '1,000,000';
-            await tester.ensureVisible(find.text('+400,000'));
-            await tester.pumpAndSettle();
-            await tester.tap(find.text('+400,000'));
+            if (mobile) {
+              await tester.ensureVisible(find.text('+400,000'));
+              await tester.pumpAndSettle();
+              await tester.tap(find.text('+400,000'));
+            } else {
+              expect(find.text('+400,000'), findsNothing);
+              expect(find.text('금액 추가'), findsNothing);
+              await tester.enterText(
+                find.byWidgetPredicate(
+                  (w) => w is TextField && w.decoration?.labelText == '현재 금액',
+                ),
+                '1,400,000',
+              );
+            }
             await tester.pumpAndSettle();
             expect(form.draft.current.text, '1,400,000');
           }
@@ -210,10 +221,15 @@ void main() {
             .draft;
         expect(draft.target.text, '2,681,630');
         draft.current.text = '3,000,000';
-        draft.addition.text = '123,456';
-        await tester.ensureVisible(find.text('금액 추가'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('금액 추가'));
+        if (mobile) {
+          draft.addition.text = '123,456';
+          await tester.ensureVisible(find.text('금액 추가'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('금액 추가'));
+        } else {
+          expect(find.text('금액 추가'), findsNothing);
+          draft.current.text = '3,123,456';
+        }
         await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('저장'));
         await tester.pumpAndSettle();

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'bulk_manage_button.dart';
 import '../../core/date.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/database.dart';
@@ -87,7 +88,7 @@ class _CalendarDdayListState extends State<CalendarDdayList> {
               subtitle: Text(toDateKey(calendarEventStart(event))),
               trailing: const Icon(Icons.chevron_right),
             ),
-          ),
+          ).bulkSelectable(BulkEntity.calendar, event.id),
       ],
     );
   }

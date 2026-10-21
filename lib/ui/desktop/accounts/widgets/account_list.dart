@@ -80,120 +80,126 @@ class _State extends ConsumerState<AccountList> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(accountBalancesProvider);
-    return async.when(
-      loading: () => Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text('불러오기 오류: $e'),
-      ),
-      data: (items) {
-        final visible = _reorderMode ? _draft : items;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: BulkManageButton(
-                entity: BulkEntity.accounts,
-                items: [
-                  for (final item in items) BulkItem(item.accountId, item.name),
-                ],
-              ),
-            ),
-            // 상단 액션
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (_reorderMode) ...[
-                    TextButton.icon(
-                      onPressed: _saving ? null : _cancelReorder,
-                      icon: Icon(Icons.close, size: 14),
-                      label: Text('취소'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: context.desktopMuted,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    FilledButton.icon(
-                      onPressed: _saving ? null : () => _saveReorder(items),
-                      icon: Icon(Icons.check, size: 14),
-                      label: Text(_saving ? '저장 중…' : '순서 저장'),
-                    ),
-                  ] else if (items.length > 1)
-                    OutlinedButton.icon(
-                      onPressed: () => _startReorder(items),
-                      icon: Icon(Icons.swap_vert, size: 14),
-                      label: Text('순서 편집'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: context.desktopMuted,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            if (items.isEmpty)
-              Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  '등록된 계좌가 없습니다.',
-                  style: TextStyle(color: context.desktopMuted),
-                ),
-              )
-            else
-              for (var i = 0; i < visible.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _reorderMode
-                      ? _ReorderRow(
-                          account: visible[i],
-                          isFirst: i == 0,
-                          isLast: i == visible.length - 1,
-                          onUp: () => _swap(i, i - 1),
-                          onDown: () => _swap(i, i + 1),
-                        )
-                      : MouseRegion(
-                          onEnter: (_) =>
-                              setState(() => _hoveredId = visible[i].accountId),
-                          onExit: (_) => setState(() => _hoveredId = null),
-                          child: _DisplayRow(
-                            account: visible[i],
-                            showEditIcon: _hoveredId == visible[i].accountId,
-                            onTap: () =>
-                                context.go('/accounts/${visible[i].accountId}'),
-                            onEdit: () => AccountFormDialog.show(
-                              context,
-                              account: visible[i],
-                            ),
-                          ),
-                        ),
-                ),
-
-            // 추가 버튼
-            if (!_reorderMode)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Align(
+    return async
+        .when(
+          loading: () => Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text('불러오기 오류: $e'),
+          ),
+          data: (items) {
+            final visible = _reorderMode ? _draft : items;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
                   alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => AccountFormDialog.show(context),
-                    icon: Icon(Icons.add, size: 16),
-                    label: Text('계좌 추가'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: context.desktopMuted,
-                    ),
+                  child: BulkSelectionToolbar(
+                    entity: BulkEntity.accounts,
+                    items: [
+                      for (final item in items)
+                        BulkItem(item.accountId, item.name),
+                    ],
                   ),
                 ),
-              ),
-          ],
-        );
-      },
-    );
+                // 상단 액션
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (_reorderMode) ...[
+                        TextButton.icon(
+                          onPressed: _saving ? null : _cancelReorder,
+                          icon: Icon(Icons.close, size: 14),
+                          label: Text('취소'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: context.desktopMuted,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed: _saving ? null : () => _saveReorder(items),
+                          icon: Icon(Icons.check, size: 14),
+                          label: Text(_saving ? '저장 중…' : '순서 저장'),
+                        ),
+                      ] else if (items.length > 1)
+                        OutlinedButton.icon(
+                          onPressed: () => _startReorder(items),
+                          icon: Icon(Icons.swap_vert, size: 14),
+                          label: Text('순서 편집'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.desktopMuted,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                if (items.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      '등록된 계좌가 없습니다.',
+                      style: TextStyle(color: context.desktopMuted),
+                    ),
+                  )
+                else
+                  for (var i = 0; i < visible.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _reorderMode
+                          ? _ReorderRow(
+                              account: visible[i],
+                              isFirst: i == 0,
+                              isLast: i == visible.length - 1,
+                              onUp: () => _swap(i, i - 1),
+                              onDown: () => _swap(i, i + 1),
+                            )
+                          : MouseRegion(
+                              onEnter: (_) => setState(
+                                () => _hoveredId = visible[i].accountId,
+                              ),
+                              onExit: (_) => setState(() => _hoveredId = null),
+                              child: _DisplayRow(
+                                account: visible[i],
+                                showEditIcon:
+                                    _hoveredId == visible[i].accountId,
+                                onTap: () => context.go(
+                                  '/accounts/${visible[i].accountId}',
+                                ),
+                                onEdit: () => AccountFormDialog.show(
+                                  context,
+                                  account: visible[i],
+                                ),
+                              ),
+                            ),
+                    ),
+
+                // 추가 버튼
+                if (!_reorderMode)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => AccountFormDialog.show(context),
+                        icon: Icon(Icons.add, size: 16),
+                        label: Text('계좌 추가'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: context.desktopMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        )
+        .bulkSelectionViewport(BulkEntity.accounts);
   }
 }
 
@@ -252,7 +258,7 @@ class _DisplayRow extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).bulkSelectable(BulkEntity.accounts, account.accountId);
   }
 }
 
