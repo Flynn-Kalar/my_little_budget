@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../features/calendar/calendar_schedule.dart';
 import '../../features/notes/note_schedule.dart';
 import '../../features/notes/reminder_calendar.dart';
+import 'calendar_time_zone_field.dart';
 
 class CalendarScheduleDraft extends ChangeNotifier {
   CalendarScheduleDraft(CalendarScheduleSettings settings)
@@ -96,9 +97,11 @@ class CalendarScheduleOptions extends StatelessWidget {
     required this.repeating,
     required this.onChanged,
     this.busy = false,
+    required this.date,
   });
   final CalendarScheduleDraft draft;
   final bool repeating, busy;
+  final DateTime date;
   final VoidCallback onChanged;
   @override
   Widget build(BuildContext context) => Column(
@@ -146,14 +149,11 @@ class CalendarScheduleOptions extends StatelessWidget {
                 },
         ),
       ],
-      TextField(
+      CalendarTimeZoneField(
         controller: draft.zone,
         enabled: !busy,
-        decoration: const InputDecoration(
-          labelText: '일정 시간대',
-          hintText: 'Asia/Seoul',
-          helperText: '시간이 있는 일정의 반복·알림 기준입니다. 종일 날짜는 이동하지 않습니다.',
-        ),
+        date: date,
+        onChanged: onChanged,
       ),
     ],
   );

@@ -11,6 +11,7 @@ import '../../../features/accounts/validation.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import '../mobile_widgets.dart';
 import '../../shared/bulk_manage_button.dart';
+import '../../shared/inline_order_editor.dart';
 
 class MobileAccountsScreen extends ConsumerWidget {
   const MobileAccountsScreen({super.key});
@@ -41,39 +42,64 @@ class MobileAccountsScreen extends ConsumerWidget {
             final netWorth = totalAssets - totalDebt;
             final income = context.appIncome;
             final expense = context.appExpense;
-            return Column(
-              children: [
-                BulkSelectionToolbar(
-                  entity: BulkEntity.accounts,
-                  items: [
-                    for (final item in value)
-                      BulkItem(item.accountId, item.name),
-                  ],
-                ),
-                MobileCard(
-                  child: Column(
-                    children: [
-                      AmountLine(
-                        label: '총 자산',
-                        value: formatKRW(totalAssets),
-                        valueColor: income,
-                      ),
-                      AmountLine(
-                        label: '총 부채',
-                        value: formatKRW(totalDebt),
-                        valueColor: totalDebt > 0 ? expense : null,
-                      ),
-                      AmountLine(
-                        label: '순자산',
-                        value: formatKRW(netWorth),
-                        valueColor: netWorth < 0 ? expense : income,
-                      ),
+            return InlineOrderEditor<AccountBalance>(
+              prefix: 'accounts-order',
+              enabled: !bulkSelectionIsBusy(ref, BulkEntity.accounts),
+              onStart: () =>
+                  ref
+                          .read(
+                            bulkSelectionProvider(BulkEntity.accounts).notifier,
+                          )
+                          .state =
+                      null,
+              items: value,
+              idOf: (r) => r.accountId,
+              titleOf: (r) => r.name,
+              onSave: (rows) async {
+                await ref
+                    .read(accountsDaoProvider)
+                    .updateAccountOrder(rows.map((r) => r.accountId).toList());
+                ref.invalidate(accountBalancesProvider);
+              },
+              builder: (context, orderButton) => Column(
+                children: [
+                  Align(alignment: Alignment.centerLeft, child: orderButton),
+                  BulkSelectionToolbar(
+                    entity: BulkEntity.accounts,
+                    items: [
+                      for (final item in value)
+                        BulkItem(item.accountId, item.name),
                     ],
                   ),
-                ),
-                for (var i = 0; i < value.length; i++)
-                  _AccountCard(account: value[i], allAccounts: value, index: i),
-              ],
+                  MobileCard(
+                    child: Column(
+                      children: [
+                        AmountLine(
+                          label: '총 자산',
+                          value: formatKRW(totalAssets),
+                          valueColor: income,
+                        ),
+                        AmountLine(
+                          label: '총 부채',
+                          value: formatKRW(totalDebt),
+                          valueColor: totalDebt > 0 ? expense : null,
+                        ),
+                        AmountLine(
+                          label: '순자산',
+                          value: formatKRW(netWorth),
+                          valueColor: netWorth < 0 ? expense : income,
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (var i = 0; i < value.length; i++)
+                    _AccountCard(
+                      account: value[i],
+                      allAccounts: value,
+                      index: i,
+                    ),
+                ],
+              ),
             );
           },
         ),
@@ -139,18 +165,6 @@ class _AccountCard extends ConsumerWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('자산을 보관했습니다.')));
-  }
-
-  Future<void> _move(WidgetRef ref, int direction) async {
-    final target = index + direction;
-    if (target < 0 || target >= allAccounts.length) return;
-    final ordered = [...allAccounts];
-    final moving = ordered.removeAt(index);
-    ordered.insert(target, moving);
-    await ref
-        .read(accountsDaoProvider)
-        .updateAccountOrder(ordered.map((row) => row.accountId).toList());
-    refreshAccountsList(ref);
   }
 
   @override
@@ -246,10 +260,6 @@ class _AccountCard extends ConsumerWidget {
                     context.go('/accounts/${account.accountId}');
                   } else if (value == 'edit') {
                     _AccountSheet.show(context, account: account);
-                  } else if (value == 'up') {
-                    _move(ref, -1);
-                  } else if (value == 'down') {
-                    _move(ref, 1);
                   } else if (value == 'archive') {
                     _archive(context, ref);
                   }
@@ -267,22 +277,6 @@ class _AccountCard extends ConsumerWidget {
                     child: ListTile(
                       leading: Icon(Icons.edit_outlined),
                       title: Text('수정'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'up',
-                    enabled: index > 0,
-                    child: const ListTile(
-                      leading: Icon(Icons.arrow_upward),
-                      title: Text('위로 이동'),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'down',
-                    enabled: index < allAccounts.length - 1,
-                    child: const ListTile(
-                      leading: Icon(Icons.arrow_downward),
-                      title: Text('아래로 이동'),
                     ),
                   ),
                   const PopupMenuItem(

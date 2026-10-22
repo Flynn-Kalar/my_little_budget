@@ -7,6 +7,25 @@ import 'package:flutter_quill/quill_delta.dart';
 import '../../data/database.dart';
 import 'checklist.dart';
 import 'note_goal_block.dart';
+import 'note_amount_goal.dart';
+
+/// Convert the old note-level goal in the editing draft only. Saving the draft
+/// clears the old fields together with persisting this block; cancel is read-only.
+Document documentForUnifiedNoteEditor(Note note) {
+  final document = documentFromNote(note);
+  final goal = NoteAmountGoal.fromNote(note);
+  if (goal == null) return document;
+  final delta = document.toDelta()
+    ..insert({
+      noteGoalBlockType: NoteGoalBlock(
+        id: 'legacy-goal-${note.uuid}',
+        title: '',
+        goal: goal,
+      ).encode(),
+    })
+    ..insert('\n');
+  return Document.fromDelta(delta);
+}
 
 Document documentFromNote(Note note) {
   final rich = note.richContent;

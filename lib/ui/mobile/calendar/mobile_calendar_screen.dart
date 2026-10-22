@@ -851,6 +851,13 @@ class _MobileCalendarEventSheetState
                   : (value) => setState(() => _repeat = value!),
             ),
             CalendarScheduleOptions(
+              date: DateTime(
+                _date.year,
+                _date.month,
+                _date.day,
+                _startTime.hour,
+                _startTime.minute,
+              ),
               draft: _scheduleDraft,
               repeating: _repeat.isRepeating,
               busy: _busy,

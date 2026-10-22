@@ -16,7 +16,8 @@ import 'package:my_little_budget/ui/desktop/notes/notes_screen.dart';
 import 'package:my_little_budget/ui/mobile/notes/mobile_notes_screen.dart';
 import 'package:my_little_budget/ui/mobile/notes/mobile_note_detail_page.dart';
 import 'package:my_little_budget/ui/mobile/notes/mobile_note_editor.dart';
-import 'package:my_little_budget/ui/shared/note_amount_goal.dart';
+import 'package:my_little_budget/features/notes/note_amount_goal.dart';
+import 'package:my_little_budget/features/notes/note_goal_block.dart';
 import 'package:my_little_budget/ui/shared/note_editing_session.dart';
 import 'package:my_little_budget/ui/shared/rich_note_editor.dart';
 
@@ -638,14 +639,18 @@ void main() {
           const TextSelection.collapsed(offset: 5),
         );
         editor.controller.formatText(0, 2, Attribute.bold);
-        final goal = tester
-            .widget<NoteGoalForm>(find.byType(NoteGoalForm))
-            .draft;
-        goal.enabled = true;
-        goal.target.text = '2,000,000';
-        goal.current.text = '500,000';
-        goal.due = DateTime(2027, 1, 1);
-        goal.refresh();
+        insertNoteGoalBlock(
+          editor.controller,
+          newNoteGoalBlock(
+            '복구 목표',
+            NoteAmountGoal(
+              targetAmount: 2000000,
+              currentAmount: 500000,
+              startDate: DateTime(2026, 1, 1),
+              dueDate: DateTime(2027, 1, 1),
+            ),
+          ),
+        );
         await tester.pumpAndSettle();
         await tapVisible(tester, find.text('상단 고정'));
         await tester.pump(const Duration(seconds: 2));
@@ -669,17 +674,24 @@ void main() {
         final restored = tester.widget<RichNoteEditor>(
           find.byType(RichNoteEditor),
         );
-        expect(restored.controller.document.toPlainText(), '복구 본문\n');
+        expect(
+          plainTextFromDocument(restored.controller.document),
+          contains('복구 본문'),
+        );
         expect(
           restored.controller.document.toDelta().toJson(),
           jsonDecode(draft.payload)['rich'],
         );
-        final restoredGoal = tester
-            .widget<NoteGoalForm>(find.byType(NoteGoalForm))
-            .draft;
-        expect(restoredGoal.enabled, isTrue);
-        expect(restoredGoal.current.text, '500,000');
-        expect(restoredGoal.due, DateTime(2027, 1, 1));
+        final goalOp = restored.controller.document
+            .toDelta()
+            .toList()
+            .where((o) => o.data is Map)
+            .single;
+        final restoredGoal = NoteGoalBlock.decode(
+          (goalOp.data as Map)[noteGoalBlockType],
+        )!;
+        expect(restoredGoal.goal.currentAmount, 500000);
+        expect(restoredGoal.goal.dueDate, DateTime(2027, 1, 1));
         expect(
           tester
               .widget<FilterChip>(find.widgetWithText(FilterChip, '상단 고정'))
@@ -692,8 +704,9 @@ void main() {
         await tester.enterText(titleField, '복구 완료');
         await tapVisible(tester, find.text('저장'));
         final saved = (await db.select(db.notes).get()).single;
-        expect(saved.content, '복구 본문');
-        expect(saved.goalCurrentAmount, 500000);
+        expect(saved.content, contains('복구 본문'));
+        expect(saved.content, contains('복구 목표'));
+        expect(saved.goalCurrentAmount, isNull);
         expect(saved.pinned, isTrue);
         expect(await NoteDraftStore(db).load(null), isNull);
         expect(tester.takeException(), isNull);

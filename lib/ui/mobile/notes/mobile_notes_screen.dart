@@ -1,4 +1,5 @@
 import '../../shared/bulk_manage_button.dart';
+import '../../shared/inline_order_editor.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -162,17 +163,47 @@ class _MobileNotesScreenState extends ConsumerState<MobileNotesScreen> {
             if (filtered.isEmpty) {
               return const EmptyMobileCard('표시할 메모가 없습니다.');
             }
-            return Column(
-              children: [
-                BulkSelectionToolbar(
-                  entity: BulkEntity.notes,
-                  items: [
-                    for (final entry in filtered)
-                      BulkItem(entry.note.id, entry.note.title),
-                  ],
-                ),
-                for (final entry in filtered) _MobileNoteCard(entry: entry),
-              ],
+            return InlineOrderEditor<NoteWithChecklist>(
+              prefix: 'notes-order',
+              enabled: !bulkSelectionIsBusy(ref, BulkEntity.notes),
+              onStart: () =>
+                  ref
+                          .read(
+                            bulkSelectionProvider(BulkEntity.notes).notifier,
+                          )
+                          .state =
+                      null,
+              items: value,
+              idOf: (e) => e.note.id,
+              titleOf: (e) => e.note.title,
+              groupOf: (e) => e.note.pinned ? '고정 메모' : '일반 메모',
+              onSave: (ordered) =>
+                  ref.read(appDatabaseProvider).transaction(() async {
+                    for (final pinned in [true, false]) {
+                      await ref
+                          .read(notesDaoProvider)
+                          .updateNoteOrder(
+                            pinned,
+                            ordered
+                                .where((e) => e.note.pinned == pinned)
+                                .map((e) => e.note.id)
+                                .toList(),
+                          );
+                    }
+                  }),
+              builder: (context, orderButton) => Column(
+                children: [
+                  Align(alignment: Alignment.centerLeft, child: orderButton),
+                  BulkSelectionToolbar(
+                    entity: BulkEntity.notes,
+                    items: [
+                      for (final entry in filtered)
+                        BulkItem(entry.note.id, entry.note.title),
+                    ],
+                  ),
+                  for (final entry in filtered) _MobileNoteCard(entry: entry),
+                ],
+              ),
             );
           },
         ),
@@ -412,10 +443,10 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
 
   late final _title = TextEditingController(text: _note?.title ?? '');
   late final _richController = QuillController(
-    document: _note == null ? Document() : documentFromNote(_note!),
+    document: _note == null ? Document() : documentForUnifiedNoteEditor(_note!),
     selection: const TextSelection.collapsed(offset: 0),
   );
-  late final _goalDraft = NoteGoalDraft(_note);
+  late final _goalDraft = NoteGoalDraft(null);
   final _richFocus = FocusNode();
   final _richScroll = ScrollController();
   final _formScroll = ScrollController();
@@ -854,6 +885,7 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
       _goalDraft.start = start;
       _goalDraft.due = due;
       _goalDraft.refresh();
+      migrateLegacyGoalDraft(_richController, _goalDraft);
       _scheduleType = NoteScheduleTypeStorage.parse(
         settings['scheduleType'] as String,
       );
@@ -982,7 +1014,6 @@ class _MobileNoteSheetState extends ConsumerState<_MobileNoteSheet> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      NoteGoalForm(draft: _goalDraft, busy: _busy),
                       MobileNoteEditor(
                         controller: _richController,
                         focusNode: _richFocus,

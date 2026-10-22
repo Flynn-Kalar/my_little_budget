@@ -115,9 +115,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SingleChildScrollView(
-            child: NoteGoalForm(draft: draft, showType: false),
-          ),
+          body: SingleChildScrollView(child: NoteGoalForm(draft: draft)),
         ),
       ),
     );

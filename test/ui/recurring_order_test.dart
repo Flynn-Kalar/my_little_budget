@@ -107,25 +107,10 @@ void main() {
                   .dy,
             ),
           );
-          // Explicit drag handles work on both touch and desktop surfaces.
-          final handle = find.descendant(
-            of: find.byKey(ValueKey('recurring-order-row-${ids[1]}')),
-            matching: find.byType(ReorderableDragStartListener),
-          );
-          final start = tester.getCenter(handle);
-          final target = tester.getTopLeft(
-            find.byKey(ValueKey('recurring-order-row-${ids.last}')),
-          );
-          final gesture = await tester.startGesture(start);
-          await tester.pump();
-          await gesture.moveBy(const Offset(0, -20));
-          await tester.pump();
-          await gesture.moveTo(Offset(start.dx, target.dy - 36));
-          await tester.pump(const Duration(seconds: 1));
-          await gesture.moveBy(const Offset(0, -60));
-          await tester.pump(const Duration(milliseconds: 300));
-          await gesture.up();
-          await tester.pumpAndSettle();
+          // Category-style inline controls replace the separate drag dialog.
+          expect(find.byType(AlertDialog), findsNothing);
+          await tap(find.byKey(ValueKey('recurring-order-up-${ids[1]}')));
+          await tap(find.byKey(ValueKey('recurring-order-up-${ids[1]}')));
           await tap(find.byKey(const ValueKey('recurring-order-save')));
           for (var i = 0; i < 10; i++) {
             await tester.pump(const Duration(milliseconds: 20));

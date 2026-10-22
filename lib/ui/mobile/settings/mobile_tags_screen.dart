@@ -11,6 +11,7 @@ import '../mobile_widgets.dart';
 import '../../../data/tag_category_links.dart';
 import '../../shared/tag_category_selector.dart';
 import '../../shared/bulk_manage_button.dart';
+import '../../shared/inline_order_editor.dart';
 
 class MobileTagsScreen extends ConsumerWidget {
   const MobileTagsScreen({super.key});
@@ -35,15 +36,36 @@ class MobileTagsScreen extends ConsumerWidget {
           value: tags,
           builder: (items) {
             if (items.isEmpty) return const EmptyMobileCard('태그가 없습니다.');
-            return Column(
-              children: [
-                BulkSelectionToolbar(
-                  entity: BulkEntity.tags,
-                  items: [for (final tag in items) BulkItem(tag.id, tag.name)],
-                ),
-                for (var i = 0; i < items.length; i++)
-                  _TagCard(tag: items[i], tags: items, index: i),
-              ],
+            return InlineOrderEditor<Tag>(
+              prefix: 'tags-order',
+              enabled: !bulkSelectionIsBusy(ref, BulkEntity.tags),
+              onStart: () =>
+                  ref
+                          .read(bulkSelectionProvider(BulkEntity.tags).notifier)
+                          .state =
+                      null,
+              items: items,
+              idOf: (r) => r.id,
+              titleOf: (r) => r.name,
+              onSave: (rows) async {
+                await ref
+                    .read(tagsDaoProvider)
+                    .updateTagOrder(rows.map((r) => r.id).toList());
+                refreshTags(ref);
+              },
+              builder: (context, orderButton) => Column(
+                children: [
+                  Align(alignment: Alignment.centerLeft, child: orderButton),
+                  BulkSelectionToolbar(
+                    entity: BulkEntity.tags,
+                    items: [
+                      for (final tag in items) BulkItem(tag.id, tag.name),
+                    ],
+                  ),
+                  for (var i = 0; i < items.length; i++)
+                    _TagCard(tag: items[i], tags: items, index: i),
+                ],
+              ),
             );
           },
         ),
@@ -71,18 +93,6 @@ class _TagCard extends ConsumerWidget {
   final Tag tag;
   final List<Tag> tags;
   final int index;
-
-  Future<void> _move(WidgetRef ref, int direction) async {
-    final target = index + direction;
-    if (target < 0 || target >= tags.length) return;
-    final ordered = [...tags];
-    final moving = ordered.removeAt(index);
-    ordered.insert(target, moving);
-    await ref
-        .read(tagsDaoProvider)
-        .updateTagOrder(ordered.map((tag) => tag.id).toList());
-    refreshTags(ref);
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -119,10 +129,6 @@ class _TagCard extends ConsumerWidget {
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(SnackBar(content: Text(message)));
-                } else if (value == 'up') {
-                  _move(ref, -1);
-                } else if (value == 'down') {
-                  _move(ref, 1);
                 }
               },
               itemBuilder: (context) => [
@@ -131,22 +137,6 @@ class _TagCard extends ConsumerWidget {
                   child: ListTile(
                     leading: Icon(Icons.edit_outlined),
                     title: Text('수정'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'up',
-                  enabled: index > 0,
-                  child: const ListTile(
-                    leading: Icon(Icons.arrow_upward),
-                    title: Text('위로 이동'),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'down',
-                  enabled: index < tags.length - 1,
-                  child: const ListTile(
-                    leading: Icon(Icons.arrow_downward),
-                    title: Text('아래로 이동'),
                   ),
                 ),
               ],

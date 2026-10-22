@@ -239,6 +239,7 @@ Map<String, Object?> _noteJson(Map<String, dynamic> m) {
   m['alarmClipStartMs'] ??= 0;
   m['alarmVibrationEnabled'] ??= true;
   m['showOnCalendar'] ??= false;
+  m['sortOrder'] ??= 0;
   return _bools(m, const [
     'completed',
     'pinned',

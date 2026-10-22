@@ -41,6 +41,7 @@ const noteSyncColumns = <String>[
   'show_on_calendar',
   'completed',
   'pinned',
+  'sort_order',
   'created_at',
 ];
 

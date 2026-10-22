@@ -80,7 +80,6 @@ class _GoalBlockDialogState extends State<_GoalBlockDialog> {
               ),
               NoteGoalForm(
                 draft: draft,
-                showType: false,
                 showAdditionControls: widget.showAdditionControls,
               ),
               if (error != null)

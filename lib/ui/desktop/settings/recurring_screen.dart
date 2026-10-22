@@ -45,14 +45,6 @@ class RecurringScreen extends ConsumerWidget {
               style: TextStyle(fontSize: 13, color: context.desktopMuted),
             ),
             SizedBox(height: 24),
-            RecurringOrderButton(items: items.asData?.value ?? const []),
-            BulkSelectionToolbar(
-              entity: BulkEntity.recurring,
-              items: [
-                for (final item in items.asData?.value ?? [])
-                  BulkItem(item.recurring.id, item.recurring.name),
-              ],
-            ),
             items.when(
               loading: () => Padding(
                 padding: EdgeInsets.all(40),
@@ -62,11 +54,27 @@ class RecurringScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(20),
                 child: Text('불러오기 오류: $e'),
               ),
-              data: (rows) => RecurringList(
+              data: (rows) => RecurringOrderEditor(
                 items: rows,
-                accounts: accounts,
-                categories: categories,
-                tags: tags,
+                builder: (context, orderButton) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(alignment: Alignment.centerLeft, child: orderButton),
+                    BulkSelectionToolbar(
+                      entity: BulkEntity.recurring,
+                      items: [
+                        for (final row in rows)
+                          BulkItem(row.recurring.id, row.recurring.name),
+                      ],
+                    ),
+                    RecurringList(
+                      items: rows,
+                      accounts: accounts,
+                      categories: categories,
+                      tags: tags,
+                    ),
+                  ],
+                ),
               ),
             ),
             SizedBox(height: 40),

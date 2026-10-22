@@ -22,7 +22,9 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
   Stream<List<Note>> watchNotes() {
     return (select(notes)..orderBy([
           (n) => OrderingTerm(expression: n.pinned, mode: OrderingMode.desc),
+          (n) => OrderingTerm(expression: n.sortOrder),
           (n) => OrderingTerm(expression: n.updatedAt, mode: OrderingMode.desc),
+          (n) => OrderingTerm(expression: n.id, mode: OrderingMode.desc),
         ]))
         .watch();
   }
@@ -52,11 +54,33 @@ class NotesDao extends DatabaseAccessor<AppDatabase> with _$NotesDaoMixin {
       result.sort((a, b) {
         final pinned = (b.note.pinned ? 1 : 0).compareTo(a.note.pinned ? 1 : 0);
         if (pinned != 0) return pinned;
-        return b.note.updatedAt.compareTo(a.note.updatedAt);
+        final order = a.note.sortOrder.compareTo(b.note.sortOrder);
+        if (order != 0) return order;
+        final updated = b.note.updatedAt.compareTo(a.note.updatedAt);
+        return updated != 0 ? updated : b.note.id.compareTo(a.note.id);
       });
       return result;
     });
   }
+
+  /// Reorder a complete pin group; stale or cross-group requests are atomic errors.
+  Future<void> updateNoteOrder(bool pinned, List<int> orderedIds) =>
+      transaction(() async {
+        final current = await (select(
+          notes,
+        )..where((n) => n.pinned.equals(pinned))).get();
+        final ids = current.map((n) => n.id).toSet();
+        if (orderedIds.length != ids.length ||
+            orderedIds.toSet().length != ids.length ||
+            !orderedIds.every(ids.contains)) {
+          throw StateError('메모 목록이 변경되었습니다. 순서 편집을 다시 시작하세요.');
+        }
+        for (var i = 0; i < orderedIds.length; i++) {
+          await (update(notes)..where((n) => n.id.equals(orderedIds[i]))).write(
+            NotesCompanion(sortOrder: Value(i + 1)),
+          );
+        }
+      });
 
   Future<int> pendingReminderCount(DateTime now) async {
     final cutoff = now.toUtc().toIso8601String();
@@ -482,7 +506,15 @@ AND EXISTS (
     return result;
   }
 
-  Future<List<Note>> listNotes() => select(notes).get();
+  Future<List<Note>> listNotes() =>
+      (select(notes)..orderBy([
+            (n) => OrderingTerm(expression: n.pinned, mode: OrderingMode.desc),
+            (n) => OrderingTerm(expression: n.sortOrder),
+            (n) =>
+                OrderingTerm(expression: n.updatedAt, mode: OrderingMode.desc),
+            (n) => OrderingTerm(expression: n.id, mode: OrderingMode.desc),
+          ]))
+          .get();
 
   Future<int> reconcileRecurringNotes(DateTime now) async {
     final cutoff = now.toUtc().toIso8601String();

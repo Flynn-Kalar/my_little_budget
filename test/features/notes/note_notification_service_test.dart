@@ -212,6 +212,7 @@ NoteWithChecklist _entry({
 }) {
   return NoteWithChecklist(
     note: Note(
+      sortOrder: 0,
       id: 42,
       uuid: '00000000-0000-4000-8000-000000000042',
       syncStatus: 'pending',

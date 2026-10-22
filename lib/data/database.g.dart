@@ -7521,6 +7521,18 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -7582,6 +7594,7 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     showOnCalendar,
     completed,
     pinned,
+    sortOrder,
     createdAt,
     updatedAt,
   ];
@@ -7878,6 +7891,12 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         pinned.isAcceptableOrUnknown(data['pinned']!, _pinnedMeta),
       );
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -8039,6 +8058,10 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
         DriftSqlType.bool,
         data['${effectivePrefix}pinned'],
       )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}created_at'],
@@ -8092,6 +8115,7 @@ class Note extends DataClass implements Insertable<Note> {
   final bool showOnCalendar;
   final bool completed;
   final bool pinned;
+  final int sortOrder;
   final String createdAt;
   final String updatedAt;
   const Note({
@@ -8130,6 +8154,7 @@ class Note extends DataClass implements Insertable<Note> {
     required this.showOnCalendar,
     required this.completed,
     required this.pinned,
+    required this.sortOrder,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -8211,6 +8236,7 @@ class Note extends DataClass implements Insertable<Note> {
     map['show_on_calendar'] = Variable<bool>(showOnCalendar);
     map['completed'] = Variable<bool>(completed);
     map['pinned'] = Variable<bool>(pinned);
+    map['sort_order'] = Variable<int>(sortOrder);
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
     return map;
@@ -8289,6 +8315,7 @@ class Note extends DataClass implements Insertable<Note> {
       showOnCalendar: Value(showOnCalendar),
       completed: Value(completed),
       pinned: Value(pinned),
+      sortOrder: Value(sortOrder),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -8345,6 +8372,7 @@ class Note extends DataClass implements Insertable<Note> {
       showOnCalendar: serializer.fromJson<bool>(json['showOnCalendar']),
       completed: serializer.fromJson<bool>(json['completed']),
       pinned: serializer.fromJson<bool>(json['pinned']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
     );
@@ -8392,6 +8420,7 @@ class Note extends DataClass implements Insertable<Note> {
       'showOnCalendar': serializer.toJson<bool>(showOnCalendar),
       'completed': serializer.toJson<bool>(completed),
       'pinned': serializer.toJson<bool>(pinned),
+      'sortOrder': serializer.toJson<int>(sortOrder),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
     };
@@ -8433,6 +8462,7 @@ class Note extends DataClass implements Insertable<Note> {
     bool? showOnCalendar,
     bool? completed,
     bool? pinned,
+    int? sortOrder,
     String? createdAt,
     String? updatedAt,
   }) => Note(
@@ -8492,6 +8522,7 @@ class Note extends DataClass implements Insertable<Note> {
     showOnCalendar: showOnCalendar ?? this.showOnCalendar,
     completed: completed ?? this.completed,
     pinned: pinned ?? this.pinned,
+    sortOrder: sortOrder ?? this.sortOrder,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -8586,6 +8617,7 @@ class Note extends DataClass implements Insertable<Note> {
           : this.showOnCalendar,
       completed: data.completed.present ? data.completed.value : this.completed,
       pinned: data.pinned.present ? data.pinned.value : this.pinned,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -8629,6 +8661,7 @@ class Note extends DataClass implements Insertable<Note> {
           ..write('showOnCalendar: $showOnCalendar, ')
           ..write('completed: $completed, ')
           ..write('pinned: $pinned, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -8672,6 +8705,7 @@ class Note extends DataClass implements Insertable<Note> {
     showOnCalendar,
     completed,
     pinned,
+    sortOrder,
     createdAt,
     updatedAt,
   ]);
@@ -8715,6 +8749,7 @@ class Note extends DataClass implements Insertable<Note> {
           other.showOnCalendar == this.showOnCalendar &&
           other.completed == this.completed &&
           other.pinned == this.pinned &&
+          other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -8755,6 +8790,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
   final Value<bool> showOnCalendar;
   final Value<bool> completed;
   final Value<bool> pinned;
+  final Value<int> sortOrder;
   final Value<String> createdAt;
   final Value<String> updatedAt;
   const NotesCompanion({
@@ -8793,6 +8829,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     this.showOnCalendar = const Value.absent(),
     this.completed = const Value.absent(),
     this.pinned = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -8832,6 +8869,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     this.showOnCalendar = const Value.absent(),
     this.completed = const Value.absent(),
     this.pinned = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : title = Value(title);
@@ -8871,6 +8909,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     Expression<bool>? showOnCalendar,
     Expression<bool>? completed,
     Expression<bool>? pinned,
+    Expression<int>? sortOrder,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
   }) {
@@ -8915,6 +8954,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
       if (showOnCalendar != null) 'show_on_calendar': showOnCalendar,
       if (completed != null) 'completed': completed,
       if (pinned != null) 'pinned': pinned,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -8956,6 +8996,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
     Value<bool>? showOnCalendar,
     Value<bool>? completed,
     Value<bool>? pinned,
+    Value<int>? sortOrder,
     Value<String>? createdAt,
     Value<String>? updatedAt,
   }) {
@@ -8999,6 +9040,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
       showOnCalendar: showOnCalendar ?? this.showOnCalendar,
       completed: completed ?? this.completed,
       pinned: pinned ?? this.pinned,
+      sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -9120,6 +9162,9 @@ class NotesCompanion extends UpdateCompanion<Note> {
     if (pinned.present) {
       map['pinned'] = Variable<bool>(pinned.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
     }
@@ -9167,6 +9212,7 @@ class NotesCompanion extends UpdateCompanion<Note> {
           ..write('showOnCalendar: $showOnCalendar, ')
           ..write('completed: $completed, ')
           ..write('pinned: $pinned, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -18908,6 +18954,7 @@ typedef $$NotesTableCreateCompanionBuilder =
       Value<bool> showOnCalendar,
       Value<bool> completed,
       Value<bool> pinned,
+      Value<int> sortOrder,
       Value<String> createdAt,
       Value<String> updatedAt,
     });
@@ -18948,6 +18995,7 @@ typedef $$NotesTableUpdateCompanionBuilder =
       Value<bool> showOnCalendar,
       Value<bool> completed,
       Value<bool> pinned,
+      Value<int> sortOrder,
       Value<String> createdAt,
       Value<String> updatedAt,
     });
@@ -19179,6 +19227,11 @@ class $$NotesTableFilterComposer extends Composer<_$AppDatabase, $NotesTable> {
 
   ColumnFilters<bool> get pinned => $composableBuilder(
     column: $table.pinned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19427,6 +19480,11 @@ class $$NotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -19606,6 +19664,9 @@ class $$NotesTableAnnotationComposer
   GeneratedColumn<bool> get pinned =>
       $composableBuilder(column: $table.pinned, builder: (column) => column);
 
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -19731,6 +19792,7 @@ class $$NotesTableTableManager
                 Value<bool> showOnCalendar = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
                 Value<bool> pinned = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
               }) => NotesCompanion(
@@ -19769,6 +19831,7 @@ class $$NotesTableTableManager
                 showOnCalendar: showOnCalendar,
                 completed: completed,
                 pinned: pinned,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -19810,6 +19873,7 @@ class $$NotesTableTableManager
                 Value<bool> showOnCalendar = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
                 Value<bool> pinned = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
                 Value<String> updatedAt = const Value.absent(),
               }) => NotesCompanion.insert(
@@ -19848,6 +19912,7 @@ class $$NotesTableTableManager
                 showOnCalendar: showOnCalendar,
                 completed: completed,
                 pinned: pinned,
+                sortOrder: sortOrder,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),

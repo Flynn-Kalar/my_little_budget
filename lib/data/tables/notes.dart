@@ -48,6 +48,7 @@ class Notes extends Table {
       boolean().withDefault(const Constant(false))();
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
   BoolColumn get pinned => boolean().withDefault(const Constant(false))();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   TextColumn get createdAt =>
       text().withDefault(const CustomExpression("datetime('now')"))();
   TextColumn get updatedAt =>

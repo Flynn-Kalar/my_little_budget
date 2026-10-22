@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 
 import '../../data/database.dart';
 import '../../features/notes/note_amount_goal.dart';
+import '../../features/notes/note_goal_block.dart';
+
+/// Old temporary drafts may still have a separate goal. Bring it into the body
+/// before the next save, just like a legacy saved note.
+void migrateLegacyGoalDraft(QuillController controller, NoteGoalDraft draft) {
+  final goal = draft.goal;
+  if (goal == null) return;
+  controller.updateSelection(
+    TextSelection.collapsed(offset: controller.document.length - 1),
+    ChangeSource.local,
+  );
+  insertNoteGoalBlock(controller, newNoteGoalBlock('', goal));
+  draft.enabled = false;
+  draft.refresh();
+}
 
 class NoteGoalDraft extends ChangeNotifier {
   NoteGoalDraft(Note? note) {
@@ -80,12 +96,10 @@ class NoteGoalForm extends StatelessWidget {
     super.key,
     required this.draft,
     this.busy = false,
-    this.showType = true,
     this.showAdditionControls = true,
   });
   final NoteGoalDraft draft;
   final bool busy;
-  final bool showType;
   final bool showAdditionControls;
 
   Future<void> _pickDate(BuildContext context, {required bool due}) async {
@@ -110,24 +124,6 @@ class NoteGoalForm extends StatelessWidget {
     builder: (context, _) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (showType)
-          DropdownButtonFormField<bool>(
-            initialValue: draft.enabled,
-            decoration: const InputDecoration(
-              labelText: '메모 유형',
-              helperText: '본문 중간의 금액 목표는 서식 도구 모음의 저금통 버튼으로 삽입하세요.',
-            ),
-            items: const [
-              DropdownMenuItem(value: false, child: Text('일반 메모')),
-              DropdownMenuItem(value: true, child: Text('금액 목표')),
-            ],
-            onChanged: busy
-                ? null
-                : (value) {
-                    draft.enabled = value ?? false;
-                    draft.refresh();
-                  },
-          ),
         if (draft.enabled) ...[
           TextField(
             controller: draft.target,

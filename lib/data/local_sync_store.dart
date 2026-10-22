@@ -417,7 +417,8 @@ WHERE uuid = ?
     final values = <String, Object?>{};
     for (final column in _payloadColumns[entity]!) {
       if (!payload.containsKey(column)) {
-        if (entity == 'recurring_transactions' && column == 'sort_order') {
+        if ((entity == 'recurring_transactions' || entity == 'notes') &&
+            column == 'sort_order') {
           continue; // Older clients preserve the local order; new rows use zero.
         }
         if (entity == 'calendar_events' && column == 'schedule_data') {

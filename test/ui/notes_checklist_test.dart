@@ -11,6 +11,10 @@ import 'package:my_little_budget/ui/desktop/notes/notes_screen.dart';
 import 'package:my_little_budget/ui/mobile/notes/mobile_notes_screen.dart';
 import 'package:my_little_budget/ui/shared/rich_note_editor.dart';
 import 'package:my_little_budget/ui/shared/note_amount_goal.dart';
+import 'package:my_little_budget/features/notes/note_amount_goal.dart';
+import 'package:my_little_budget/features/notes/note_goal_block.dart';
+import 'package:my_little_budget/features/notes/rich_note.dart';
+import 'package:drift/drift.dart' show Value;
 
 void main() {
   Future<AppDatabase> pumpNotesScreen(
@@ -149,98 +153,155 @@ void main() {
 
   for (final mobile in [false, true]) {
     testWidgets(
-      '${mobile ? 'mobile' : 'desktop'} creates and edits normal and amount goal notes',
+      '${mobile ? 'mobile' : 'desktop'} converts legacy goals only on save',
       (tester) async {
         final db = await pumpNotesScreen(tester, mobile: mobile);
         addTearDown(() => tester.binding.setSurfaceSize(null));
         addTearDown(db.close);
-        final titleField = find.byWidgetPredicate(
-          (widget) =>
-              widget is TextField && widget.decoration?.labelText == '제목',
+        final id = await db.notesDao.saveNote(
+          title: '기존 목표',
+          content: '유지할 본문',
+          amountGoal: Value(
+            NoteAmountGoal(
+              targetAmount: 2000000,
+              currentAmount: 500000,
+              startDate: DateTime(2026, 1, 1),
+            ),
+          ),
         );
-        Future<void> createNote(String title, {bool goal = false}) async {
-          await tester.tap(mobile ? find.byTooltip('새 메모') : find.text('새 메모'));
-          await tester.pumpAndSettle();
-          await tester.enterText(titleField, title);
-          if (goal) {
-            await tester.tap(find.byType(DropdownButtonFormField<bool>));
-            await tester.pumpAndSettle();
-            await tester.tap(find.text('금액 목표').last);
-            await tester.pumpAndSettle();
-            final form = tester.widget<NoteGoalForm>(find.byType(NoteGoalForm));
-            form.draft.target.text = '2,681,630';
-            form.draft.current.text = '1,000,000';
-            if (mobile) {
-              await tester.ensureVisible(find.text('+400,000'));
-              await tester.pumpAndSettle();
-              await tester.tap(find.text('+400,000'));
-            } else {
-              expect(find.text('+400,000'), findsNothing);
-              expect(find.text('금액 추가'), findsNothing);
-              await tester.enterText(
-                find.byWidgetPredicate(
-                  (w) => w is TextField && w.decoration?.labelText == '현재 금액',
-                ),
-                '1,400,000',
-              );
-            }
-            await tester.pumpAndSettle();
-            expect(form.draft.current.text, '1,400,000');
-          }
-          final editor = tester.widget<RichNoteEditor>(
-            find.byType(RichNoteEditor),
-          );
-          editor.controller.replaceText(
-            0,
-            0,
-            '일반 본문',
-            const TextSelection.collapsed(offset: 5),
-          );
-          await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text('저장'));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text('저장'));
-          await tester.pumpAndSettle();
-          expect(find.text(title), findsOneWidget);
-        }
-
-        await createNote('새 일반 메모');
-        expect((await db.notesDao.getNote(1))!.content, '일반 본문');
-        expect((await db.notesDao.getNote(1))!.goalTargetAmount, isNull);
-        await createNote('컴퓨터 비상금 복구', goal: true);
-        expect((await db.notesDao.getNote(2))!.goalCurrentAmount, 1400000);
-        expect(find.text('52.2%'), findsOneWidget);
-        await tester.tap(find.text('컴퓨터 비상금 복구'));
         await tester.pumpAndSettle();
-        expect(find.byType(RichNoteViewer), findsOneWidget);
-        expect(find.text('남은 금액 1,281,630원'), findsWidgets);
+        await tester.tap(find.text('기존 목표'));
+        await tester.pumpAndSettle();
         await tester.tap(find.byIcon(Icons.edit_outlined));
         await tester.pumpAndSettle();
-        final draft = tester
-            .widget<NoteGoalForm>(find.byType(NoteGoalForm))
-            .draft;
-        expect(draft.target.text, '2,681,630');
-        draft.current.text = '3,000,000';
-        if (mobile) {
-          draft.addition.text = '123,456';
-          await tester.ensureVisible(find.text('금액 추가'));
-          await tester.pumpAndSettle();
-          await tester.tap(find.text('금액 추가'));
-        } else {
-          expect(find.text('금액 추가'), findsNothing);
-          draft.current.text = '3,123,456';
-        }
+        expect(find.text('메모 유형'), findsNothing);
+        expect(find.byType(NoteGoalForm), findsNothing);
+        var editor = tester.widget<RichNoteEditor>(find.byType(RichNoteEditor));
+        expect(
+          plainTextFromDocument(editor.controller.document),
+          contains('유지할 본문'),
+        );
+        expect(
+          plainTextFromDocument(editor.controller.document),
+          contains('500,000 / 2,000,000원'),
+        );
+        expect((await db.notesDao.getNote(id))!.goalTargetAmount, 2000000);
+        await tester.ensureVisible(find.text('취소'));
+        await tester.tap(find.text('취소'));
+        await tester.pumpAndSettle();
+        expect((await db.notesDao.getNote(id))!.richContent, isNull);
+        await tester.tap(find.byIcon(Icons.edit_outlined));
+        await tester.pumpAndSettle();
+        editor = tester.widget<RichNoteEditor>(find.byType(RichNoteEditor));
+        final op = editor.controller.document
+            .toDelta()
+            .toList()
+            .where((o) => o.data is Map)
+            .single;
+        final block = NoteGoalBlock.decode(
+          (op.data as Map)[noteGoalBlockType],
+        )!;
+        replaceNoteGoalBlock(
+          editor.controller,
+          block.id,
+          NoteGoalBlock(
+            id: block.id,
+            title: '변환한 목표',
+            goal: NoteAmountGoal(
+              targetAmount: 2000000,
+              currentAmount: -1000,
+              startDate: block.goal.startDate,
+            ),
+          ),
+        );
         await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('저장'));
-        await tester.pumpAndSettle();
         await tester.tap(find.text('저장'));
         await tester.pumpAndSettle();
-        expect((await db.notesDao.getNote(2))!.goalCurrentAmount, 3123456);
-        expect(find.text('100.0%'), findsWidgets);
-        expect(find.text('남은 금액 0원'), findsWidgets);
-        expect(tester.takeException(), isNull);
+        final saved = (await db.notesDao.getNote(id))!;
+        expect(saved.goalTargetAmount, isNull);
+        expect(saved.richContent, contains('budget-goal'));
+        final restored = documentForUnifiedNoteEditor(saved);
+        expect(
+          restored.toDelta().toList().where((o) => o.data is Map),
+          hasLength(1),
+        );
+        expect(
+          plainTextFromDocument(restored),
+          contains('-1,000 / 2,000,000원'),
+        );
         await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 1));
         await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final mobile in [false, true]) {
+    testWidgets(
+      '${mobile ? 'mobile' : 'desktop'} orders notes inline within pin groups',
+      (tester) async {
+        final db = await pumpNotesScreen(tester, mobile: mobile);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        addTearDown(db.close);
+        final a = await db.notesDao.saveNote(
+          title: '고정 A',
+          content: '',
+          pinned: true,
+        );
+        final b = await db.notesDao.saveNote(
+          title: '고정 B',
+          content: '',
+          pinned: true,
+        );
+        final c = await db.notesDao.saveNote(title: '일반 C', content: '');
+        final d = await db.notesDao.saveNote(title: '일반 D', content: '');
+        await db.notesDao.updateNoteOrder(true, [a, b]);
+        await db.notesDao.updateNoteOrder(false, [c, d]);
+        await tester.pumpAndSettle();
+        Future<void> tap(Finder f) async {
+          await tester.ensureVisible(f);
+          await tester.pumpAndSettle();
+          await tester.tap(f);
+          await tester.pumpAndSettle();
+        }
+
+        Finder key(String value) => find.byKey(ValueKey(value));
+        await tap(key('notes-order-button'));
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(
+          tester.widget<IconButton>(key('notes-order-up-$a')).onPressed,
+          isNull,
+        );
+        expect(
+          tester.widget<IconButton>(key('notes-order-down-$b')).onPressed,
+          isNull,
+        );
+        expect(
+          tester.widget<IconButton>(key('notes-order-up-$c')).onPressed,
+          isNull,
+        );
+        await tap(key('notes-order-up-$b'));
+        await tap(find.text('취소'));
+        expect((await db.notesDao.listNotes()).map((n) => n.id), [a, b, c, d]);
+        await tap(key('notes-order-button'));
+        await tap(key('notes-order-up-$b'));
+        await tap(key('notes-order-up-$d'));
+        await tap(key('notes-order-save'));
+        expect((await db.notesDao.listNotes()).map((n) => n.id), [b, a, d, c]);
+        await tap(key('notes-order-button'));
+        expect(
+          tester.getTopLeft(key('notes-order-row-$b')).dy,
+          lessThan(tester.getTopLeft(key('notes-order-row-$a')).dy),
+        );
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expect(key('notes-order-button'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(milliseconds: 1));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
       },
     );
   }

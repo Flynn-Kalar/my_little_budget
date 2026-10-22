@@ -85,7 +85,7 @@ class CalendarScheduleSettings {
     try {
       if (timeZone != null) calendarZone(timeZone);
     } catch (_) {
-      return '시간대는 Asia/Seoul 같은 IANA 이름으로 입력하세요.';
+      return '지역명을 검색해 목록에서 시간대를 선택하세요.';
     }
     return null;
   }

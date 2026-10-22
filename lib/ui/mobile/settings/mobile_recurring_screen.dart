@@ -39,18 +39,21 @@ class MobileRecurringScreen extends ConsumerWidget {
           value: items,
           builder: (value) {
             if (value.isEmpty) return const EmptyMobileCard('반복거래가 없습니다.');
-            return Column(
-              children: [
-                RecurringOrderButton(items: value),
-                BulkSelectionToolbar(
-                  entity: BulkEntity.recurring,
-                  items: [
-                    for (final item in value)
-                      BulkItem(item.recurring.id, item.recurring.name),
-                  ],
-                ),
-                for (final item in value) _RecurringCard(item: item),
-              ],
+            return RecurringOrderEditor(
+              items: value,
+              builder: (context, orderButton) => Column(
+                children: [
+                  Align(alignment: Alignment.centerLeft, child: orderButton),
+                  BulkSelectionToolbar(
+                    entity: BulkEntity.recurring,
+                    items: [
+                      for (final item in value)
+                        BulkItem(item.recurring.id, item.recurring.name),
+                    ],
+                  ),
+                  for (final item in value) _RecurringCard(item: item),
+                ],
+              ),
             );
           },
         ),

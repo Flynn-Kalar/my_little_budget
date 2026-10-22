@@ -9,6 +9,7 @@ import '../../../features/categories/validation.dart';
 import '../../shared/category_icon.dart';
 import '../../shared/category_icon_picker.dart';
 import '../../shared/bulk_manage_button.dart';
+import '../../shared/inline_order_editor.dart';
 import 'package:my_little_budget/features/settings/providers.dart';
 import '../mobile_widgets.dart';
 
@@ -73,7 +74,7 @@ class MobileCategoriesScreen extends ConsumerWidget {
   }
 }
 
-class _CategorySection extends StatelessWidget {
+class _CategorySection extends ConsumerWidget {
   const _CategorySection({
     required this.title,
     required this.items,
@@ -85,26 +86,49 @@ class _CategorySection extends StatelessWidget {
   final bool archived;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (items.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-          child: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w800),
+    return InlineOrderEditor<Category>(
+      prefix: 'categories-${items.first.type}-order',
+      enabled: !bulkSelectionIsBusy(ref, BulkEntity.categories),
+      onStart: () =>
+          ref
+                  .read(bulkSelectionProvider(BulkEntity.categories).notifier)
+                  .state =
+              null,
+      items: items,
+      idOf: (r) => r.id,
+      titleOf: (r) => r.name,
+      onSave: (rows) async {
+        await ref
+            .read(categoriesDaoProvider)
+            .updateCategoryOrder(
+              items.first.type,
+              rows.map((r) => r.id).toList(),
+            );
+        refreshCategories(ref);
+      },
+      builder: (context, orderButton) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!archived)
+            Align(alignment: Alignment.centerRight, child: orderButton),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
           ),
-        ),
-        for (var i = 0; i < items.length; i++)
-          _CategoryCard(
-            item: items[i],
-            sectionItems: items,
-            index: i,
-            archived: archived,
-          ),
-      ],
+          for (var i = 0; i < items.length; i++)
+            _CategoryCard(
+              item: items[i],
+              sectionItems: items,
+              index: i,
+              archived: archived,
+            ),
+        ],
+      ),
     );
   }
 }
@@ -121,18 +145,6 @@ class _CategoryCard extends ConsumerWidget {
   final List<Category> sectionItems;
   final int index;
   final bool archived;
-
-  Future<void> _move(WidgetRef ref, int direction) async {
-    final target = index + direction;
-    if (target < 0 || target >= sectionItems.length) return;
-    final ordered = [...sectionItems];
-    final moving = ordered.removeAt(index);
-    ordered.insert(target, moving);
-    await ref
-        .read(categoriesDaoProvider)
-        .updateCategoryOrder(item.type, ordered.map((c) => c.id).toList());
-    refreshCategories(ref);
-  }
 
   Future<void> _restore(BuildContext context, WidgetRef ref) async {
     await ref.read(categoriesDaoProvider).restoreCategory(item.id);
@@ -195,10 +207,6 @@ class _CategoryCard extends ConsumerWidget {
           onSelected: (value) {
             if (value == 'edit') {
               _CategorySheet.show(context, item: item);
-            } else if (value == 'up') {
-              _move(ref, -1);
-            } else if (value == 'down') {
-              _move(ref, 1);
             } else if (value == 'restore') {
               _restore(context, ref);
             } else if (value == 'delete') {
@@ -212,24 +220,6 @@ class _CategoryCard extends ConsumerWidget {
                 child: ListTile(
                   leading: Icon(Icons.edit_outlined),
                   title: Text('수정'),
-                ),
-              ),
-            if (!archived)
-              PopupMenuItem(
-                value: 'up',
-                enabled: index > 0,
-                child: const ListTile(
-                  leading: Icon(Icons.arrow_upward),
-                  title: Text('위로 이동'),
-                ),
-              ),
-            if (!archived)
-              PopupMenuItem(
-                value: 'down',
-                enabled: index < sectionItems.length - 1,
-                child: const ListTile(
-                  leading: Icon(Icons.arrow_downward),
-                  title: Text('아래로 이동'),
                 ),
               ),
             if (archived)

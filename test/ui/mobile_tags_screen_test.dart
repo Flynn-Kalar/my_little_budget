@@ -89,9 +89,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(PopupMenuButton<String>).last);
+    await tester.tap(find.byKey(const ValueKey('tags-order-button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('위로 이동'));
+    await tester.tap(find.byTooltip('위로 이동').last);
+    await tester.pumpAndSettle();
+    expect((await db.tagsDao.getTags()).map((t) => t.name), ['A', 'B']);
+    await tester.tap(find.byKey(const ValueKey('tags-order-save')));
     await tester.pumpAndSettle();
 
     final tags = await db.tagsDao.getTags();
