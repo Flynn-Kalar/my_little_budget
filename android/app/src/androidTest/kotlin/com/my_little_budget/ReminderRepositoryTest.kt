@@ -134,6 +134,34 @@ class ReminderRepositoryTest {
         }
     }
 
+    @Test fun openingReminderPreservesPartialChecklistAndDoesNotSnooze() {
+        db.execSQL("UPDATE note_checklist_items SET is_checked=1 WHERE id=1")
+        db.execSQL("INSERT INTO note_checklist_items VALUES(2,1,0,NULL)")
+        db.execSQL("UPDATE reminder_occurrences SET checklist_json=? WHERE id=1",
+            arrayOf("[{\"checked\":true},{\"checked\":false}]"))
+        assertNotNull(repository.claim(job))
+        val open = ReminderNavigation.intent(context, job)
+        assertEquals(1, open.getIntExtra(NoteAlarmScheduler.EXTRA_NOTE_ID, -1))
+        ReminderNavigation.consume(context, open)
+        // Re-consuming an Activity intent must be harmless.
+        ReminderNavigation.consume(context, open)
+        db.rawQuery("SELECT is_checked FROM note_checklist_items ORDER BY id",null).use { c ->
+            c.moveToFirst(); assertEquals(1,c.getInt(0))
+            c.moveToNext(); assertEquals(0,c.getInt(0))
+        }
+        db.rawQuery("SELECT status,checklist_json FROM reminder_occurrences WHERE id=1",null).use { c ->
+            c.moveToFirst(); assertEquals("pending",c.getString(0))
+            assertEquals("[{\"checked\":true},{\"checked\":false}]",c.getString(1))
+        }
+        db.rawQuery("SELECT state,snoozed_until FROM reminder_jobs WHERE id=1",null).use { c ->
+            c.moveToFirst(); assertEquals("dismissed",c.getString(0)); assertTrue(c.isNull(1))
+        }
+        db.rawQuery("SELECT completed FROM notes WHERE id=1",null).use { c ->
+            c.moveToFirst(); assertEquals(0,c.getInt(0))
+        }
+        assertTrue(repository.pending().isEmpty())
+    }
+
     @Test fun deletedNoteAndExpiredAlarmAreSuppressed() {
         db.execSQL("DELETE FROM notes")
         assertNull(repository.current(job))
@@ -167,8 +195,8 @@ class ReminderRepositoryTest {
         formatter.timeZone=java.util.TimeZone.getTimeZone("UTC")
         SQLiteDatabase.openDatabase(actual.absolutePath,null,SQLiteDatabase.OPEN_READWRITE).use { real ->
             real.execSQL("DELETE FROM notes WHERE title='headless-contract-test'")
-            real.execSQL("INSERT INTO notes(title,schedule_type,notification_enabled,reminder_at) VALUES(?,'once',1,?)",
-                arrayOf("headless-contract-test",formatter.format(java.util.Date(System.currentTimeMillis()+3_600_000))))
+            real.execSQL("INSERT INTO notes(uuid,title,schedule_type,notification_enabled,reminder_at) VALUES(?,?,'once',1,?)",
+                arrayOf(java.util.UUID.randomUUID().toString(),"headless-contract-test",formatter.format(java.util.Date(System.currentTimeMillis()+3_600_000))))
         }
         try {
             repository.configure(actual.absolutePath)
@@ -186,7 +214,7 @@ class ReminderRepositoryTest {
         }
     }
 
-    @Test fun scheduledAlarmStartsAudioAndCanBeStopped() {
+    @Test fun scheduledAlarmStartsAudioAndOpeningChecklistStopsItWithoutCompletion() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         fun shell(command: String) {
             instrumentation.uiAutomation.executeShellCommand(command).use { fd ->
@@ -209,6 +237,16 @@ class ReminderRepositoryTest {
                     .getLong("last_sound_started_at",0)<start) Thread.sleep(100)
             assertTrue("Scheduled receiver must reach MediaPlayer.start()",
                 context.getSharedPreferences("reminder_playback",0).getLong("last_sound_started_at",0)>=start)
+            val previousStop=context.getSharedPreferences("reminder_playback",0).getLong("last_sound_stopped_at",0)
+            ReminderNavigation.consume(context, ReminderNavigation.intent(context, payload))
+            val stoppedDeadline=System.currentTimeMillis()+3000
+            while(System.currentTimeMillis()<stoppedDeadline && context.getSharedPreferences("reminder_playback",0)
+                    .getLong("last_sound_stopped_at",0)<=previousStop) Thread.sleep(100)
+            assertTrue("Opening the checklist must stop the alarm audio",
+                context.getSharedPreferences("reminder_playback",0).getLong("last_sound_stopped_at",0)>previousStop)
+            db.rawQuery("SELECT status FROM reminder_occurrences WHERE id=1",null).use { c ->
+                c.moveToFirst(); assertEquals("pending",c.getString(0))
+            }
         } finally {
             context.startService(android.content.Intent(context,NoteAlarmPlaybackService::class.java)
                 .setAction(NoteAlarmPlaybackService.ACTION_STOP))

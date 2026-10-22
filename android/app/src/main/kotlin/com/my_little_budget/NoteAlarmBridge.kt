@@ -184,6 +184,7 @@ class NoteAlarmPlaybackService : Service() {
         if (intent?.action == ACTION_RECONCILE) {
             activeJobs.entries.removeAll { ReminderRepository(this).current(it.value) == null }
             if (activeJobs.isEmpty()) { stopPlayback(notifyScreen = true); stopSelf() }
+            else startForeground(NOTIFICATION_ID, notification(activeJobs.values.first()))
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_COMPLETE) {
@@ -321,14 +322,11 @@ class NoteAlarmPlaybackService : Service() {
     }
 
     private fun notification(job: JSONObject): android.app.Notification {
-        val noteId = job.optInt("noteId")
         val title = job.optString("title", "메모 알람")
         val open = PendingIntent.getActivity(
             this,
-            noteId,
-            Intent(this, MainActivity::class.java)
-                .putExtra(NoteAlarmScheduler.EXTRA_NOTE_ID, noteId)
-                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            job.getInt("id"),
+            ReminderNavigation.intent(this, job),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val stop = PendingIntent.getService(
@@ -379,11 +377,12 @@ class NoteAlarmPlaybackService : Service() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setFullScreenIntent(alarmScreen, true)
-            .addAction(0, NoteAlarmPresentationPolicy.STOP_ACTION_LABEL, stop)
+            .addAction(0, ReminderNavigation.label(job), open)
             .addAction(0, "완료", complete)
         if (job.optInt("snoozeMinutes", 0) > 0) {
             builder.addAction(0, "${job.optInt("snoozeMinutes",10)}분 뒤 다시 알림", snooze)
         }
+        builder.addAction(0, NoteAlarmPresentationPolicy.STOP_ACTION_LABEL, stop)
         return builder.build()
     }
 

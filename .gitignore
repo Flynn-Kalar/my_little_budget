@@ -60,6 +60,8 @@ app.*.map.json
 **/credentials.json
 **/service-account*.json
 **/service_account*.json
+**/gptupload-*.json
+/.google-play.local.json
 *.p12
 *.pfx
 

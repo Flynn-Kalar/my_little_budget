@@ -23,15 +23,14 @@ internal object ReminderNotification {
                 .putExtra(NoteAlarmScheduler.EXTRA_JOB,job.toString()),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val open=PendingIntent.getActivity(context,job.getInt("id"),
-            Intent(context,MainActivity::class.java).putExtra(NoteAlarmScheduler.EXTRA_NOTE_ID,job.optInt("noteId",-1))
-                .putExtra("occurrence_id",job.getInt("occurrenceId"))
-                .putExtra("calendar_event_id",job.optInt("calendarEventId",-1)),
+            ReminderNavigation.intent(context, job),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         manager.notify(job.getInt("id"),NotificationCompat.Builder(context,CHANNEL)
             .setSmallIcon(com.my_little_budget.R.drawable.ic_notification)
             .setContentTitle(job.optString("title")).setContentText(if(job.has("calendarEventId")) "일정을 확인하세요" else "할 일을 확인하세요")
             .addExtras(android.os.Bundle().apply { putString(NoteAlarmScheduler.EXTRA_JOB,job.toString()) })
             .setContentIntent(open).setAutoCancel(true).setDeleteIntent(action(DISMISS))
+            .addAction(0,ReminderNavigation.label(job),open)
             .addAction(0,if(job.has("calendarEventId")) "확인" else "완료",action(COMPLETE))
             .addAction(0,"다시 알림",action(SNOOZE)).build())
     }

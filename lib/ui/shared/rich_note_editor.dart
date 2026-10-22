@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -136,6 +137,31 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
         focusNode: widget.focusNode,
         scrollController: widget.scrollController,
         config: QuillEditorConfig(
+          customStyleBuilder: (attribute) =>
+              attribute == Attribute.checked || attribute == Attribute.unchecked
+              ? const TextStyle(height: 48 / 18)
+              : const TextStyle(),
+          textSpanBuilder: (context, node, offset, text, style, recognizer) {
+            final list = node.parent?.style.attributes[Attribute.list.key];
+            if (list == Attribute.checked || list == Attribute.unchecked) {
+              final fontSize = style?.fontSize ?? 18;
+              style = (style ?? const TextStyle()).copyWith(
+                fontSize: fontSize,
+                height: math.max(
+                  style?.height ?? widget.lineHeight ?? 1.2,
+                  48 / fontSize,
+                ),
+              );
+            }
+            return defaultSpanBuilder(
+              context,
+              node,
+              offset,
+              text,
+              style,
+              recognizer,
+            );
+          },
           onTapUp: readOnly && widget.onReadOnlyTap != null
               ? (details, positionForOffset) {
                   final position = positionForOffset(details.globalPosition);
@@ -161,6 +187,23 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
               ),
             ),
             lists: styles.lists!.copyWith(
+              checkboxUIBuilder: _NoteCheckboxBuilder(),
+              indentWidthBuilder: (block, context, count, numberWidth) {
+                final spacing = styles.lists!.indentWidthBuilder(
+                  block,
+                  context,
+                  count,
+                  numberWidth,
+                );
+                final list = block.style.attributes[Attribute.list.key];
+                if (list != Attribute.checked && list != Attribute.unchecked) {
+                  return spacing;
+                }
+                return HorizontalSpacing(
+                  math.max(48, spacing.left),
+                  spacing.right,
+                );
+              },
               style: styles.lists!.style.copyWith(
                 fontSize: 18,
                 height: widget.lineHeight,
@@ -199,6 +242,40 @@ class _RichNoteEditorState extends State<RichNoteEditor> {
       ],
     );
   }
+}
+
+/// Keep the visible glyph compact while the whole leading gutter receives taps.
+class _NoteCheckboxBuilder extends QuillCheckboxBuilder {
+  _NoteCheckboxBuilder();
+
+  @override
+  Widget build({
+    required BuildContext context,
+    required bool isChecked,
+    required ValueChanged<bool> onChanged,
+  }) => Semantics(
+    checked: isChecked,
+    label: isChecked ? '체크 해제' : '체크',
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: const ValueKey('note-check-target'),
+        onTap: () => onChanged(!isChecked),
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox.expand(
+          child: Center(
+            child: Icon(
+              isChecked ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 24,
+              color: isChecked
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _RichNoteToolbar extends StatelessWidget {

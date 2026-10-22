@@ -38,7 +38,7 @@ class NoteAlarmActivity : Activity() {
 
     private val finishedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == NoteAlarmPlaybackService.ACTION_FINISHED) closeScreen()
+            if (intent?.action == NoteAlarmPlaybackService.ACTION_FINISHED && !isFinishing) closeScreen()
         }
     }
 
@@ -154,6 +154,15 @@ class NoteAlarmActivity : Activity() {
             setOnClickListener { act(NoteAlarmPlaybackService.ACTION_SNOOZE) }
         }, LinearLayout.LayoutParams(0, -2, 1f))
         root.addView(actions, LinearLayout.LayoutParams(-1,-2))
+        root.addView(Button(this).apply {
+            text = "체크리스트로 이동"
+            setOnClickListener {
+                val job = currentJob ?: return@setOnClickListener
+                // Finish just the alarm activity, never the app task opened next.
+                finish()
+                startActivity(ReminderNavigation.intent(this@NoteAlarmActivity, job))
+            }
+        }, LinearLayout.LayoutParams(-1, -2))
         root.addView(dismiss, LinearLayout.LayoutParams(-1, dp(220)))
         root.addView(hint, LinearLayout.LayoutParams(-1, -2))
         return root

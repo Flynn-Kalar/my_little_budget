@@ -20,6 +20,7 @@ class MainActivity : FlutterActivity() {
     private var fullScreenPermissionResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        ReminderNavigation.consume(this, intent)
         super.configureFlutterEngine(flutterEngine)
         NoteAlarmChannel.ensureCreated(this)
         channel = MethodChannel(
@@ -77,6 +78,7 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        ReminderNavigation.consume(this, intent)
         val id = intent.getIntExtra(NoteAlarmScheduler.EXTRA_NOTE_ID, -1)
         if (id >= 0) channel?.invokeMethod("openNote", id)
         val eventId = intent.getIntExtra("calendar_event_id", -1)
