@@ -151,14 +151,18 @@ class MobileMonthNav extends StatelessWidget {
     super.key,
     required this.month,
     required this.onChanged,
+    this.displayMonth,
+    this.onMonthPicked,
   });
 
   final String month;
+  final String? displayMonth;
+  final ValueChanged<String>? onMonthPicked;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final date = parseMonthKey(month);
+    final date = parseMonthKey(displayMonth ?? month);
     return MobileCard(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
@@ -173,9 +177,9 @@ class MobileMonthNav extends StatelessWidget {
               onPressed: () async {
                 final selected = await showMobileMonthPicker(
                   context,
-                  initialMonth: month,
+                  initialMonth: displayMonth ?? month,
                 );
-                if (selected != null) onChanged(selected);
+                if (selected != null) (onMonthPicked ?? onChanged)(selected);
               },
               icon: const Icon(Icons.calendar_month, size: 18),
               label: Text(

@@ -17,6 +17,9 @@ class MobileTransactionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(selectedMonthProvider);
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
     final period = ref
         .watch(statementPeriodProvider)
         .asData
@@ -51,6 +54,10 @@ class MobileTransactionsScreen extends ConsumerWidget {
       children: [
         MobileMonthNav(
           month: month,
+          displayMonth: policy.displayMonth(month),
+          onMonthPicked: (value) =>
+              ref.read(selectedMonthProvider.notifier).state = policy
+                  .anchorForDisplay(value, month),
           onChanged: (value) =>
               ref.read(selectedMonthProvider.notifier).state = value,
         ),

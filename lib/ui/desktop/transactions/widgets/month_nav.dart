@@ -22,7 +22,11 @@ class _MonthNavState extends ConsumerState<MonthNav> {
   Widget build(BuildContext context) {
     final compact = isCompactDesktop(context);
     final month = ref.watch(selectedMonthProvider);
-    final date = parseMonthKey(month);
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
+    final displayedMonth = policy.displayMonth(month);
+    final date = parseMonthKey(displayedMonth);
     final label = '${date.year}\uB144 ${date.month}\uC6D4';
 
     void shift(int delta) {
@@ -58,9 +62,10 @@ class _MonthNavState extends ConsumerState<MonthNav> {
               ),
               menuChildren: [
                 MonthPickerPopup(
-                  currentMonth: month,
+                  currentMonth: displayedMonth,
                   onPick: (next) {
-                    ref.read(selectedMonthProvider.notifier).state = next;
+                    ref.read(selectedMonthProvider.notifier).state = policy
+                        .anchorForDisplay(next, month);
                     _menu.close();
                   },
                 ),

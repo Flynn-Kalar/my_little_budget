@@ -5,9 +5,42 @@ import '../../core/date.dart';
 import '../calendar/korean_holidays.dart';
 
 class StatementPeriod {
-  const StatementPeriod({this.day = 1, this.adjustment = 'same'});
+  const StatementPeriod({
+    this.day = 1,
+    this.adjustment = 'same',
+    this.labelByEnd = false,
+  });
+  final bool labelByEnd;
   final int day; // 0 = month end
   final String adjustment;
+
+  StatementPeriod copyWith({int? day, String? adjustment, bool? labelByEnd}) =>
+      StatementPeriod(
+        day: day ?? this.day,
+        adjustment: adjustment ?? this.adjustment,
+        labelByEnd: labelByEnd ?? this.labelByEnd,
+      );
+
+  String displayMonth(String month) {
+    final dates = range(month);
+    return (labelByEnd ? dates.end : dates.start).substring(0, 7);
+  }
+
+  String anchorForDisplay(String selected, String current) {
+    if (displayMonth(current) == selected) return current;
+    final currentDate = parseMonthKey(current);
+    final displayDate = parseMonthKey(displayMonth(current));
+    final offset =
+        (currentDate.year - displayDate.year) * 12 +
+        currentDate.month -
+        displayDate.month;
+    final guess = shiftMonth(selected, offset);
+    for (final delta in [0, -1, 1, -2, 2]) {
+      final candidate = shiftMonth(guess, delta);
+      if (displayMonth(candidate) == selected) return candidate;
+    }
+    return guess;
+  }
 
   DateTime start(String month) {
     final anchor = parseMonthKey(month);
@@ -51,9 +84,10 @@ class StatementPeriodController extends AsyncNotifier<StatementPeriod> {
     }
     final value = prefs.getString('transaction_statement_period')?.split(':');
     final day = int.tryParse(value?.first ?? '') ?? 1;
-    final adjustment = value != null && value.length == 2 ? value[1] : 'same';
+    final adjustment = value != null && value.length >= 2 ? value[1] : 'same';
     return StatementPeriod(
       day: day.clamp(0, 31),
+      labelByEnd: value != null && value.length >= 3 && value[2] == 'end',
       adjustment: ['same', 'previous', 'next'].contains(adjustment)
           ? adjustment
           : 'same',
@@ -64,7 +98,7 @@ class StatementPeriodController extends AsyncNotifier<StatementPeriod> {
     final prefs = await SharedPreferences.getInstance();
     if (!await prefs.setString(
       'transaction_statement_period',
-      '${value.day}:${value.adjustment}',
+      '${value.day}:${value.adjustment}:${value.labelByEnd ? 'end' : 'start'}',
     )) {
       throw StateError('설정을 저장하지 못했습니다.');
     }

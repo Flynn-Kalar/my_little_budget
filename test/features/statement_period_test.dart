@@ -11,6 +11,40 @@ import 'package:my_little_budget/core/date.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('labels use actual start or end month without changing the range', () {
+    const start = StatementPeriod(day: 30);
+    final end = start.copyWith(labelByEnd: true);
+    expect(start.displayMonth('2026-10'), '2026-10');
+    expect(end.displayMonth('2026-10'), '2026-11');
+    expect(end.range('2026-10'), start.range('2026-10'));
+    expect(end.anchorForDisplay('2026-12', '2026-10'), '2026-11');
+    expect(end.displayMonth('2026-12'), '2027-01');
+    expect(
+      const StatementPeriod(adjustment: 'previous').displayMonth('2026-01'),
+      '2025-12',
+    );
+    expect(end.copyWith(day: 25).labelByEnd, isTrue);
+    expect(end.copyWith(adjustment: 'next').labelByEnd, isTrue);
+  });
+  test('legacy settings default to start; end label persists', () async {
+    SharedPreferences.setMockInitialValues({
+      'transaction_statement_period': '30:previous',
+    });
+    final first = ProviderContainer();
+    final old = await first.read(statementPeriodProvider.future);
+    expect(old.labelByEnd, isFalse);
+    expect(old.adjustment, 'previous');
+    await first
+        .read(statementPeriodProvider.notifier)
+        .save(old.copyWith(labelByEnd: true));
+    first.dispose();
+    final second = ProviderContainer();
+    addTearDown(second.dispose);
+    final saved = await second.read(statementPeriodProvider.future);
+    expect(saved.labelByEnd, isTrue);
+    expect(saved.day, 30);
+    expect(saved.adjustment, 'previous');
+  });
   test(
     'transaction providers share boundaries and react to saved settings',
     () async {

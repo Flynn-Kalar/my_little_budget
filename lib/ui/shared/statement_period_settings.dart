@@ -33,11 +33,7 @@ class StatementPeriodSettings extends ConsumerWidget {
                 ],
                 onChanged: (day) async {
                   if (day != null) {
-                    await _save(
-                      context,
-                      ref,
-                      StatementPeriod(day: day, adjustment: value.adjustment),
-                    );
+                    await _save(context, ref, value.copyWith(day: day));
                   }
                 },
               ),
@@ -56,8 +52,23 @@ class StatementPeriodSettings extends ConsumerWidget {
                     await _save(
                       context,
                       ref,
-                      StatementPeriod(day: value.day, adjustment: adjustment),
+                      value.copyWith(adjustment: adjustment),
                     );
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<bool>(
+                key: ValueKey('statement-label-${value.labelByEnd}'),
+                initialValue: value.labelByEnd,
+                decoration: const InputDecoration(labelText: '내역 월 제목 표시 기준'),
+                items: const [
+                  DropdownMenuItem(value: false, child: Text('집계 시작일이 속한 달')),
+                  DropdownMenuItem(value: true, child: Text('집계 종료일이 속한 달')),
+                ],
+                onChanged: (end) async {
+                  if (end != null) {
+                    await _save(context, ref, value.copyWith(labelByEnd: end));
                   }
                 },
               ),
