@@ -217,8 +217,9 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   Future<List<TransactionRow>> listTransactionsByMonth(
     String month, {
     TransactionFilter filter = const TransactionFilter(),
+    ({String start, String end})? period,
   }) async {
-    final bounds = monthRange(month);
+    final bounds = period ?? monthRange(month);
     final hasDate = filter.fromDate != null || filter.toDate != null;
     final hasSearch =
         filter.q != null ||
@@ -357,8 +358,11 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// SPEC §4.1 — 월 수입/지출/순수입. (transfer·adjustment 제외)
-  Future<MonthlySummary> monthlySummary(String month) async {
-    final b = monthRange(month);
+  Future<MonthlySummary> monthlySummary(
+    String month, {
+    ({String start, String end})? period,
+  }) async {
+    final b = period ?? monthRange(month);
     final rows = await customSelect(
       'SELECT type, COALESCE(SUM(amount), 0) AS total FROM transactions '
       'WHERE occurred_on BETWEEN ? AND ? GROUP BY type',
@@ -380,8 +384,11 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// SPEC §4.5 — 지출 카테고리별 합. 카테고리 없는 지출은 '미분류' 로 집계.
-  Future<List<CategoryBreakdownRow>> expenseByCategory(String month) async {
-    final b = monthRange(month);
+  Future<List<CategoryBreakdownRow>> expenseByCategory(
+    String month, {
+    ({String start, String end})? period,
+  }) async {
+    final b = period ?? monthRange(month);
     final rows = await customSelect(
       '''
       SELECT c.id AS id, c.name AS name, c.color AS color,

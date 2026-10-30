@@ -105,35 +105,39 @@ class _MobileTransactionSheetState
     final item = await showModalBottomSheet<TransactionPresetListItem>(
       context: context,
       useSafeArea: true,
-      builder: (pickerContext) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            '프리셋 불러오기',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          if (items.isEmpty)
-            const ListTile(title: Text('저장된 프리셋이 없습니다.'))
-          else
-            for (final item in items)
-              ListTile(
-                enabled: item.isUsable,
-                leading: Icon(
-                  item.isUsable
-                      ? Icons.bookmark_outline
-                      : Icons.warning_amber_outlined,
+      useRootNavigator: true,
+      builder: (pickerContext) => SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              '프리셋 불러오기',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (items.isEmpty)
+              const ListTile(title: Text('저장된 프리셋이 없습니다.'))
+            else
+              for (final item in items)
+                ListTile(
+                  enabled: item.isUsable,
+                  leading: Icon(
+                    item.isUsable
+                        ? Icons.bookmark_outline
+                        : Icons.warning_amber_outlined,
+                  ),
+                  title: Text(item.displayName),
+                  subtitle: Text(
+                    '${formatKRW(item.preset.amount)}'
+                    '${item.isUsable ? '' : ' · 사용 불가'}',
+                  ),
+                  onTap: item.isUsable
+                      ? () => Navigator.pop(pickerContext, item)
+                      : null,
                 ),
-                title: Text(item.displayName),
-                subtitle: Text(
-                  '${formatKRW(item.preset.amount)}'
-                  '${item.isUsable ? '' : ' · 사용 불가'}',
-                ),
-                onTap: item.isUsable
-                    ? () => Navigator.pop(pickerContext, item)
-                    : null,
-              ),
-        ],
+          ],
+        ),
       ),
     );
     if (item == null || !mounted) return;

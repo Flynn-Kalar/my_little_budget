@@ -1,3 +1,4 @@
+import '../settings/statement_period.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -46,6 +47,7 @@ final transactionsListProvider =
       final dao = ref.watch(transactionsDaoProvider);
       return dao.listTransactionsByMonth(
         month,
+        period: (await ref.watch(statementPeriodProvider.future)).range(month),
         filter: TransactionFilter(
           type: type,
           q: sf.q,
@@ -67,28 +69,51 @@ final monthlySummaryProvider = FutureProvider.autoDispose<MonthlySummary>((
 ) async {
   final month = ref.watch(selectedMonthProvider);
   final dao = ref.watch(transactionsDaoProvider);
-  return dao.monthlySummary(month);
+  return dao.monthlySummary(
+    month,
+    period: (await ref.watch(statementPeriodProvider.future)).range(month),
+  );
 });
 
 final transactionsMonthRowsProvider =
     FutureProvider.autoDispose<List<TransactionRow>>((ref) async {
       final month = ref.watch(selectedMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.listTransactionsByMonth(month);
+      return dao.listTransactionsByMonth(
+        month,
+        period: (await ref.watch(statementPeriodProvider.future)).range(month),
+      );
     });
 
 final transactionsCategoryBreakdownProvider =
-    FutureProvider.autoDispose<List<CategoryBreakdownRow>>((ref) {
+    FutureProvider.autoDispose<List<CategoryBreakdownRow>>((ref) async {
       final month = ref.watch(selectedMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.expenseByCategory(month);
+      return dao.expenseByCategory(
+        month,
+        period: (await ref.watch(statementPeriodProvider.future)).range(month),
+      );
     });
 
 final transactionsMonthlyTrendProvider =
-    FutureProvider.autoDispose<List<MonthlyTrendRow>>((ref) {
+    FutureProvider.autoDispose<List<MonthlyTrendRow>>((ref) async {
       final month = ref.watch(selectedMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.monthlyTrend(6, month);
+      final policy = await ref.watch(statementPeriodProvider.future);
+      return Future.wait(
+        List.generate(6, (i) async {
+          final key = shiftMonth(month, i - 5);
+          final summary = await dao.monthlySummary(
+            key,
+            period: policy.range(key),
+          );
+          return MonthlyTrendRow(
+            month: key,
+            income: summary.income,
+            expense: summary.expense,
+          );
+        }),
+      );
     });
 
 final activeAccountsProvider = FutureProvider<List<Account>>(

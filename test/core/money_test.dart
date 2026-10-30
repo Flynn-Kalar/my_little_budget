@@ -20,6 +20,15 @@ void main() {
   });
 
   group('parseKRW', () {
+    test('nullable parser distinguishes invalid input from a valid zero', () {
+      expect(tryParseKRW('2,000-2000'), 0);
+      expect(tryParseKRW('999999999999999'), 999999999999999);
+      for (final input in ['', '-', '1+', '10/0', '1.0/0', 'abc']) {
+        expect(tryParseKRW(input), isNull, reason: input);
+        expect(parseKRW(input), 0, reason: input);
+      }
+    });
+
     test('parses plain and formatted amounts', () {
       expect(parseKRW('12000'), 12000);
       expect(parseKRW('₩ 12,000원'), 12000);

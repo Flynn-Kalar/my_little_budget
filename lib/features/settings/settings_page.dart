@@ -1,3 +1,4 @@
+import '../../ui/shared/statement_period_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -47,6 +48,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             child: SingleChildScrollView(
               child: Column(
                 children: const [
+                  StatementPeriodSettings(),
                   _SettingsCard(
                     icon: Icons.category_outlined,
                     title: '카테고리 관리',

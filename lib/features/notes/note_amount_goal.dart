@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
 import '../../data/database.dart';
+import '../../core/money.dart';
 
 const maxNoteGoalAmount = 999999999999999;
 
@@ -58,8 +59,4 @@ String formatNoteAmount(int amount) =>
     NumberFormat('#,##0', 'ko_KR').format(amount);
 String formatGoalDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
 
-int? parseNoteAmount(String text) {
-  final normalized = text.trim().replaceAll(',', '');
-  if (!RegExp(r'^[+-]?\d+$').hasMatch(normalized)) return null;
-  return int.tryParse(normalized);
-}
+int? parseNoteAmount(String text) => tryParseKRW(text);

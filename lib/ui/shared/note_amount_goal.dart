@@ -57,8 +57,12 @@ class NoteGoalDraft extends ChangeNotifier {
 
   String? get validationError {
     if (!enabled) return null;
-    if (parseNoteAmount(target.text) == null) return '목표 금액을 숫자로 입력하세요.';
-    if (parseNoteAmount(current.text) == null) return '현재 금액을 숫자로 입력하세요.';
+    if (parseNoteAmount(target.text) == null) {
+      return '목표 금액에 올바른 숫자나 계산식을 입력하세요.';
+    }
+    if (parseNoteAmount(current.text) == null) {
+      return '현재 금액에 올바른 숫자나 계산식을 입력하세요.';
+    }
     return goal?.validationError;
   }
 
@@ -128,7 +132,7 @@ class NoteGoalForm extends StatelessWidget {
           TextField(
             controller: draft.target,
             enabled: !busy,
-            keyboardType: const TextInputType.numberWithOptions(signed: true),
+            keyboardType: TextInputType.text,
             decoration: const InputDecoration(
               labelText: '목표 금액',
               suffixText: '원',
@@ -137,7 +141,7 @@ class NoteGoalForm extends StatelessWidget {
           TextField(
             controller: draft.current,
             enabled: !busy,
-            keyboardType: const TextInputType.numberWithOptions(signed: true),
+            keyboardType: TextInputType.text,
             decoration: const InputDecoration(
               labelText: '현재 금액',
               suffixText: '원',
@@ -162,9 +166,7 @@ class NoteGoalForm extends StatelessWidget {
                   child: TextField(
                     controller: draft.addition,
                     enabled: !busy,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      signed: true,
-                    ),
+                    keyboardType: TextInputType.text,
                     onSubmitted: busy
                         ? null
                         : (_) => draft.addAmount(

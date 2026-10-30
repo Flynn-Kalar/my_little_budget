@@ -58,6 +58,7 @@ void main() {
         ValueKey('mobile-stats-category-${categories.first.id}'),
       );
       await tester.ensureVisible(category);
+      await tester.pumpAndSettle();
       await tester.tap(category);
       await tester.pumpAndSettle();
       expect(find.text('${categories.first.name} · 태그별 비율'), findsOneWidget);
@@ -95,6 +96,7 @@ void main() {
         ValueKey('mobile-stats-category-${categories[1].id}'),
       );
       await tester.ensureVisible(other);
+      await tester.pumpAndSettle();
       await tester.tap(other);
       await tester.pumpAndSettle();
       expect(find.text('#다른 범위 태그'), findsOneWidget);

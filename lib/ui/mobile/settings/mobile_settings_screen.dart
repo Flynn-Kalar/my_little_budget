@@ -1,3 +1,4 @@
+import '../../shared/statement_period_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +33,7 @@ class _MobileSettingsScreenState extends ConsumerState<MobileSettingsScreen> {
     return MobilePage(
       title: '설정',
       children: [
+        const StatementPeriodSettings(),
         const _SettingsTile(
           icon: Icons.category_outlined,
           title: '카테고리 관리',

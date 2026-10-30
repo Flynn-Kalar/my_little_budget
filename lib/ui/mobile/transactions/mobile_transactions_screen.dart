@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +17,11 @@ class MobileTransactionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(selectedMonthProvider);
+    final period = ref
+        .watch(statementPeriodProvider)
+        .asData
+        ?.value
+        .range(month);
     final summary = ref.watch(monthlySummaryProvider);
     final rows = ref.watch(transactionsListProvider);
 
@@ -48,6 +54,11 @@ class MobileTransactionsScreen extends ConsumerWidget {
           onChanged: (value) =>
               ref.read(selectedMonthProvider.notifier).state = value,
         ),
+        if (period != null)
+          Text(
+            '${period.start} ~ ${period.end}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         MobileTransactionSearchFilterBar(
           onOpenAdvancedFilter: () =>
               MobileTransactionAdvancedFilterSheet.show(context),

@@ -31,18 +31,25 @@ String formatAmountInput(String input) {
 }
 
 /// KRW 금액 입력. 콤마/원 표기를 허용하고 사칙연산 식은 계산한다. 빈 입력은 0.
-int parseKRW(String input) {
+int parseKRW(String input) => tryParseKRW(input) ?? 0;
+
+/// Invalid or incomplete expressions return null, distinct from a valid zero.
+int? tryParseKRW(String input) {
   final expression = input
       .replaceAll(RegExp(r'[\s,₩원]'), '')
       .replaceAll('×', '*')
       .replaceAll('÷', '/')
       .replaceAll('x', '*')
       .replaceAll('X', '*');
-  if (expression.isEmpty || expression == '-') return 0;
-  if (RegExp(r'[^0-9+\-*/().]').hasMatch(expression)) return 0;
+  if (expression.isEmpty || expression == '-') return null;
+  if (RegExp(r'[^0-9+\-*/().]').hasMatch(expression)) return null;
+
+  if (RegExp(r'^[+-]?\d+$').hasMatch(expression)) {
+    return int.tryParse(expression);
+  }
 
   final value = _AmountExpressionParser(expression).parse();
-  if (value == null || !value.isFinite) return 0;
+  if (value == null || !value.isFinite) return null;
   return value.round();
 }
 

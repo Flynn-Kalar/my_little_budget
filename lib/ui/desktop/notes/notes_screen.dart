@@ -1368,61 +1368,57 @@ class _NoteDialogState extends ConsumerState<_NoteDialog> {
 
   Widget _buildViewer(BuildContext context, NoteWithChecklist entry) {
     final note = entry.note;
-    return AlertDialog(
-      title: Row(
-        children: [
-          Expanded(child: Text(note.title)),
-          IconButton(
-            tooltip: '편집',
-            onPressed: _restoreDraftAndEdit,
-            icon: const Icon(Icons.edit_outlined),
+    return GestureDetector(
+      onTap: _restoreDraftAndEdit,
+      child: AlertDialog(
+        title: Row(
+          children: [
+            Expanded(child: Text(note.title)),
+            IconButton(
+              tooltip: '편집',
+              onPressed: _restoreDraftAndEdit,
+              icon: const Icon(Icons.edit_outlined),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (note.goalTargetAmount != null)
+                  NoteGoalSummary(goal: NoteAmountGoal.fromNote(note)!),
+                RichNoteViewer(
+                  document: documentFromNote(note),
+                  onTap: _restoreDraftAndEdit,
+                  onChecklistToggle: _toggleChecklistItem,
+                  minHeight: 110,
+                ),
+                if (note.scheduleType != 'none') ...[
+                  const Divider(height: 28),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.schedule),
+                    title: Text(noteScheduleSummary(note)),
+                    subtitle: note.notificationEnabled
+                        ? Text(
+                            '${noteNotificationSummary(note)} · ${note.alarmSoundName ?? '기본 알람음'} · ${note.alarmVibrationEnabled ? '진동 켜짐' : '진동 꺼짐'}',
+                          )
+                        : null,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('닫기'),
           ),
         ],
       ),
-      content: SizedBox(
-        width: 560,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (note.goalTargetAmount != null)
-                NoteGoalSummary(goal: NoteAmountGoal.fromNote(note)!),
-              RichNoteViewer(
-                document: documentFromNote(note),
-                onTap: _restoreDraftAndEdit,
-                onChecklistToggle: _toggleChecklistItem,
-                minHeight: 110,
-              ),
-              if (note.scheduleType != 'none') ...[
-                const Divider(height: 28),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.schedule),
-                  title: Text(noteScheduleSummary(note)),
-                  subtitle: note.notificationEnabled
-                      ? Text(
-                          '${noteNotificationSummary(note)} · ${note.alarmSoundName ?? '기본 알람음'} · ${note.alarmVibrationEnabled ? '진동 켜짐' : '진동 꺼짐'}',
-                        )
-                      : null,
-                ),
-              ],
-              InkWell(
-                onTap: _restoreDraftAndEdit,
-                child: const SizedBox(
-                  height: 72,
-                  child: Center(child: Text('빈 영역을 클릭하여 편집')),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('닫기'),
-        ),
-      ],
     );
   }
 }

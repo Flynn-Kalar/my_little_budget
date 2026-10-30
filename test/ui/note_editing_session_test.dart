@@ -99,6 +99,37 @@ Future<void> tapVisible(WidgetTester tester, Finder target) async {
 }
 
 void main() {
+  noteTest('desktop dialog blank padding edits without a visible edit area', (
+    tester,
+  ) async {
+    final db = await setup(tester, false);
+    await db.notesDao.saveNote(title: '빈 여백 편집', content: '본문');
+    await tester.pumpAndSettle();
+    for (final bottom in [false, true]) {
+      await tester.tap(find.text('빈 여백 편집'));
+      await tester.pumpAndSettle();
+      expect(find.text('빈 영역을 클릭하여 편집'), findsNothing);
+      final rect = tester.getRect(find.byType(RichNoteViewer));
+      await tester.tapAt(
+        bottom
+            ? rect.bottomLeft + const Offset(10, 12)
+            : rect.topLeft + const Offset(-12, 10),
+      );
+      await tester.pumpAndSettle();
+      expect(titleField, findsOneWidget);
+      await tapVisible(tester, find.text('취소'));
+      expect(find.byType(RichNoteViewer), findsOneWidget);
+      await tapVisible(tester, find.text('닫기'));
+      expect(titleField, findsNothing);
+    }
+    await tester.tap(find.text('빈 여백 편집'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(titleField, findsNothing);
+    expect(find.byType(RichNoteViewer), findsNothing);
+  });
+
   for (final mobile in [false, true]) {
     for (final checklist in [false, true]) {
       noteTest(
@@ -233,11 +264,11 @@ void main() {
           );
           await tester.enterText(field('목표 이름 (선택사항)'), name);
           await tester.enterText(field('목표 금액'), amount);
-          await tester.enterText(field('현재 금액'), '1000000');
+          await tester.enterText(field('현재 금액'), '(3000000-1000000)/2');
           await tapVisible(tester, find.widgetWithText(FilledButton, '삽입'));
         }
 
-        await insert('비상금', '2681630');
+        await insert('비상금', '2,000,000+681630');
         editor.controller.updateSelection(
           TextSelection.collapsed(
             offset: editor.controller.document.length - 1,
@@ -256,7 +287,7 @@ void main() {
             find.byWidgetPredicate(
               (w) => w is TextField && w.decoration?.labelText == '현재 금액',
             ),
-            '1,400,000',
+            '1,175,500-20,000+244,500',
           );
         }
         await tapVisible(tester, find.widgetWithText(FilledButton, '적용'));

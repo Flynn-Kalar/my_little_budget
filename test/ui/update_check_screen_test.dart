@@ -38,6 +38,8 @@ void main() {
 
     await tester.pumpWidget(_app(const MobileSettingsScreen()));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('최신 버전 확인'), 250);
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('최신 버전 확인'));
     await tester.pump();

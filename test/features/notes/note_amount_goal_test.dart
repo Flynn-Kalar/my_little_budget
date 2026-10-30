@@ -46,7 +46,7 @@ void main() {
     draft.current.text = '0';
     draft.due = draft.start.subtract(const Duration(days: 1));
     expect(draft.validationError, isNotNull);
-    expect(parseNoteAmount('12.5'), isNull);
+    expect(parseNoteAmount('12.5'), 13);
     expect(parseNoteAmount('oops'), isNull);
   });
 
@@ -76,12 +76,13 @@ void main() {
         expect(draft.additionError, isNull);
       }
       draft.current.text = '1,200,000-24500';
-      expect(draft.validationError, isNotNull);
+      expect(draft.validationError, isNull);
       draft.addAmount(-10);
-      expect(draft.additionError, isNotNull);
+      expect(draft.additionError, isNull);
+      expect(draft.current.text, '1,175,490');
       expect(parseNoteAmount('-24,500'), -24500);
       expect(parseNoteAmount('+24,500'), 24500);
-      expect(parseNoteAmount('--24500'), isNull);
+      expect(parseNoteAmount('-*24500'), isNull);
       expect(parseNoteAmount('-'), isNull);
     },
   );
@@ -106,7 +107,34 @@ void main() {
     expect(goal.remaining, 2 * maxNoteGoalAmount);
   });
 
-  testWidgets('goal form accepts a deduction and offers a signed keyboard', (
+  test(
+    'goal amounts evaluate all operators and reject invalid expressions',
+    () {
+      expect(parseNoteAmount('1,175,500-20000'), 1155500);
+      expect(parseNoteAmount('(1,000+2,000)×3÷2'), 4500);
+      expect(parseNoteAmount('-500+200*2'), -100);
+      expect(parseNoteAmount('1000/3'), 333);
+      expect(parseNoteAmount('1000-1000'), 0);
+      for (final input in ['', '1+', '10/0', '(10+2', '1e10', 'text']) {
+        expect(parseNoteAmount(input), isNull, reason: input);
+      }
+      final draft = NoteGoalDraft(null)..enabled = true;
+      addTearDown(draft.dispose);
+      draft.target.text = '1500000*2';
+      draft.current.text = '1,175,500-20000';
+      expect(draft.validationError, isNull);
+      expect(draft.goal!.targetAmount, 3000000);
+      expect(draft.goal!.currentAmount, 1155500);
+      draft.addAmount(parseNoteAmount('20000/2'));
+      expect(draft.current.text, '1,165,500');
+      draft.target.text = '$maxNoteGoalAmount+1';
+      expect(draft.validationError, isNotNull);
+      draft.target.text = '10/0';
+      expect(draft.validationError, isNotNull);
+    },
+  );
+
+  testWidgets('goal form accepts a deduction and offers operator entry', (
     tester,
   ) async {
     final draft = NoteGoalDraft(null)..enabled = true;
@@ -121,9 +149,9 @@ void main() {
     );
     final fields = find.byType(TextField);
     for (final field in tester.widgetList<TextField>(fields)) {
-      expect(field.keyboardType.signed, isTrue);
+      expect(field.keyboardType, TextInputType.text);
     }
-    await tester.enterText(fields.at(2), '-24,500');
+    await tester.enterText(fields.at(2), '-49,000/2');
     await tester.tap(find.text('금액 추가'));
     await tester.pumpAndSettle();
     expect(draft.current.text, '1,175,500');
