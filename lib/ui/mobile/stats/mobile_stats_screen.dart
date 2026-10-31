@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -19,6 +20,9 @@ class MobileStatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(statsMonthProvider);
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
     final breakdown = ref.watch(statsExpenseBreakdownProvider);
     final trend = ref.watch(statsMonthlyTrendProvider);
 
@@ -36,6 +40,10 @@ class MobileStatsScreen extends ConsumerWidget {
       children: [
         MobileMonthNav(
           month: month,
+          displayMonth: policy.displayMonth(month),
+          onMonthPicked: (value) =>
+              ref.read(statsMonthProvider.notifier).state = policy
+                  .anchorForDisplay(value, month),
           onChanged: (value) =>
               ref.read(statsMonthProvider.notifier).state = value,
         ),
@@ -62,9 +70,6 @@ class MobileStatsScreen extends ConsumerWidget {
 int? _netForMonth(AsyncValue<List<MonthlyTrendRow>> trend, String month) {
   return trend.maybeWhen(
     data: (rows) {
-      for (final row in rows) {
-        if (row.month == month) return row.net;
-      }
       return rows.isEmpty ? null : rows.last.net;
     },
     orElse: () => null,

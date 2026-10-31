@@ -1,10 +1,12 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/money.dart';
 import '../../data/daos/budget_dao.dart';
 import '../../features/budget/daily_allowance.dart';
 
-class DailyBudgetGuidance extends StatelessWidget {
+class DailyBudgetGuidance extends ConsumerWidget {
   const DailyBudgetGuidance({
     super.key,
     required this.month,
@@ -18,9 +20,12 @@ class DailyBudgetGuidance extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
     if (rows.isEmpty) return const SizedBox.shrink();
-    final now = DateTime.now();
+    final now = ref.watch(statementTodayProvider);
     final allowances = [
       for (final row in rows)
         (
@@ -30,11 +35,12 @@ class DailyBudgetGuidance extends StatelessWidget {
             budget: row.budgetAmount,
             spent: row.spentAmount,
             now: now,
+            period: policy.range(month),
           ),
         ),
     ].where((e) => e.$2 != null).toList();
     if (allowances.isEmpty) return const SizedBox.shrink();
-    final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final currentMonth = policy.anchorForDate(now);
     return Card(
       margin: margin,
       child: Padding(
@@ -45,7 +51,7 @@ class DailyBudgetGuidance extends StatelessWidget {
             Text(
               month == currentMonth
                   ? '남은 기간 하루 사용 가능 예산'
-                  : '월 전체 기준 하루 사용 가능 예산',
+                  : '집계 기간 전체 기준 하루 사용 가능 예산',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),

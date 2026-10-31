@@ -121,10 +121,14 @@ class TagBreakdownRow {
 class MonthlyTrendRow {
   const MonthlyTrendRow({
     required this.month,
+    this.periodMonth,
     required this.income,
     required this.expense,
   });
   final String month;
+  // Stable period identity when holiday shifts produce identical display months.
+  final String? periodMonth;
+  String get periodKey => periodMonth ?? month;
   final int income;
   final int expense;
   int get net => income - expense;
@@ -417,9 +421,10 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   /// SPEC §4.5 — 최근 n개월(anchorMonth 포함) 수입/지출/순수입. 거래 없는 달은 0.
   Future<List<TagBreakdownRow>> expenseByTag(
     String month,
-    int categoryId,
-  ) async {
-    final b = monthRange(month);
+    int categoryId, {
+    ({String start, String end})? period,
+  }) async {
+    final b = period ?? monthRange(month);
     final categoryWhere = categoryId == 0
         ? 't.category_id IS NULL'
         : 't.category_id = ?';
@@ -590,6 +595,14 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// SPEC §4.6 — 거래가 존재한 연도 (네비게이션 칩용).
+  Future<List<String>> transactionDates() async {
+    final rows = await customSelect(
+      'SELECT DISTINCT occurred_on FROM transactions ORDER BY occurred_on',
+      readsFrom: {transactions},
+    ).get();
+    return rows.map((r) => r.read<String>('occurred_on')).toList();
+  }
+
   Future<List<int>> availableTransactionYears() async {
     final rows = await customSelect(
       'SELECT DISTINCT substr(occurred_on, 1, 4) AS y FROM transactions ORDER BY y',

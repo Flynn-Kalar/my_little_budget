@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,25 +16,6 @@ import '../mobile_widgets.dart';
 import '../../shared/bulk_manage_button.dart';
 
 enum _InvestmentTab { holdings, transactions, realizedPnl }
-
-final _annualInvestmentRowsProvider = FutureProvider.autoDispose
-    .family<List<Investment>, int>(
-      (ref, year) =>
-          ref.watch(investmentsDaoProvider).listInvestmentsByYear(year),
-    );
-
-final _annualInvestmentSummaryProvider = FutureProvider.autoDispose
-    .family<InvestmentSummary, int>(
-      (ref, year) =>
-          ref.watch(investmentsDaoProvider).investmentYearlySummary(year),
-    );
-
-final _annualRealizedPnlProvider = FutureProvider.autoDispose
-    .family<List<RealizedPnL>, int>(
-      (ref, year) => ref
-          .watch(investmentsDaoProvider)
-          .getRealizedPnL('$year-01-01', '$year-12-31'),
-    );
 
 class MobileInvestmentsScreen extends ConsumerStatefulWidget {
   const MobileInvestmentsScreen({super.key});
@@ -62,12 +44,14 @@ class _MobileInvestmentsScreenState
     final month = ref.watch(investmentMonthProvider);
     final filter = ref.watch(investmentFilterProvider);
     final summary = ref.watch(investmentMonthlySummaryProvider);
-    final yearlySummary = ref.watch(_annualInvestmentSummaryProvider(_year));
+    final yearlySummary = ref.watch(investmentYearlySummaryProvider(_year));
     final holdings = ref.watch(currentHoldingsProvider);
     final rows = ref.watch(investmentRowsProvider);
-    final yearlyRows = ref.watch(_annualInvestmentRowsProvider(_year));
+    final yearlyRows = ref.watch(investmentYearlyRowsProvider(_year));
     final realizedPnl = ref.watch(realizedPnlProvider);
-    final yearlyRealizedPnl = ref.watch(_annualRealizedPnlProvider(_year));
+    final yearlyRealizedPnl = ref.watch(
+      investmentYearlyRealizedPnlProvider(_year),
+    );
     final visiblePnl = _yearly ? yearlyRealizedPnl : realizedPnl;
     final accounts =
         ref.watch(investmentFilterAccountsProvider).asData?.value ??
@@ -87,7 +71,13 @@ class _MobileInvestmentsScreenState
           year: _year,
           onModeChanged: (value) => setState(() {
             _yearly = value;
-            if (value) _year = parseMonthKey(month).year;
+            if (value) {
+              _year = parseMonthKey(
+                (ref.read(statementPeriodProvider).asData?.value ??
+                        const StatementPeriod())
+                    .displayMonth(month),
+              ).year;
+            }
           }),
           onMonthChanged: (value) =>
               ref.read(investmentMonthProvider.notifier).state = value,
@@ -153,9 +143,9 @@ class _MobileInvestmentsScreenState
                       ),
                   ],
                   onChanged: () {
-                    ref.invalidate(_annualInvestmentRowsProvider);
-                    ref.invalidate(_annualInvestmentSummaryProvider);
-                    ref.invalidate(_annualRealizedPnlProvider);
+                    ref.invalidate(investmentYearlyRowsProvider);
+                    ref.invalidate(investmentYearlySummaryProvider);
+                    ref.invalidate(investmentYearlyRealizedPnlProvider);
                   },
                 ),
                 for (final row in filteredRows)
@@ -181,7 +171,7 @@ class _MobileInvestmentsScreenState
   }
 }
 
-class _InvestmentPeriodBar extends StatelessWidget {
+class _InvestmentPeriodBar extends ConsumerWidget {
   const _InvestmentPeriodBar({
     required this.yearly,
     required this.month,
@@ -198,7 +188,7 @@ class _InvestmentPeriodBar extends StatelessWidget {
   final ValueChanged<String> onMonthChanged;
   final ValueChanged<int> onYearChanged;
 
-  Future<void> _pickPeriod(BuildContext context) async {
+  Future<void> _pickPeriod(BuildContext context, StatementPeriod policy) async {
     if (yearly) {
       final selected = await showModalBottomSheet<int>(
         context: context,
@@ -209,13 +199,21 @@ class _InvestmentPeriodBar extends StatelessWidget {
       return;
     }
 
-    final selected = await showMobileMonthPicker(context, initialMonth: month);
-    if (selected != null) onMonthChanged(selected);
+    final selected = await showMobileMonthPicker(
+      context,
+      initialMonth: policy.displayMonth(month),
+    );
+    if (selected != null) {
+      onMonthChanged(policy.anchorForDisplay(selected, month));
+    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final date = parseMonthKey(month);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
+    final date = parseMonthKey(policy.displayMonth(month));
     final label = yearly ? '$year년' : '${date.year}년 ${date.month}월';
 
     return MobileCard(
@@ -233,7 +231,7 @@ class _InvestmentPeriodBar extends StatelessWidget {
               ),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _pickPeriod(context),
+                  onPressed: () => _pickPeriod(context, policy),
                   icon: const Icon(Icons.calendar_month, size: 18),
                   label: Text(label, overflow: TextOverflow.ellipsis),
                 ),
@@ -888,9 +886,9 @@ class _InvestmentCard extends ConsumerWidget {
 
     await ref.read(investmentsDaoProvider).deleteInvestment(row.id);
     refreshInvestments(ref, accountId: row.accountId);
-    ref.invalidate(_annualInvestmentRowsProvider);
-    ref.invalidate(_annualInvestmentSummaryProvider);
-    ref.invalidate(_annualRealizedPnlProvider);
+    ref.invalidate(investmentYearlyRowsProvider);
+    ref.invalidate(investmentYearlySummaryProvider);
+    ref.invalidate(investmentYearlyRealizedPnlProvider);
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -1125,9 +1123,9 @@ class _InvestmentSheetState extends ConsumerState<_InvestmentSheet> {
           .getInvestmentById(id);
       if (!mounted) return;
       refreshInvestments(ref, accountId: saved?.accountId);
-      ref.invalidate(_annualInvestmentRowsProvider);
-      ref.invalidate(_annualInvestmentSummaryProvider);
-      ref.invalidate(_annualRealizedPnlProvider);
+      ref.invalidate(investmentYearlyRowsProvider);
+      ref.invalidate(investmentYearlySummaryProvider);
+      ref.invalidate(investmentYearlyRealizedPnlProvider);
       Navigator.pop(context);
       _showSnack('${_sideLabel(_side)} 거래를 ${_isEdit ? '수정' : '추가'}했습니다.');
     } catch (e) {

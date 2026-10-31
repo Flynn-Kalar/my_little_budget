@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,6 +20,9 @@ class MobileBudgetScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(budgetMonthProvider);
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
     final income = ref.watch(monthlyExpectedIncomeProvider);
     final rows = ref.watch(budgetRowsProvider);
 
@@ -37,6 +41,10 @@ class MobileBudgetScreen extends ConsumerWidget {
         ),
         MobileMonthNav(
           month: month,
+          displayMonth: policy.displayMonth(month),
+          onMonthPicked: (value) =>
+              ref.read(budgetMonthProvider.notifier).state = policy
+                  .anchorForDisplay(value, month),
           onChanged: (value) =>
               ref.read(budgetMonthProvider.notifier).state = value,
         ),
@@ -102,7 +110,13 @@ class _CopyPreviousMonthActionState
       final sourceMonth = shiftMonth(widget.month, -1);
       final copied = await ref
           .read(budgetDaoProvider)
-          .copyBudgetGroupsWithCarryforward(sourceMonth, widget.month);
+          .copyBudgetGroupsWithCarryforward(
+            sourceMonth,
+            widget.month,
+            sourcePeriod: (await ref.read(
+              statementPeriodProvider.future,
+            )).range(sourceMonth),
+          );
       if (!mounted) return;
       refreshBudget(ref);
       ScaffoldMessenger.of(context).showSnackBar(

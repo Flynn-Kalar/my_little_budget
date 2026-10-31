@@ -1,13 +1,15 @@
+import '../settings/statement_period.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../core/date.dart';
 import '../../data/daos/budget_dao.dart';
 import '../../data/database.dart';
 import '../../data/providers.dart';
 import 'badges_providers.dart';
 
-final budgetMonthProvider = StateProvider<String>((ref) => currentMonthKey());
+final budgetMonthProvider = StateProvider<String>(
+  (ref) => ref.watch(currentStatementMonthProvider),
+);
 
 final monthlyExpectedIncomeProvider = FutureProvider.autoDispose<int>((
   ref,
@@ -22,7 +24,10 @@ final budgetRowsProvider = FutureProvider.autoDispose<List<BudgetVsActual>>((
 ) async {
   final month = ref.watch(budgetMonthProvider);
   final dao = ref.watch(budgetDaoProvider);
-  return dao.budgetGroupVsActual(month);
+  return dao.budgetGroupVsActual(
+    month,
+    period: (await ref.watch(statementPeriodProvider.future)).range(month),
+  );
 });
 
 final budgetExpenseCategoriesProvider =
@@ -42,9 +47,15 @@ final budgetAccountLinkedPreviewProvider = FutureProvider.autoDispose
     .family<({int available, int spent}), ({int accountId, String month})>((
       ref,
       args,
-    ) {
+    ) async {
       final dao = ref.watch(budgetDaoProvider);
-      return dao.accountLinkedBudgetPreview(args.accountId, args.month);
+      return dao.accountLinkedBudgetPreview(
+        args.accountId,
+        args.month,
+        period: (await ref.watch(
+          statementPeriodProvider.future,
+        )).range(args.month),
+      );
     });
 
 void refreshBudget(WidgetRef ref) {

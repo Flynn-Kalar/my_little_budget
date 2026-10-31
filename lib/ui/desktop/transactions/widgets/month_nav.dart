@@ -98,7 +98,7 @@ class _MonthNavState extends ConsumerState<MonthNav> {
             const SizedBox(width: 4),
             TextButton(
               onPressed: () => ref.read(selectedMonthProvider.notifier).state =
-                  currentMonthKey(),
+                  ref.read(currentStatementMonthProvider),
               style: TextButton.styleFrom(
                 foregroundColor: context.desktopMuted,
                 minimumSize: compact ? const Size(40, 36) : null,

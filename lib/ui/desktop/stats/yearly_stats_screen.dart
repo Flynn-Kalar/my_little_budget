@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -89,7 +90,14 @@ class _YearSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final nowYear = DateTime.now().year;
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
+    final nowYear = int.parse(
+      policy
+          .displayMonth(ref.watch(currentStatementMonthProvider))
+          .substring(0, 4),
+    );
     final options = {...years, year, nowYear}.toList()
       ..sort((a, b) => b.compareTo(a));
 

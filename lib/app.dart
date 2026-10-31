@@ -1,3 +1,4 @@
+import 'features/settings/statement_period.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -24,14 +25,17 @@ class MyLittleBudgetApp extends ConsumerStatefulWidget {
 class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
     with WidgetsBindingObserver {
   Timer? _resetTimer;
+  Timer? _statementTimer;
   bool _notesSyncing = false;
   bool _notesDirty = false;
   bool _initializing = false;
+  bool _resuming = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scheduleStatementRefresh();
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeApp());
   }
 
@@ -39,12 +43,27 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _resetTimer?.cancel();
+    _statementTimer?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) unawaited(_resumeApp());
+  }
+
+  void _scheduleStatementRefresh() {
+    _statementTimer?.cancel();
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    _statementTimer = Timer(
+      tomorrow.difference(now) + const Duration(seconds: 1),
+      () {
+        if (!mounted) return;
+        ref.invalidate(statementTodayProvider);
+        _scheduleStatementRefresh();
+      },
+    );
   }
 
   Future<void> _initializeApp() async {
@@ -67,16 +86,23 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
   }
 
   Future<void> _resumeApp() async {
-    if (!mounted) return;
-    unawaited(ref.read(localBackupServiceProvider).captureIfDue());
-    unawaited(_syncNotes());
-    final coordinator = ref.read(supabaseSyncCoordinatorProvider);
-    final syncResult = await coordinator.synchronizeNow();
-    if (syncResult.isOk) {
-      await _runRecurringBackfillAfterPull();
-      await coordinator.pushNow();
+    if (!mounted || _initializing || _resuming) return;
+    _resuming = true;
+    try {
+      ref.invalidate(statementTodayProvider);
+      _scheduleStatementRefresh();
+      unawaited(ref.read(localBackupServiceProvider).captureIfDue());
+      unawaited(_syncNotes());
+      final coordinator = ref.read(supabaseSyncCoordinatorProvider);
+      final syncResult = await coordinator.synchronizeNow();
+      if (syncResult.isOk) {
+        await _runRecurringBackfillAfterPull();
+        await coordinator.pushNow();
+      }
+      await _syncNotes();
+    } finally {
+      _resuming = false;
     }
-    await _syncNotes();
   }
 
   void _handleSyncResult(SyncRunResult result) {
@@ -147,6 +173,18 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(currentStatementMonthProvider, (previous, next) {
+      if (previous != null && previous != next) unawaited(_resumeApp());
+    });
+    ref.listen(statementPeriodProvider, (previous, next) {
+      final old = previous?.asData?.value;
+      final value = next.asData?.value;
+      if (old != null &&
+          value != null &&
+          (old.day != value.day || old.adjustment != value.adjustment)) {
+        unawaited(_resumeApp());
+      }
+    });
     ref.listen(noteScheduleRevisionProvider, (_, _) => _syncNotes());
     final router = ref.watch(appRouterProvider);
     final palettes = ref.watch(themeProvider);

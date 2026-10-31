@@ -85,12 +85,16 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
 
   /// 활성 자산 + 자산 현황 잔액 (거래 합산 SQL + 투자 손익). SPEC §3.9.
   ///
-  /// 현금/은행은 [asOf] 당일까지, 카드는 [asOf]가 속한 달의 말일까지
+  /// 현금/은행은 [asOf] 당일까지, 카드는 [statementEnd]까지 (미지정 시 달의 말일까지)
   /// 입력된 거래를 반영한다. 그 외 계좌 유형은 기존처럼 날짜 제한이 없다.
-  Future<List<AccountBalance>> getAccountBalances({DateTime? asOf}) async {
+  Future<List<AccountBalance>> getAccountBalances({
+    DateTime? asOf,
+    String? statementEnd,
+  }) async {
     final localAsOf = asOf ?? DateTime.now();
     final today = toDateKey(localAsOf);
-    final currentMonthEnd = monthRange(toMonthKey(localAsOf)).end;
+    final currentMonthEnd =
+        statementEnd ?? monthRange(toMonthKey(localAsOf)).end;
     final rows = await customSelect(
       '''
       WITH active_accounts AS (

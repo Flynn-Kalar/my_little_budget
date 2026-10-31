@@ -1,3 +1,4 @@
+import '../settings/statement_period.dart';
 import 'dart:async';
 
 import 'package:drift/drift.dart' show TableUpdateQuery;
@@ -9,7 +10,9 @@ import '../../data/daos/budget_dao.dart';
 import '../../data/daos/transactions_dao.dart';
 import '../../data/providers.dart';
 
-final homeMonthProvider = StateProvider<String>((ref) => currentMonthKey());
+final homeMonthProvider = StateProvider<String>(
+  (ref) => ref.watch(currentStatementMonthProvider),
+);
 
 class HomeOverview {
   const HomeOverview(this.summary, this.budgets, this.recent);
@@ -24,6 +27,7 @@ class HomeOverview {
 
 final homeOverviewProvider = StreamProvider.autoDispose<HomeOverview>((ref) {
   final month = ref.watch(homeMonthProvider);
+  final policyFuture = ref.watch(statementPeriodProvider.future);
   final db = ref.watch(appDatabaseProvider);
   final transactions = ref.watch(transactionsDaoProvider);
   final budget = ref.watch(budgetDaoProvider);
@@ -48,10 +52,11 @@ final homeOverviewProvider = StreamProvider.autoDispose<HomeOverview>((ref) {
     controller.add(null);
   });
   return changes.asyncMap((_) async {
+    final period = (await policyFuture).range(month);
     final results = await Future.wait<Object>([
-      transactions.monthlySummary(month),
-      budget.budgetGroupVsActual(month),
-      transactions.listTransactionsByMonth(month),
+      transactions.monthlySummary(month, period: period),
+      budget.budgetGroupVsActual(month, period: period),
+      transactions.listTransactionsByMonth(month, period: period),
     ]);
     final rows = results[2] as List<TransactionRow>;
     final today = currentDateKey();

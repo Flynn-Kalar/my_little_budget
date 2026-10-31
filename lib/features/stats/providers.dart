@@ -1,3 +1,4 @@
+import '../settings/statement_period.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -5,8 +6,19 @@ import '../../core/date.dart';
 import '../../data/daos/transactions_dao.dart';
 import '../../data/providers.dart';
 
-final statsMonthProvider = StateProvider<String>((ref) => currentMonthKey());
-final statsYearProvider = StateProvider<int>((ref) => DateTime.now().year);
+final statsMonthProvider = StateProvider<String>(
+  (ref) => ref.watch(currentStatementMonthProvider),
+);
+final statsYearProvider = StateProvider<int>((ref) {
+  final policy =
+      ref.watch(statementPeriodProvider).asData?.value ??
+      const StatementPeriod();
+  return int.parse(
+    policy
+        .displayMonth(ref.watch(currentStatementMonthProvider))
+        .substring(0, 4),
+  );
+});
 final statsSelectedCategoryProvider = StateProvider<CategoryBreakdownRow?>(
   (ref) => null,
 );
@@ -17,14 +29,22 @@ final statsExpenseBreakdownProvider =
     FutureProvider.autoDispose<List<CategoryBreakdownRow>>((ref) async {
       final month = ref.watch(statsMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.expenseByCategory(month);
+      return dao.expenseByCategory(
+        month,
+        period: (await ref.watch(statementPeriodProvider.future)).range(month),
+      );
     });
 
 final statsMonthlyTrendProvider =
     FutureProvider.autoDispose<List<MonthlyTrendRow>>((ref) async {
       final month = ref.watch(statsMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.monthlyTrend(12, month);
+      final policy = await ref.watch(statementPeriodProvider.future);
+      return _trend(
+        dao,
+        policy,
+        List.generate(12, (i) => shiftMonth(month, i - 11)),
+      );
     });
 
 final statsCategoryTransactionsProvider =
@@ -32,7 +52,9 @@ final statsCategoryTransactionsProvider =
       final selected = _effectiveCategory(ref);
       if (selected == null) return const [];
       final month = ref.watch(statsMonthProvider);
-      final range = monthRange(month);
+      final range = (await ref.watch(
+        statementPeriodProvider.future,
+      )).range(month);
       final dao = ref.watch(transactionsDaoProvider);
       return dao.listTransactionsByMonth(
         month,
@@ -51,7 +73,11 @@ final statsTagBreakdownProvider =
       if (selected == null) return const [];
       final month = ref.watch(statsMonthProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.expenseByTag(month, selected.categoryId);
+      return dao.expenseByTag(
+        month,
+        selected.categoryId,
+        period: (await ref.watch(statementPeriodProvider.future)).range(month),
+      );
     });
 
 final statsTagTransactionsProvider =
@@ -61,7 +87,9 @@ final statsTagTransactionsProvider =
       final tag = _effectiveTag(ref);
       if (tag == null) return const [];
       final month = ref.watch(statsMonthProvider);
-      final range = monthRange(month);
+      final range = (await ref.watch(
+        statementPeriodProvider.future,
+      )).range(month);
       final dao = ref.watch(transactionsDaoProvider);
       return dao.listTransactionsByMonth(
         month,
@@ -99,21 +127,83 @@ TagBreakdownRow? _effectiveTag(Ref ref) {
 
 final availableStatsYearsProvider = FutureProvider.autoDispose<List<int>>((
   ref,
-) {
+) async {
   final dao = ref.watch(transactionsDaoProvider);
-  return dao.availableTransactionYears();
+  final policy = await ref.watch(statementPeriodProvider.future);
+  final dates = await dao.transactionDates();
+  return dates
+      .map(
+        (date) => int.parse(
+          policy
+              .displayMonth(policy.anchorForDate(parseDateKey(date)))
+              .substring(0, 4),
+        ),
+      )
+      .toSet()
+      .toList()
+    ..sort();
 });
 
 final yearlyMonthlyTrendProvider =
     FutureProvider.autoDispose<List<MonthlyTrendRow>>((ref) async {
       final year = ref.watch(statsYearProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.monthlyTrend(12, '$year-12');
+      final policy = await ref.watch(statementPeriodProvider.future);
+      final rows = await _trend(dao, policy, policy.anchorsForYear(year));
+      return List.generate(12, (i) {
+        final month = '$year-${(i + 1).toString().padLeft(2, '0')}';
+        final matching = rows.where((r) => r.month == month);
+        return MonthlyTrendRow(
+          month: month,
+          income: matching.fold(0, (a, b) => a + b.income),
+          expense: matching.fold(0, (a, b) => a + b.expense),
+        );
+      });
     });
 
 final yearlyExpenseByCategoryProvider =
-    FutureProvider.autoDispose<List<YearlyPivotRow>>((ref) {
+    FutureProvider.autoDispose<List<YearlyPivotRow>>((ref) async {
       final year = ref.watch(statsYearProvider);
       final dao = ref.watch(transactionsDaoProvider);
-      return dao.yearlyCategoryPivot(year, 'expense');
+      final policy = await ref.watch(statementPeriodProvider.future);
+      final result = <int, YearlyPivotRow>{};
+      for (final anchor in policy.anchorsForYear(year)) {
+        final monthIndex =
+            int.parse(policy.displayMonth(anchor).substring(5)) - 1;
+        for (final row in await dao.expenseByCategory(
+          anchor,
+          period: policy.range(anchor),
+        )) {
+          final pivot = result.putIfAbsent(
+            row.categoryId,
+            () => YearlyPivotRow(
+              categoryId: row.categoryId,
+              categoryName: row.categoryName,
+              categoryColor: row.categoryColor,
+              months: List.filled(12, 0),
+            ),
+          );
+          pivot.months[monthIndex] += row.total;
+        }
+      }
+      return result.values.toList()..sort((a, b) => b.total.compareTo(a.total));
     });
+
+Future<List<MonthlyTrendRow>> _trend(
+  TransactionsDao dao,
+  StatementPeriod policy,
+  List<String> anchors,
+) => Future.wait(
+  anchors.map((anchor) async {
+    final summary = await dao.monthlySummary(
+      anchor,
+      period: policy.range(anchor),
+    );
+    return MonthlyTrendRow(
+      month: policy.displayMonth(anchor),
+      periodMonth: anchor,
+      income: summary.income,
+      expense: summary.expense,
+    );
+  }),
+);

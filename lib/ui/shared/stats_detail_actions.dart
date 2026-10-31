@@ -1,8 +1,8 @@
+import '../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/date.dart';
 import '../../data/daos/transactions_dao.dart';
 import '../../features/transactions/providers.dart' as transactions;
 import '../../features/budget/providers.dart' as budget;
@@ -21,7 +21,10 @@ void openStatsTransactions(
   CategoryBreakdownRow? category,
   TagBreakdownRow? tag,
 }) {
-  final range = monthRange(month);
+  final range =
+      (ref.read(statementPeriodProvider).asData?.value ??
+              const StatementPeriod())
+          .range(month);
   ref.read(transactions.selectedMonthProvider.notifier).state = month;
   ref.read(transactions.typeFilterProvider.notifier).state = 'expense';
   ref

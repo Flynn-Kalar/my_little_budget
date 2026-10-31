@@ -1,6 +1,6 @@
+import '../features/settings/statement_period.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/date.dart';
 import 'daos/accounts_dao.dart';
 import 'daos/backup_dao.dart';
 import 'daos/budget_dao.dart';
@@ -95,10 +95,15 @@ final calendarEventsDaoProvider = Provider<CalendarEventsDao>(
   (ref) => ref.watch(appDatabaseProvider).calendarEventsDao,
 );
 
-/// 앱 시작 시 당월 말까지 반복거래를 한 번 backfill 한다.
-final recurringBackfillProvider = FutureProvider<int>((ref) {
+/// 현재 집계 기간 종료일까지 반복거래를 생성한다. 지정된 거래일은 유지한다.
+final recurringBackfillProvider = FutureProvider<int>((ref) async {
+  final today = ref.read(statementTodayProvider);
+  // The app explicitly refreshes after sync; do not generate as a side effect
+  // of a preference/date notification before the pull has completed.
+  final policyFuture = ref.read(statementPeriodProvider.future);
   final dao = ref.watch(recurringDaoProvider);
+  final policy = await policyFuture;
   return dao.generateDueRecurringTransactions(
-    monthRange(currentMonthKey()).end,
+    policy.range(policy.anchorForDate(today)).end,
   );
 });

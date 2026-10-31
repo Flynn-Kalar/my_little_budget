@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -114,7 +115,13 @@ class _CopyPreviousMonthButtonState
     try {
       final copied = await ref
           .read(budgetDaoProvider)
-          .copyBudgetGroupsWithCarryforward(sourceMonth, widget.month);
+          .copyBudgetGroupsWithCarryforward(
+            sourceMonth,
+            widget.month,
+            sourcePeriod: (await ref.read(
+              statementPeriodProvider.future,
+            )).range(sourceMonth),
+          );
       if (!mounted) return;
       refreshBudget(ref);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -167,7 +174,11 @@ class _BudgetMonthNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final d = parseMonthKey(month);
+    final d = parseMonthKey(
+      (ref.watch(statementPeriodProvider).asData?.value ??
+              const StatementPeriod())
+          .displayMonth(month),
+    );
 
     void shift(int delta) {
       ref.read(budgetMonthProvider.notifier).state = shiftMonth(month, delta);
@@ -183,7 +194,9 @@ class _BudgetMonthNav extends ConsumerWidget {
         ),
         OutlinedButton.icon(
           onPressed: () {
-            ref.read(budgetMonthProvider.notifier).state = currentMonthKey();
+            ref.read(budgetMonthProvider.notifier).state = ref.read(
+              currentStatementMonthProvider,
+            );
           },
           icon: Icon(Icons.calendar_month, size: 18),
           label: Text('${d.year}년 ${d.month}월'),
@@ -648,7 +661,7 @@ class _BudgetGroupModeDialogState
                 ),
                 SizedBox(height: 8),
                 Text(
-                  '계좌 연동 그룹은 선택 계좌의 월초 잔액과 이번 달 입출금 흐름으로 예산을 계산합니다. carry-forward와 카테고리 연결은 사용하지 않습니다.',
+                  '계좌 연동 그룹은 선택 계좌의 집계 시작일 잔액과 집계 기간의 입출금 흐름으로 예산을 계산합니다. carry-forward와 카테고리 연결은 사용하지 않습니다.',
                   style: TextStyle(color: context.desktopMuted, fontSize: 12),
                 ),
                 SizedBox(height: 12),

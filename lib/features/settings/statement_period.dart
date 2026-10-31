@@ -21,6 +21,30 @@ class StatementPeriod {
         labelByEnd: labelByEnd ?? this.labelByEnd,
       );
 
+  String anchorForDate(DateTime date) {
+    final key = toDateKey(date);
+    final nominal = toMonthKey(date);
+    for (final offset in [0, -1, 1, -2, 2]) {
+      final anchor = shiftMonth(nominal, offset);
+      final bounds = range(anchor);
+      if (key.compareTo(bounds.start) >= 0 && key.compareTo(bounds.end) <= 0) {
+        return anchor;
+      }
+    }
+    throw StateError('No statement period for $key');
+  }
+
+  List<String> anchorsForYear(int year) => [
+    for (var offset = -1; offset <= 12; offset++)
+      if (displayMonth(shiftMonth('$year-01', offset)).startsWith('$year-'))
+        shiftMonth('$year-01', offset),
+  ];
+
+  ({String start, String end}) yearRange(int year) {
+    final anchors = anchorsForYear(year);
+    return (start: range(anchors.first).start, end: range(anchors.last).end);
+  }
+
   String displayMonth(String month) {
     final dates = range(month);
     return (labelByEnd ? dates.end : dates.start).substring(0, 7);
@@ -105,3 +129,15 @@ class StatementPeriodController extends AsyncNotifier<StatementPeriod> {
     state = AsyncData(value);
   }
 }
+
+final statementTodayProvider = Provider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+});
+final currentStatementMonthProvider = Provider<String>((ref) {
+  final today = ref.watch(statementTodayProvider);
+  final policy =
+      ref.watch(statementPeriodProvider).asData?.value ??
+      const StatementPeriod();
+  return policy.anchorForDate(today);
+});

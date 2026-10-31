@@ -136,9 +136,11 @@ void main() {
       final now = DateTime.now();
       final month = toMonthKey(DateTime(now.year, now.month + 1));
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: DailyBudgetGuidance(month: month, rows: sampleBudgetRows()),
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: DailyBudgetGuidance(month: month, rows: sampleBudgetRows()),
+            ),
           ),
         ),
       );

@@ -52,6 +52,48 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('same display month keeps each statement period selectable', (
+    tester,
+  ) async {
+    const data = [
+      MonthlyTrendRow(
+        month: '2026-12',
+        periodMonth: '2026-12',
+        income: 500,
+        expense: 100,
+      ),
+      MonthlyTrendRow(
+        month: '2026-12',
+        periodMonth: '2027-01',
+        income: 600,
+        expense: 200,
+      ),
+    ];
+    await boot(tester, data);
+    final graph = tester.widget<LineChart>(find.byType(LineChart));
+    final spot = LineBarSpot(
+      graph.data.lineBarsData[1],
+      1,
+      graph.data.lineBarsData[1].spots[1],
+    );
+    graph.data.lineTouchData.touchCallback!(
+      FlTapUpEvent(TapUpDetails(kind: PointerDeviceKind.touch)),
+      LineTouchResponse(
+        touchLocation: Offset.zero,
+        touchChartCoordinate: Offset.zero,
+        lineBarSpots: [TouchLineBarSpot(spot.bar, spot.barIndex, spot, 0)],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('mobile-trend-selected-month')),
+        matching: find.text('지출 ${formatKRW(200)}'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   for (final width in [320.0, 390.0, 700.0]) {
     testWidgets(
       'mobile trend includes twelve months, totals and scrollable exact amounts at $width',

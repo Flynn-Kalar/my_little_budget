@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -83,7 +84,13 @@ class _InvestmentsScreenState extends ConsumerState<InvestmentsScreen> {
                       year: _year,
                       onModeChanged: (yearly) => setState(() {
                         _yearly = yearly;
-                        if (yearly) _year = parseMonthKey(month).year;
+                        if (yearly) {
+                          _year = parseMonthKey(
+                            (ref.read(statementPeriodProvider).asData?.value ??
+                                    const StatementPeriod())
+                                .displayMonth(month),
+                          ).year;
+                        }
                       }),
                       onMonthChanged: (value) =>
                           ref.read(investmentMonthProvider.notifier).state =
@@ -453,7 +460,7 @@ class _InvestmentFilterBarState extends ConsumerState<_InvestmentFilterBar> {
   }
 }
 
-class _InvestmentPeriodNav extends StatelessWidget {
+class _InvestmentPeriodNav extends ConsumerWidget {
   const _InvestmentPeriodNav({
     required this.yearly,
     required this.month,
@@ -471,8 +478,11 @@ class _InvestmentPeriodNav extends StatelessWidget {
   final ValueChanged<int> onYearChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final d = parseMonthKey(month);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
+    final d = parseMonthKey(policy.displayMonth(month));
 
     void shift(int delta) {
       if (yearly) {
@@ -504,9 +514,13 @@ class _InvestmentPeriodNav extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: () {
             if (yearly) {
-              onYearChanged(DateTime.now().year);
+              onYearChanged(
+                parseMonthKey(
+                  policy.displayMonth(ref.read(currentStatementMonthProvider)),
+                ).year,
+              );
             } else {
-              onMonthChanged(currentMonthKey());
+              onMonthChanged(ref.read(currentStatementMonthProvider));
             }
           },
           icon: Icon(Icons.calendar_month, size: 18),
@@ -521,8 +535,12 @@ class _InvestmentPeriodNav extends StatelessWidget {
         const SizedBox(width: 12),
         TextButton(
           onPressed: () {
-            onMonthChanged(currentMonthKey());
-            onYearChanged(DateTime.now().year);
+            onMonthChanged(ref.read(currentStatementMonthProvider));
+            onYearChanged(
+              parseMonthKey(
+                policy.displayMonth(ref.read(currentStatementMonthProvider)),
+              ).year,
+            );
           },
           child: const Text('오늘'),
         ),

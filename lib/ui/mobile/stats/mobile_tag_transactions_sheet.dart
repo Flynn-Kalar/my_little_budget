@@ -1,7 +1,7 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/date.dart';
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/daos/transactions_dao.dart';
@@ -10,8 +10,10 @@ import '../../shared/stats_detail_actions.dart';
 
 final mobileStatsTagTransactionsProvider = FutureProvider.autoDispose
     .family<List<TransactionRow>, ({String month, int categoryId, int? tagId})>(
-      (ref, key) {
-        final range = monthRange(key.month);
+      (ref, key) async {
+        final range = (await ref.watch(
+          statementPeriodProvider.future,
+        )).range(key.month);
         return ref
             .watch(transactionsDaoProvider)
             .listTransactionsByMonth(

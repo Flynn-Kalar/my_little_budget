@@ -1,8 +1,9 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../features/settings/statement_period.dart';
 import '../../../shared/bulk_manage_button.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/money.dart';
-import '../../../../core/date.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/budget_dao.dart';
 import '../../../shared/daily_budget_guidance.dart';
@@ -60,7 +61,7 @@ class BudgetReadOnlyContent extends StatelessWidget {
   }
 }
 
-class DesktopBudgetOverview extends StatelessWidget {
+class DesktopBudgetOverview extends ConsumerWidget {
   const DesktopBudgetOverview({
     super.key,
     required this.month,
@@ -71,11 +72,12 @@ class DesktopBudgetOverview extends StatelessWidget {
   final List<BudgetVsActual> rows;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final totalBudget = rows.fold<int>(0, (sum, row) => sum + row.budgetAmount);
     final totalSpent = rows.fold<int>(0, (sum, row) => sum + row.spentAmount);
     final hasGuidance =
-        rows.isNotEmpty && month.compareTo(currentMonthKey()) >= 0;
+        rows.isNotEmpty &&
+        month.compareTo(ref.watch(currentStatementMonthProvider)) >= 0;
     Widget summary({bool stretch = false}) => BudgetSummary(
       key: const ValueKey('desktop-budget-summary'),
       totalBudget: totalBudget,

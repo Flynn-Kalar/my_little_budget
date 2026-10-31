@@ -32,8 +32,11 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
     with _$InvestmentsDaoMixin {
   InvestmentsDao(super.db);
 
-  Future<List<Investment>> listInvestmentsByMonth(String month) {
-    final b = monthRange(month);
+  Future<List<Investment>> listInvestmentsByMonth(
+    String month, {
+    ({String start, String end})? period,
+  }) {
+    final b = period ?? monthRange(month);
     return (select(investments)
           ..where((i) => i.occurredOn.isBetweenValues(b.start, b.end))
           ..orderBy([
@@ -48,16 +51,25 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
-  Future<InvestmentSummary> investmentMonthlySummary(String month) async {
-    final b = monthRange(month);
+  Future<InvestmentSummary> investmentMonthlySummary(
+    String month, {
+    ({String start, String end})? period,
+  }) async {
+    final b = period ?? monthRange(month);
     return _sumBySide(b.start, b.end);
   }
 
   /// 연 단위 투자 목록. = Tauri listInvestmentsByYear.
-  Future<List<Investment>> listInvestmentsByYear(int year) {
+  Future<List<Investment>> listInvestmentsByYear(
+    int year, {
+    ({String start, String end})? period,
+  }) {
     return (select(investments)
           ..where(
-            (i) => i.occurredOn.isBetweenValues('$year-01-01', '$year-12-31'),
+            (i) => i.occurredOn.isBetweenValues(
+              period?.start ?? '$year-01-01',
+              period?.end ?? '$year-12-31',
+            ),
           )
           ..orderBy([
             (i) =>
@@ -72,8 +84,14 @@ class InvestmentsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// 연 단위 매수/매도/배당 요약. = Tauri investmentYearlySummary.
-  Future<InvestmentSummary> investmentYearlySummary(int year) {
-    return _sumBySide('$year-01-01', '$year-12-31');
+  Future<InvestmentSummary> investmentYearlySummary(
+    int year, {
+    ({String start, String end})? period,
+  }) {
+    return _sumBySide(
+      period?.start ?? '$year-01-01',
+      period?.end ?? '$year-12-31',
+    );
   }
 
   /// 투자 기록이 있는 연도. = Tauri availableInvestmentYears.

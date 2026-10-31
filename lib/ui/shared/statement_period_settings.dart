@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/date.dart';
 import '../../features/settings/statement_period.dart';
 
 class StatementPeriodSettings extends ConsumerWidget {
@@ -78,7 +77,7 @@ class StatementPeriodSettings extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '이번 달: ${value.range(currentMonthKey()).start} ~ ${value.range(currentMonthKey()).end}',
+                '이번 달: ${value.range(value.anchorForDate(DateTime.now())).start} ~ ${value.range(value.anchorForDate(DateTime.now())).end}',
               ),
             ],
           ),

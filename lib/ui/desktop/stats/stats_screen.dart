@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -122,9 +123,6 @@ class StatsScreen extends ConsumerWidget {
 int? _netForMonth(AsyncValue<List<MonthlyTrendRow>> trend, String month) {
   return trend.maybeWhen(
     data: (rows) {
-      for (final row in rows) {
-        if (row.month == month) return row.net;
-      }
       return rows.isEmpty ? null : rows.last.net;
     },
     orElse: () => null,
@@ -663,7 +661,11 @@ class _CategoryAndTagDetailCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final d = parseMonthKey(month);
+    final d = parseMonthKey(
+      (ref.watch(statementPeriodProvider).asData?.value ??
+              const StatementPeriod())
+          .displayMonth(month),
+    );
     final effectiveTag = tagBreakdown.maybeWhen(
       data: (rows) => _effectiveSelectedTag(rows, selectedTag),
       orElse: () => null,

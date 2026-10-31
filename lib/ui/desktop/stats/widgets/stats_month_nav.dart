@@ -1,3 +1,4 @@
+import '../../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,7 +12,11 @@ class StatsMonthNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final d = parseMonthKey(month);
+    final d = parseMonthKey(
+      (ref.watch(statementPeriodProvider).asData?.value ??
+              const StatementPeriod())
+          .displayMonth(month),
+    );
 
     void shift(int delta) {
       ref.read(statsMonthProvider.notifier).state = shiftMonth(month, delta);
@@ -30,7 +35,9 @@ class StatsMonthNav extends ConsumerWidget {
         ),
         OutlinedButton.icon(
           onPressed: () {
-            ref.read(statsMonthProvider.notifier).state = currentMonthKey();
+            ref.read(statsMonthProvider.notifier).state = ref.read(
+              currentStatementMonthProvider,
+            );
             ref.read(statsSelectedCategoryProvider.notifier).state = null;
             ref.read(statsSelectedTagProvider.notifier).state = null;
             ref.read(statsDetailPanelOpenProvider.notifier).state = false;

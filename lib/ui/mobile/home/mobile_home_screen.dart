@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +18,9 @@ class MobileHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(homeMonthProvider);
+    final policy =
+        ref.watch(statementPeriodProvider).asData?.value ??
+        const StatementPeriod();
     return MobilePageScaffold(
       title: '이번 달 가계부',
       onAdd: () => MobileTransactionSheet.show(context),
@@ -26,6 +30,9 @@ class MobileHomeScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         MobileMonthNav(
           month: month,
+          displayMonth: policy.displayMonth(month),
+          onMonthPicked: (value) => ref.read(homeMonthProvider.notifier).state =
+              policy.anchorForDisplay(value, month),
           onChanged: (value) =>
               ref.read(homeMonthProvider.notifier).state = value,
         ),

@@ -1,3 +1,4 @@
+import '../../../features/settings/statement_period.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +16,13 @@ final mobileStatsTagBreakdownProvider = FutureProvider.autoDispose
     .family<List<TagBreakdownRow>, ({String month, int categoryId})>((
       ref,
       key,
-    ) {
+    ) async {
+      final period = (await ref.watch(
+        statementPeriodProvider.future,
+      )).range(key.month);
       return ref
           .watch(transactionsDaoProvider)
-          .expenseByTag(key.month, key.categoryId);
+          .expenseByTag(key.month, key.categoryId, period: period);
     });
 
 Future<void> showMobileTagBreakdown(

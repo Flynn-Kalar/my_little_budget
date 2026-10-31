@@ -1,7 +1,7 @@
+import '../settings/statement_period.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
-import '../../core/date.dart';
 import '../../data/daos/investments_dao.dart';
 import '../../data/database.dart';
 import '../../data/providers.dart';
@@ -9,7 +9,7 @@ import 'cost_basis.dart';
 import '../accounts/providers.dart';
 
 final investmentMonthProvider = StateProvider<String>(
-  (ref) => currentMonthKey(),
+  (ref) => ref.watch(currentStatementMonthProvider),
 );
 
 class InvestmentFilter {
@@ -68,7 +68,10 @@ final investmentRowsProvider = FutureProvider.autoDispose<List<Investment>>((
   final month = ref.watch(investmentMonthProvider);
   final filter = ref.watch(investmentFilterProvider);
   final dao = ref.watch(investmentsDaoProvider);
-  final rows = await dao.listInvestmentsByMonth(month);
+  final rows = await dao.listInvestmentsByMonth(
+    month,
+    period: (await ref.watch(statementPeriodProvider.future)).range(month),
+  );
   return rows.where((row) {
     if (filter.side != null && row.side != filter.side) return false;
     if (filter.accountId != null && row.accountId != filter.accountId) {
@@ -92,9 +95,12 @@ final investmentRowsProvider = FutureProvider.autoDispose<List<Investment>>((
 final investmentYearlyRowsProvider = FutureProvider.autoDispose
     .family<List<Investment>, int>((ref, year) async {
       final filter = ref.watch(investmentFilterProvider);
+      final period = (await ref.watch(
+        statementPeriodProvider.future,
+      )).yearRange(year);
       final rows = await ref
           .watch(investmentsDaoProvider)
-          .listInvestmentsByYear(year);
+          .listInvestmentsByYear(year, period: period);
       return rows.where((row) {
         if (filter.side != null && row.side != filter.side) return false;
         if (filter.accountId != null && row.accountId != filter.accountId) {
@@ -122,12 +128,20 @@ final investmentMonthlySummaryProvider =
     FutureProvider.autoDispose<InvestmentSummary>((ref) async {
       final month = ref.watch(investmentMonthProvider);
       final dao = ref.watch(investmentsDaoProvider);
-      return dao.investmentMonthlySummary(month);
+      return dao.investmentMonthlySummary(
+        month,
+        period: (await ref.watch(statementPeriodProvider.future)).range(month),
+      );
     });
 
 final investmentYearlySummaryProvider = FutureProvider.autoDispose
-    .family<InvestmentSummary, int>((ref, year) {
-      return ref.watch(investmentsDaoProvider).investmentYearlySummary(year);
+    .family<InvestmentSummary, int>((ref, year) async {
+      final period = (await ref.watch(
+        statementPeriodProvider.future,
+      )).yearRange(year);
+      return ref
+          .watch(investmentsDaoProvider)
+          .investmentYearlySummary(year, period: period);
     });
 
 final investmentAccountProvider = FutureProvider.autoDispose<Account?>((ref) {
@@ -145,16 +159,19 @@ final realizedPnlProvider = FutureProvider.autoDispose<List<RealizedPnL>>((
   ref,
 ) async {
   final month = ref.watch(investmentMonthProvider);
-  final range = monthRange(month);
+  final range = (await ref.watch(statementPeriodProvider.future)).range(month);
   final dao = ref.watch(investmentsDaoProvider);
   return dao.getRealizedPnL(range.start, range.end);
 });
 
 final investmentYearlyRealizedPnlProvider = FutureProvider.autoDispose
-    .family<List<RealizedPnL>, int>((ref, year) {
+    .family<List<RealizedPnL>, int>((ref, year) async {
+      final period = (await ref.watch(
+        statementPeriodProvider.future,
+      )).yearRange(year);
       return ref
           .watch(investmentsDaoProvider)
-          .getRealizedPnL('$year-01-01', '$year-12-31');
+          .getRealizedPnL(period.start, period.end);
     });
 
 void refreshInvestments(WidgetRef ref, {int? accountId}) {

@@ -1,3 +1,5 @@
+import '../../core/date.dart';
+
 class DailyAllowance {
   const DailyAllowance(this.remaining, this.days);
   final int remaining;
@@ -12,14 +14,19 @@ DailyAllowance? dailyAllowance({
   required int budget,
   required int spent,
   required DateTime now,
+  ({String start, String end})? period,
 }) {
   final parts = month.split('-');
   final year = int.parse(parts[0]);
   final m = int.parse(parts[1]);
   final today = DateTime(now.year, now.month, now.day);
-  final last = DateTime(year, m + 1, 0);
+  final last = period == null
+      ? DateTime(year, m + 1, 0)
+      : parseDateKey(period.end);
   if (last.isBefore(today)) return null;
-  final first = DateTime(year, m, 1);
+  final first = period == null
+      ? DateTime(year, m, 1)
+      : parseDateKey(period.start);
   final start = first.isAfter(today) ? first : today;
   // Calendar dates, independent of local daylight-saving hour changes.
   final days =

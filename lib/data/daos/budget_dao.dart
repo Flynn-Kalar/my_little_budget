@@ -317,11 +317,14 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
 
   // ── 예산 vs 실제 ─────────────────────────────────────────────
   /// SPEC §4.4. 그룹별로 유효 예산·사용액·사용률 계산.
-  Future<List<BudgetVsActual>> budgetGroupVsActual(String month) async {
+  Future<List<BudgetVsActual>> budgetGroupVsActual(
+    String month, {
+    ({String start, String end})? period,
+  }) async {
     final groups = await listBudgetGroups(month);
     if (groups.isEmpty) return [];
 
-    final bounds = monthRange(month);
+    final bounds = period ?? monthRange(month);
     final expectedIncome = await getMonthlyExpectedIncome(month);
 
     final result = <BudgetVsActual>[];
@@ -400,6 +403,8 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   Future<List<BudgetLimitWarning>> budgetLimitWarningsFor(
     TransactionDraft draft, {
     int thresholdPercent = 80,
+    String? statementMonth,
+    ({String start, String end})? period,
   }) async {
     if (draft.type != 'expense' ||
         !isDateKey(draft.occurredOn) ||
@@ -408,8 +413,8 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
       return const [];
     }
 
-    final month = draft.occurredOn.substring(0, 7);
-    final rows = await budgetGroupVsActual(month);
+    final month = statementMonth ?? draft.occurredOn.substring(0, 7);
+    final rows = await budgetGroupVsActual(month, period: period);
     return [
       for (final row in rows)
         if (_isAffectedBudget(row, draft) &&
@@ -492,9 +497,10 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
 
   Future<({int available, int spent})> accountLinkedBudgetPreview(
     int accountId,
-    String month,
-  ) {
-    final bounds = monthRange(month);
+    String month, {
+    ({String start, String end})? period,
+  }) {
+    final bounds = period ?? monthRange(month);
     return _accountBudget(accountId, bounds.start, bounds.end);
   }
 
@@ -502,9 +508,13 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   /// SPEC §4.4 — 이전 달 그룹을 대상 월로 복사. carryForward 면 잔금을 조정액으로 이월.
   Future<int> copyBudgetGroupsWithCarryforward(
     String sourceMonth,
-    String targetMonth,
-  ) async {
-    final sourceGroups = await budgetGroupVsActual(sourceMonth);
+    String targetMonth, {
+    ({String start, String end})? sourcePeriod,
+  }) async {
+    final sourceGroups = await budgetGroupVsActual(
+      sourceMonth,
+      period: sourcePeriod,
+    );
     var copied = 0;
 
     return transaction(() async {

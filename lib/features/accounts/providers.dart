@@ -1,3 +1,4 @@
+import '../settings/statement_period.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -8,9 +9,15 @@ import '../../../data/providers.dart';
 
 /// 활성 자산 + 계산된 잔액.
 final accountBalancesProvider =
-    FutureProvider.autoDispose<List<AccountBalance>>(
-      (ref) => ref.watch(accountsDaoProvider).getAccountBalances(),
-    );
+    FutureProvider.autoDispose<List<AccountBalance>>((ref) async {
+      final dao = ref.watch(accountsDaoProvider);
+      final today = ref.watch(statementTodayProvider);
+      final policy = await ref.watch(statementPeriodProvider.future);
+      return dao.getAccountBalances(
+        asOf: today,
+        statementEnd: policy.range(policy.anchorForDate(today)).end,
+      );
+    });
 
 /// 보관된 자산.
 final archivedAccountsProvider = FutureProvider.autoDispose<List<Account>>(
@@ -19,9 +26,13 @@ final archivedAccountsProvider = FutureProvider.autoDispose<List<Account>>(
 
 /// 단일 자산 + 잔액.
 final accountByIdProvider = FutureProvider.autoDispose
-    .family<AccountBalance?, int>(
-      (ref, id) => ref.watch(accountsDaoProvider).getAccountBalance(id),
-    );
+    .family<AccountBalance?, int>((ref, id) async {
+      final rows = await ref.watch(accountBalancesProvider.future);
+      for (final row in rows) {
+        if (row.accountId == id) return row;
+      }
+      return null;
+    });
 
 /// 자산에 귀속된 거래 (투자 가상 행 병합). SPEC §4.3.
 class AccountDetailFilter {

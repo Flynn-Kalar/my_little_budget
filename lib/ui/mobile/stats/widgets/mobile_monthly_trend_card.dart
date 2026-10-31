@@ -25,7 +25,7 @@ class _MobileMonthlyTrendCardState extends State<MobileMonthlyTrendCard> {
     final expense = rows.fold<int>(0, (sum, row) => sum + row.expense);
     final net = income - expense;
     final selected =
-        rows.where((r) => r.month == _selectedMonth).firstOrNull ??
+        rows.where((r) => r.periodKey == _selectedMonth).firstOrNull ??
         rows.lastOrNull;
     final colors = [context.appIncome, context.appExpense, context.appAccent];
     const labels = ['수입', '지출', '순액'];
@@ -147,8 +147,9 @@ class _MobileMonthlyTrendCardState extends State<MobileMonthlyTrendCard> {
                     padding: const EdgeInsets.only(right: 12, top: 10),
                     child: _TrendChart(
                       rows: rows,
-                      onSelected: (index) =>
-                          setState(() => _selectedMonth = rows[index].month),
+                      onSelected: (index) => setState(
+                        () => _selectedMonth = rows[index].periodKey,
+                      ),
                     ),
                   ),
                 ),

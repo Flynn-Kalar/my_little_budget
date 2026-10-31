@@ -1,5 +1,5 @@
 const appDisplayName = 'my_little_budget';
-const appVersionLabel = '1.0.0-rc.14+63';
+const appVersionLabel = '1.0.0-rc.15+64';
 const appRepositoryUrl = 'https://github.com/Flynn-Kalar/my_little_budget';
 const appAndroidPackageName = 'com.my_little_budget';
 const appPlayStoreUrl =

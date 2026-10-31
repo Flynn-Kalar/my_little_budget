@@ -1,3 +1,4 @@
+import '../../../../features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -188,9 +189,17 @@ class _MobileTransactionSheetState
       final warning = await ref
           .read(transactionsDaoProvider)
           .cardLimitWarningFor(result.value!);
+      final statementPolicy = await ref.read(statementPeriodProvider.future);
+      final statementMonth = statementPolicy.anchorForDate(
+        DateTime.parse(result.value!.occurredOn),
+      );
       final budgetWarnings = await ref
           .read(budgetDaoProvider)
-          .budgetLimitWarningsFor(result.value!);
+          .budgetLimitWarningsFor(
+            result.value!,
+            statementMonth: statementMonth,
+            period: statementPolicy.range(statementMonth),
+          );
       if (!mounted) return;
       refreshTransactions(ref);
       Navigator.pop(context);
