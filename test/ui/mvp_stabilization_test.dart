@@ -372,6 +372,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('transactions-search-clear')));
     await tester.pumpAndSettle();
 
+    if (DateTime.now().day == 1) {
+      await tester.tap(
+        find.byKey(const ValueKey('desktop-transactions-planned-toggle')),
+      );
+      await tester.pumpAndSettle();
+    }
+
     expect(find.textContaining('Alpha memo target'), findsOneWidget);
     expect(find.textContaining('Beta memo hidden'), findsOneWidget);
   });

@@ -6,9 +6,10 @@ import '../../core/date.dart';
 import '../../data/daos/transactions_dao.dart';
 import '../../data/providers.dart';
 
-final statsMonthProvider = StateProvider<String>(
-  (ref) => ref.watch(currentStatementMonthProvider),
-);
+final statsMonthProvider =
+    StateNotifierProvider<StatementMonthController, String>(
+      createStatementMonthController,
+    );
 final statsYearProvider = StateProvider<int>((ref) {
   final policy =
       ref.watch(statementPeriodProvider).asData?.value ??

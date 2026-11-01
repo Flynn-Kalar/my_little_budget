@@ -7,9 +7,10 @@ import '../../data/database.dart';
 import '../../data/providers.dart';
 import 'badges_providers.dart';
 
-final budgetMonthProvider = StateProvider<String>(
-  (ref) => ref.watch(currentStatementMonthProvider),
-);
+final budgetMonthProvider =
+    StateNotifierProvider<StatementMonthController, String>(
+      createStatementMonthController,
+    );
 
 final monthlyExpectedIncomeProvider = FutureProvider.autoDispose<int>((
   ref,

@@ -16,9 +16,10 @@ import 'package:my_little_budget/features/stats/providers.dart'
 /// ?댁뿭 ?붾㈃ ?곹깭/議고쉶 provider. DAO쨌?쒖닔濡쒖쭅???몄텧留??쒕떎 (濡쒖쭅 誘몄닔??.
 
 /// ?꾩옱 蹂닿퀬 ?덈뒗 ??(YYYY-MM).
-final selectedMonthProvider = StateProvider<String>(
-  (ref) => ref.watch(currentStatementMonthProvider),
-);
+final selectedMonthProvider =
+    StateNotifierProvider<StatementMonthController, String>(
+      createStatementMonthController,
+    );
 
 /// ????꾪꽣. null = ?꾩껜(湲곕낯).
 final typeFilterProvider = StateProvider<String?>((ref) => null);

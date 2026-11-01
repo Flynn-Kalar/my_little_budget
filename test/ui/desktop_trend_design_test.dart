@@ -1,3 +1,4 @@
+import 'package:my_little_budget/features/settings/statement_period.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -90,7 +91,9 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
-          statsMonthProvider.overrideWith((ref) => '2026-10'),
+          statsMonthProvider.overrideWith(
+            (ref) => StatementMonthController('2026-10'),
+          ),
           statsMonthlyTrendProvider.overrideWith((ref) async => data),
           statsExpenseBreakdownProvider.overrideWith((ref) async => []),
         ],

@@ -8,9 +8,10 @@ import '../../data/providers.dart';
 import 'cost_basis.dart';
 import '../accounts/providers.dart';
 
-final investmentMonthProvider = StateProvider<String>(
-  (ref) => ref.watch(currentStatementMonthProvider),
-);
+final investmentMonthProvider =
+    StateNotifierProvider<StatementMonthController, String>(
+      createStatementMonthController,
+    );
 
 class InvestmentFilter {
   const InvestmentFilter({

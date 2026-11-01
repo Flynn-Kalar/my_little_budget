@@ -10,9 +10,10 @@ import '../../data/daos/budget_dao.dart';
 import '../../data/daos/transactions_dao.dart';
 import '../../data/providers.dart';
 
-final homeMonthProvider = StateProvider<String>(
-  (ref) => ref.watch(currentStatementMonthProvider),
-);
+final homeMonthProvider =
+    StateNotifierProvider<StatementMonthController, String>(
+      createStatementMonthController,
+    );
 
 class HomeOverview {
   const HomeOverview(this.summary, this.budgets, this.recent);

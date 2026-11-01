@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/date.dart';
@@ -141,3 +142,31 @@ final currentStatementMonthProvider = Provider<String>((ref) {
       const StatementPeriod();
   return policy.anchorForDate(today);
 });
+
+/// Follow the current period until the user explicitly selects a month.
+/// Preference loading and midnight refreshes must not overwrite that choice.
+class StatementMonthController extends StateController<String> {
+  StatementMonthController(super.state);
+
+  bool _selected = false;
+
+  @override
+  set state(String value) {
+    _selected = true;
+    super.state = value;
+  }
+
+  void followCurrent(String value) {
+    if (!_selected) super.state = value;
+  }
+}
+
+StatementMonthController createStatementMonthController(Ref ref) {
+  final controller = StatementMonthController(
+    ref.read(currentStatementMonthProvider),
+  );
+  ref.listen(currentStatementMonthProvider, (_, next) {
+    controller.followCurrent(next);
+  });
+  return controller;
+}

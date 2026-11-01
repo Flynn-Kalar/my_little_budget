@@ -39,17 +39,81 @@ extension BulkSelectableWidget on Widget {
       : BulkSelectable(entity: entity, id: id, compact: compact, child: this);
 }
 
-class _BulkSelectionViewport extends ConsumerWidget {
+class _BulkPanelScope extends InheritedWidget {
+  const _BulkPanelScope({required this.panel, required super.child});
+  final ValueNotifier<Widget?> panel;
+  @override
+  bool updateShouldNotify(_BulkPanelScope oldWidget) =>
+      panel != oldWidget.panel;
+}
+
+class _BulkSelectionViewport extends ConsumerStatefulWidget {
   const _BulkSelectionViewport({required this.entity, required this.child});
   final BulkEntity entity;
   final Widget child;
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Padding(
-    padding: EdgeInsets.only(
-      bottom: ref.watch(bulkSelectionProvider(entity)) == null ? 0 : 160,
-    ),
-    child: child,
-  );
+  ConsumerState<_BulkSelectionViewport> createState() =>
+      _BulkSelectionViewportState();
+}
+
+class _BulkSelectionViewportState
+    extends ConsumerState<_BulkSelectionViewport> {
+  final _panel = ValueNotifier<Widget?>(null);
+  @override
+  void dispose() {
+    _panel.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = ref.watch(bulkSelectionProvider(widget.entity)) != null;
+    return _BulkPanelScope(
+      panel: _panel,
+      child: LayoutBuilder(
+        builder: (context, constraints) => ValueListenableBuilder<Widget?>(
+          valueListenable: _panel,
+          child: widget.child,
+          builder: (context, panel, child) => Column(
+            mainAxisSize: constraints.hasBoundedHeight
+                ? MainAxisSize.max
+                : MainAxisSize.min,
+            children: [
+              if (constraints.hasBoundedHeight)
+                Expanded(child: child!)
+              else
+                child!,
+              if (active && panel != null)
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: constraints.hasBoundedHeight
+                        ? constraints.maxHeight * .5
+                        : double.infinity,
+                  ),
+                  child: SingleChildScrollView(
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Material(
+                          elevation: 2,
+                          borderRadius: BorderRadius.circular(16),
+                          color: Theme.of(context).colorScheme.surface,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: panel,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class BulkSelectable extends ConsumerWidget {
@@ -127,63 +191,28 @@ class BulkSelectionToolbar extends ConsumerStatefulWidget {
 
 class _BulkSelectionToolbarState extends ConsumerState<BulkSelectionToolbar>
     with AutomaticKeepAliveClientMixin {
-  OverlayEntry? _overlay;
-  Widget? _panel;
   @override
   bool get wantKeepAlive => true;
 
-  @override
-  void dispose() {
-    _overlay?.remove();
-    _overlay?.dispose();
-    super.dispose();
-  }
-
   Widget _host(Widget? panel) {
-    final active = panel != null;
-    _panel = panel;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_panel == null) {
-        _overlay?.remove();
-        _overlay?.dispose();
-        _overlay = null;
-      } else if (_overlay != null) {
-        _overlay!.markNeedsBuild();
-      } else {
-        _overlay = OverlayEntry(
-          builder: (context) => Positioned(
-            left: 12,
-            right: 12,
-            bottom:
-                MediaQuery.viewInsetsOf(context).bottom +
-                MediaQuery.paddingOf(context).bottom +
-                12,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Material(
-                elevation: 8,
-                borderRadius: BorderRadius.circular(16),
-                color: Theme.of(context).colorScheme.surface,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: _panel,
-                ),
-              ),
-            ),
-          ),
-        );
-        Overlay.of(context, rootOverlay: true).insert(_overlay!);
-      }
-    });
+    final target = context
+        .dependOnInheritedWidgetOfExactType<_BulkPanelScope>()
+        ?.panel;
+    if (target != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) target.value = panel;
+      });
+    }
     return PopScope(
-      canPop: !active,
+      canPop: panel == null,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && !_busy) {
           ref.read(bulkSelectionProvider(widget.entity).notifier).state = null;
         }
       },
-      child: const SizedBox.shrink(),
+      child: target == null
+          ? (panel ?? const SizedBox.shrink())
+          : const SizedBox.shrink(),
     );
   }
 

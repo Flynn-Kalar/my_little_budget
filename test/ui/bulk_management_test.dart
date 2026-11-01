@@ -189,6 +189,73 @@ Widget screenFor(BulkEntity entity, bool mobile) => switch ((entity, mobile)) {
   (BulkEntity.investments, true) => const MobileInvestmentsScreen(),
 };
 void main() {
+  testWidgets(
+    'mobile selection reserves space above navigation and stays below dialogs',
+    (tester) async {
+      final db = AppDatabase.forTesting(NativeDatabase.memory());
+      try {
+        for (var i = 0; i < 15; i++) {
+          await db.tagsDao.createTag('태그 $i', '#123456');
+        }
+        final tags = await db.tagsDao.getTags();
+        await tester.binding.setSurfaceSize(const Size(360, 740));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [appDatabaseProvider.overrideWithValue(db)],
+            child: MaterialApp(
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(1.3)),
+                child: child!,
+              ),
+              home: Scaffold(
+                body: const SafeArea(child: MobileTagsScreen()),
+                bottomNavigationBar: const SizedBox(
+                  key: ValueKey('test-navigation'),
+                  height: 80,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await hold(tester, BulkEntity.tags, tags.first.id);
+        final toolbar = find.byKey(
+          const ValueKey('bulk-selection-toolbar-tags'),
+        );
+        expect(
+          tester.getRect(toolbar).bottom,
+          lessThan(
+            tester.getRect(find.byKey(const ValueKey('test-navigation'))).top,
+          ),
+        );
+        final last = find.byKey(ValueKey('bulk-row-tags-${tags.last.id}'));
+        await reveal(tester, last);
+        expect(
+          tester.getRect(last).bottom,
+          lessThanOrEqualTo(tester.getRect(toolbar).top),
+        );
+        await tester.tap(find.widgetWithText(FilledButton, '카테고리 지정'));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('bulk-cancel-selection')).hitTestable(),
+          findsNothing,
+        );
+        final expense = find.byKey(
+          const ValueKey('tag-category-group-expense'),
+        );
+        final income = find.byKey(const ValueKey('tag-category-group-income'));
+        expect(expense, findsOneWidget);
+        await tester.ensureVisible(income);
+        await tester.pumpAndSettle();
+        expect(income.hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await cleanup(tester, db);
+      }
+    },
+  );
   for (final mobile in [false, true]) {
     for (final entity in BulkEntity.values) {
       testWidgets(
@@ -391,7 +458,7 @@ void main() {
                         title: Text(c.name),
                       ).bulkSelectable(BulkEntity.categories, c.id),
                   ],
-                ),
+                ).bulkSelectionViewport(BulkEntity.categories),
               ),
             ),
           ),

@@ -73,10 +73,12 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
       ref.read(localBackupServiceProvider).start();
       unawaited(_syncNotes());
       final coordinator = ref.read(supabaseSyncCoordinatorProvider);
-      coordinator.start(onResult: _handleSyncResult);
+      coordinator.start(
+        onResult: _handleSyncResult,
+        afterFullSync: _runRecurringBackfillAfterPull,
+      );
       final syncResult = await coordinator.synchronizeNow();
       if (syncResult.isOk) {
-        await _runRecurringBackfillAfterPull();
         await coordinator.pushNow();
       }
       await _syncNotes();
@@ -96,7 +98,6 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
       final coordinator = ref.read(supabaseSyncCoordinatorProvider);
       final syncResult = await coordinator.synchronizeNow();
       if (syncResult.isOk) {
-        await _runRecurringBackfillAfterPull();
         await coordinator.pushNow();
       }
       await _syncNotes();
@@ -112,6 +113,7 @@ class _MyLittleBudgetAppState extends ConsumerState<MyLittleBudgetApp>
   }
 
   Future<void> _runRecurringBackfillAfterPull() async {
+    if (!mounted) return;
     // Run a fresh pass after every successful pull. Keeping this out of screen
     // providers prevents the initial /transactions route from racing startup.
     ref.invalidate(recurringBackfillProvider);

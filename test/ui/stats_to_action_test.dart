@@ -1,3 +1,4 @@
+import 'package:my_little_budget/features/settings/statement_period.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -60,7 +61,9 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(db),
-          statsMonthProvider.overrideWith((ref) => '2024-02'),
+          statsMonthProvider.overrideWith(
+            (ref) => StatementMonthController('2024-02'),
+          ),
         ],
         child: const MyLittleBudgetApp(),
       ),

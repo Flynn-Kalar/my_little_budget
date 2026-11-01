@@ -556,6 +556,13 @@ void main() {
     ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
+    if (secondDate.compareTo(firstDate) > 0) {
+      await tester.tap(
+        find.byKey(const ValueKey('desktop-transactions-planned-toggle')),
+      );
+      await tester.pumpAndSettle();
+    }
+
     expect(_desktopDailyIncome(firstDate, 3000), findsOneWidget);
     expect(_desktopDailyExpense(firstDate, 1000), findsOneWidget);
     expect(_desktopDailyIncome(secondDate, 5000), findsOneWidget);

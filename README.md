@@ -4,8 +4,8 @@
 
 ## 공개 버전과 개발 상태
 
-- 최신 GitHub 공개 버전: **`1.0.0-rc.9+58`** ([릴리스와 변경 내역](https://github.com/Flynn-Kalar/my_little_budget/releases/tag/v1.0.0-rc.9))
-- 아래의 일반 기능·설치 안내는 공개된 rc.9을 기준으로 합니다.
+- 최신 GitHub 공개 사전 릴리스: **`1.0.0-rc.16+65`** ([릴리스와 변경 내역](https://github.com/Flynn-Kalar/my_little_budget/releases/tag/v1.0.0-rc.16))
+- 아래의 일반 기능·설치 안내는 공개된 rc.16을 기준으로 합니다.
 - GitHub의 Android AAB 공개와 Google Play 배포는 별개입니다. Play 스토어에서 제공하는 버전은 배포 트랙에 따라 다를 수 있습니다.
 
 | 구분 | 상태 |
@@ -17,17 +17,21 @@
 | 일정 상세를 먼저 읽고 ‘수정’ 버튼으로 편집 | rc.9 포함 |
 | 메모 내용 동기화·기기별 알람 설정 분리 | rc.9 포함, 서버에 최신 SQL 적용 필요 |
 
-**기존 Supabase 사용자는 rc.9로 업데이트한 뒤 [최신 SQL 전체](supabase/table_sync_v2_schema.sql)를 다시 실행하고 `11 / 11`을 확인하세요.** 이전 10개 테이블 구성에는 메모 동기화 테이블이 없습니다.
+rc.10~15에는 투자 포트폴리오, 메모 목표·순서 편집, 시간대 선택, 체크리스트 터치 영역 개선, 집계 시작일·표시월 설정이 추가됐습니다. rc.15에서는 홈·예산·통계·투자의 월별 조회를 같은 집계 기간으로 통일하고, 반복 거래를 해당 기간 종료일까지 생성합니다.
+
+**rc.9 이전 버전의 Supabase 사용자는 현재 버전으로 업데이트한 뒤 [최신 SQL 전체](supabase/table_sync_v2_schema.sql)를 다시 실행하고 `11 / 11`을 확인하세요.** 이전 10개 테이블 구성에는 메모 동기화 테이블이 없습니다.
+
+rc.16에서는 다중 선택 도구의 하단 겹침, 태그 카테고리의 수입·지출 구분, 동기화 완료 대기와 자동 복구, 집계 설정 변경 시 선택 월 보존을 개선했습니다.
 
 ## Windows 버전 설치
 
-**[Windows Setup 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.9/MyLittleBudget-Setup-1.0.0-rc.9.exe)** · **[Windows Update 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.9/MyLittleBudget-Update-1.0.0-rc.9.exe)** · **[Android AAB 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.9/MyLittleBudget-Android-1.0.0-rc.9.aab)**
+**[Windows Setup 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/MyLittleBudget-Setup-1.0.0-rc.16.exe)** · **[Windows Update 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/MyLittleBudget-Update-1.0.0-rc.16.exe)** · **[Android AAB 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/MyLittleBudget-Android-1.0.0-rc.16.aab)**
 
-1. 처음 설치할 때는 `MyLittleBudget-Setup-1.0.0-rc.9.exe`, 기존 앱을 업데이트할 때는 `MyLittleBudget-Update-1.0.0-rc.9.exe`를 내려받습니다.
+1. 처음 설치할 때는 `MyLittleBudget-Setup-1.0.0-rc.16.exe`, 기존 앱을 업데이트할 때는 `MyLittleBudget-Update-1.0.0-rc.16.exe`를 내려받습니다.
 2. Setup 파일을 실행하고 설치 안내를 따릅니다.
 3. 설치가 끝나면 시작 메뉴의 `나만의 작은 가계부`를 실행합니다.
 
-사용자별 `%LOCALAPPDATA%\Programs\MyLittleBudget`에 설치되므로 관리자 권한이 필요하지 않습니다. 기존 설치와 같은 AppId 및 데이터 저장 위치를 사용해 업그레이드합니다. 두 EXE는 파일명만 다른 동일한 전체 설치 패키지이며 [SHA256SUMS.txt](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.9/SHA256SUMS.txt)로 검증할 수 있습니다.
+사용자별 `%LOCALAPPDATA%\Programs\MyLittleBudget`에 설치되므로 관리자 권한이 필요하지 않습니다. 기존 설치와 같은 AppId 및 데이터 저장 위치를 사용해 업그레이드합니다. 두 EXE는 파일명만 다른 동일한 전체 설치 패키지이며 [SHA256SUMS.txt](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/SHA256SUMS.txt)로 검증할 수 있습니다.
 
 Android AAB는 Google Play 업로드용 번들입니다. 휴대전화에서 직접 설치하는 APK 파일과는 다릅니다.
 
@@ -173,8 +177,8 @@ release 빌드와 Setup 생성을 한 번에 실행:
 설치·업데이트 산출물:
 
 ```text
-installer\output\MyLittleBudget-Setup-1.0.0-rc.9.exe
-installer\output\MyLittleBudget-Update-1.0.0-rc.9.exe
+installer\output\MyLittleBudget-Setup-1.0.0-rc.16.exe
+installer\output\MyLittleBudget-Update-1.0.0-rc.16.exe
 installer\output\SHA256SUMS.txt
 ```
 

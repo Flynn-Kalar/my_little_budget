@@ -510,7 +510,10 @@ class _ProgressCoordinator extends SupabaseSyncCoordinator {
   void complete() => _completion.complete(const SyncRunResult());
 
   @override
-  void start({SyncResultListener? onResult}) {}
+  void start({
+    SyncResultListener? onResult,
+    Future<void> Function()? afterFullSync,
+  }) {}
 
   @override
   Future<SyncRunResult> synchronizeNow() async => const SyncRunResult();

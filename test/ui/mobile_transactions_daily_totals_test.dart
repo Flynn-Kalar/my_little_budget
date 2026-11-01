@@ -125,6 +125,13 @@ void main() {
     ).read(appRouterProvider).go('/transactions');
     await tester.pumpAndSettle();
 
+    if (secondDate.compareTo(firstDate) > 0) {
+      await tester.tap(
+        find.byKey(const ValueKey('mobile-transactions-planned-toggle')),
+      );
+      await tester.pumpAndSettle();
+    }
+
     expect(_dailyIncome(firstDate, 3000), findsOneWidget);
     expect(_dailyExpense(firstDate, 1000), findsOneWidget);
     expect(_dailyTransfer(firstDate, 1, 9999), findsOneWidget);

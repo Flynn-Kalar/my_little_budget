@@ -17,6 +17,43 @@ import 'package:my_little_budget/features/transactions/providers.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
 
 void main() {
+  test(
+    'manual months survive policy changes while untouched months follow the current period',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var date = DateTime(2026, 11, 1);
+      final scope = ProviderContainer(
+        overrides: [statementTodayProvider.overrideWith((ref) => date)],
+      );
+      addTearDown(scope.dispose);
+      await scope.read(statementPeriodProvider.future);
+      final months = [
+        selectedMonthProvider,
+        homeMonthProvider,
+        budgetMonthProvider,
+        statsMonthProvider,
+        investmentMonthProvider,
+      ];
+      for (final provider in months) {
+        expect(scope.read(provider), '2026-11');
+      }
+      await scope
+          .read(statementPeriodProvider.notifier)
+          .save(const StatementPeriod(day: 25));
+      for (final provider in months) {
+        expect(scope.read(provider), '2026-10');
+        scope.read(provider.notifier).state = '2025-12';
+      }
+      await scope
+          .read(statementPeriodProvider.notifier)
+          .save(const StatementPeriod());
+      date = DateTime(2027, 1, 1);
+      scope.invalidate(statementTodayProvider);
+      for (final provider in months) {
+        expect(scope.read(provider), '2025-12');
+      }
+    },
+  );
   TestWidgetsFlutterBinding.ensureInitialized();
   late AppDatabase db;
   late ProviderContainer container;

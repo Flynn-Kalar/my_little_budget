@@ -1,3 +1,4 @@
+import 'package:my_little_budget/features/settings/statement_period.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +37,9 @@ Widget budgetOverviewHost({
   final future = toMonthKey(DateTime(now.year, now.month + 1));
   return ProviderScope(
     overrides: [
-      budgetMonthProvider.overrideWith((ref) => month ?? future),
+      budgetMonthProvider.overrideWith(
+        (ref) => StatementMonthController(month ?? future),
+      ),
       monthlyExpectedIncomeProvider.overrideWith((ref) async => 2000000),
       budgetRowsProvider.overrideWith(
         (ref) async => rows ?? sampleBudgetRows(),

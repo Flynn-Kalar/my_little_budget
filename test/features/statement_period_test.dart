@@ -51,7 +51,10 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final db = AppDatabase.forTesting(NativeDatabase.memory());
       final container = ProviderContainer(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          statementTodayProvider.overrideWithValue(DateTime(2026, 11, 1)),
+        ],
       );
       final account = (await db.accountsDao.getActiveAccounts()).first;
       final category = (await db.categoriesDao.getActiveCategories())

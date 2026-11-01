@@ -66,29 +66,49 @@ class TagCategorySelector extends ConsumerWidget {
               return ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: maxHeight),
                 child: SingleChildScrollView(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final category in visible)
-                        FilterChip(
-                          key: ValueKey('tag-category-${category.id}'),
-                          selected: selected.contains(category.id),
-                          label: Text(
-                            '${category.type == 'income' ? '수입' : '지출'} · ${category.name}${category.archivedAt == null ? '' : ' (보관)'}',
+                      for (final type in ['expense', 'income'])
+                        if (visible.any((c) => c.type == type)) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              type == 'expense' ? '지출 카테고리' : '수입 카테고리',
+                              key: ValueKey('tag-category-group-$type'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                          onSelected: enabled
-                              ? (value) {
-                                  final next = {...selected};
-                                  if (value) {
-                                    next.add(category.id);
-                                  } else {
-                                    next.remove(category.id);
-                                  }
-                                  onChanged(next);
-                                }
-                              : null,
-                        ),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              for (final category in visible.where(
+                                (c) => c.type == type,
+                              ))
+                                FilterChip(
+                                  key: ValueKey('tag-category-${category.id}'),
+                                  selected: selected.contains(category.id),
+                                  label: Text(
+                                    '${category.type == 'income' ? '수입' : '지출'} · ${category.name}${category.archivedAt == null ? '' : ' (보관)'}',
+                                  ),
+                                  onSelected: enabled
+                                      ? (value) {
+                                          final next = {...selected};
+                                          if (value) {
+                                            next.add(category.id);
+                                          } else {
+                                            next.remove(category.id);
+                                          }
+                                          onChanged(next);
+                                        }
+                                      : null,
+                                ),
+                            ],
+                          ),
+                        ],
                     ],
                   ),
                 ),

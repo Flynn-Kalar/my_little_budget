@@ -47,16 +47,21 @@ class SupabaseSyncCoordinator {
   Timer? _retryTimer;
   Future<SyncRunResult>? _activeRun;
   SyncResultListener? _listener;
+  Future<void> Function()? _afterFullSync;
   final Set<SyncProgressListener> _progressListeners = {};
   SyncProgress? _currentProgress;
-  bool _queuedFullSync = false;
-  bool _queuedPush = false;
+  Completer<SyncRunResult>? _queuedFullSync;
+  Completer<SyncRunResult>? _queuedPush;
   bool _retryFullSync = false;
   bool _disposed = false;
   int _retryAttempt = 0;
 
-  void start({SyncResultListener? onResult}) {
+  void start({
+    SyncResultListener? onResult,
+    Future<void> Function()? afterFullSync,
+  }) {
     _listener = onResult ?? _listener;
+    _afterFullSync = afterFullSync ?? _afterFullSync;
     if (_updatesSubscription != null || _disposed) return;
     final query = TableUpdateQuery.allOf([
       for (final table in localSyncTableNames)
@@ -98,11 +103,9 @@ class SupabaseSyncCoordinator {
     final active = _activeRun;
     if (active != null) {
       if (fullSync) {
-        _queuedFullSync = true;
-      } else {
-        _queuedPush = true;
+        return (_queuedFullSync ??= Completer<SyncRunResult>()).future;
       }
-      return active;
+      return (_queuedPush ??= Completer<SyncRunResult>()).future;
     }
 
     if (fullSync) _currentProgress = null;
@@ -110,14 +113,15 @@ class SupabaseSyncCoordinator {
     _activeRun = future;
     future.whenComplete(() {
       _activeRun = null;
-      if (_disposed) return;
-      if (_queuedFullSync) {
-        _queuedFullSync = false;
-        _queuedPush = false;
-        unawaited(_run(fullSync: true));
-      } else if (_queuedPush) {
-        _queuedPush = false;
-        unawaited(_run(fullSync: false));
+      final full = _queuedFullSync;
+      final push = _queuedPush;
+      _queuedFullSync = null;
+      _queuedPush = null;
+      if (full != null || push != null) {
+        // A queued caller waits for its own run, not the preceding upload.
+        final next = _run(fullSync: full != null);
+        full?.complete(next);
+        push?.complete(next);
       }
     });
     return future;
@@ -142,6 +146,7 @@ class SupabaseSyncCoordinator {
   Future<SyncRunResult> _execute({required bool fullSync}) async {
     final settings = await _loadSettings();
     if (settings == null || !settings.isTableSyncConfigured) {
+      if (fullSync && !_disposed) await _afterFullSync?.call();
       _clearRetryState();
       return const SyncRunResult();
     }
@@ -154,6 +159,9 @@ class SupabaseSyncCoordinator {
     await _recordResult(fullSync: fullSync, result: result);
     _listener?.call(result);
     if (result.isOk) {
+      // Includes automatic retries with zero downloaded rows. The callback
+      // may write local data, but must not await another coordinator run.
+      if (fullSync && !_disposed) await _afterFullSync?.call();
       // A push-only success does not prove that a failed pull recovered.
       // Keep that full-sync retry pending until a full sync succeeds.
       if (fullSync || !_retryFullSync) {

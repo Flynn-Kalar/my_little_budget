@@ -25,6 +25,128 @@ const _settings = SupabaseBackupSettings(
 
 void main() {
   test(
+    'automatic full-sync recovery runs backfill even with no remote changes',
+    () async {
+      final db = await _openDatabase();
+      addTearDown(db.close);
+      await _markAllSyncedAndClearOutbox(db);
+      final remote = _FailFirstFetchGateway();
+      final coordinator = _coordinator(db, remote);
+      addTearDown(coordinator.dispose);
+      final recovered = Completer<void>();
+      var backfills = 0;
+      coordinator.start(
+        afterFullSync: () async {
+          backfills++;
+          if (!recovered.isCompleted) recovered.complete();
+        },
+      );
+      expect((await coordinator.synchronizeNow()).isOk, isFalse);
+      expect(backfills, 0);
+      await recovered.future.timeout(const Duration(seconds: 2));
+      await coordinator.pushNow();
+      expect(
+        backfills,
+        1,
+        reason: 'Push-only completion must not run backfill',
+      );
+    },
+  );
+
+  test(
+    'queued full-sync callers receive the pull failure rather than push success',
+    () async {
+      final db = await _openDatabase();
+      addTearDown(db.close);
+      await _markAllSyncedAndClearOutbox(db);
+      final gate = Completer<void>();
+      var loads = 0;
+      final coordinator = SupabaseSyncCoordinator(
+        database: db,
+        service: SupabaseIncrementalSyncService(
+          local: LocalSyncStore(db),
+          remote: _FailFirstFetchGateway(),
+        ),
+        loadSettings: () async {
+          if (++loads == 1) await gate.future;
+          return _settings;
+        },
+        retryDelays: const [Duration(days: 1)],
+      );
+      addTearDown(coordinator.dispose);
+      final push = coordinator.pushNow();
+      final first = coordinator.synchronizeNow();
+      final second = coordinator.synchronizeNow();
+      gate.complete();
+      expect((await push).isOk, isTrue);
+      expect((await first).isOk, isFalse);
+      expect((await second).errorStage, 'download');
+    },
+  );
+
+  test(
+    'full-sync requested during a full-sync waits for its queued pull',
+    () async {
+      final db = await _openDatabase();
+      addTearDown(db.close);
+      await _markAllSyncedAndClearOutbox(db);
+      final remote = _AuditBlockingGateway();
+      final coordinator = _coordinator(db, remote);
+      addTearDown(coordinator.dispose);
+      var completions = 0;
+      coordinator.start(
+        afterFullSync: () async {
+          completions++;
+        },
+      );
+      final first = coordinator.synchronizeNow();
+      await remote.entered.future;
+      final second = coordinator.synchronizeNow();
+      remote.release.complete();
+      await first;
+      await second;
+      expect(completions, 2);
+    },
+  );
+  test('audit: full sync requested during push waits for pull', () async {
+    final db = await _openDatabase();
+    await _markAllSyncedAndClearOutbox(db);
+    final settingsGate = Completer<void>();
+    final remote = _AuditBlockingGateway();
+    var loads = 0;
+    final coordinator = SupabaseSyncCoordinator(
+      database: db,
+      service: SupabaseIncrementalSyncService(
+        local: LocalSyncStore(db),
+        remote: remote,
+      ),
+      loadSettings: () async {
+        if (++loads == 1) await settingsGate.future;
+        return _settings;
+      },
+    );
+    final push = coordinator.pushNow();
+    var fullCompleted = false;
+    final full = coordinator.synchronizeNow().then((_) {
+      fullCompleted = true;
+    });
+    settingsGate.complete();
+    await push;
+    await remote.entered.future;
+    await Future<void>.delayed(Duration.zero);
+    final returnedBeforePull = fullCompleted;
+    remote.release.complete();
+    await full;
+    await coordinator.dispose();
+    await db.close();
+    expect(
+      returnedBeforePull,
+      isFalse,
+      reason: 'Full-sync caller must not proceed before remote pull finishes',
+    );
+  });
+
+  test(
     'a committed local edit starts uploading before immediate app disposal',
     () async {
       final db = await _openDatabase();
@@ -225,9 +347,15 @@ class _FailedStartupCoordinator extends SupabaseSyncCoordinator {
       );
 
   var pushCount = 0;
+  Future<void> Function()? onFullSync;
 
   @override
-  void start({SyncResultListener? onResult}) {}
+  void start({
+    SyncResultListener? onResult,
+    Future<void> Function()? afterFullSync,
+  }) {
+    onFullSync = afterFullSync;
+  }
 
   @override
   Future<SyncRunResult> synchronizeNow() async {
@@ -255,6 +383,7 @@ class _SuccessfulLifecycleCoordinator extends SupabaseSyncCoordinator {
   final _startupPull = Completer<SyncRunResult>();
   var syncCount = 0;
   var pushCount = 0;
+  Future<void> Function()? onFullSync;
 
   void completeStartupPull() {
     if (!_startupPull.isCompleted) {
@@ -263,13 +392,19 @@ class _SuccessfulLifecycleCoordinator extends SupabaseSyncCoordinator {
   }
 
   @override
-  void start({SyncResultListener? onResult}) {}
+  void start({
+    SyncResultListener? onResult,
+    Future<void> Function()? afterFullSync,
+  }) {
+    onFullSync = afterFullSync;
+  }
 
   @override
-  Future<SyncRunResult> synchronizeNow() {
+  Future<SyncRunResult> synchronizeNow() async {
     syncCount++;
-    if (syncCount == 1) return _startupPull.future;
-    return Future.value(const SyncRunResult());
+    if (syncCount == 1) await _startupPull.future;
+    await onFullSync?.call();
+    return const SyncRunResult();
   }
 
   @override
@@ -434,5 +569,26 @@ class _SharedMemoryGateway implements SupabaseSyncGateway {
     (_rows[entity] ??= {})[uuid] = row;
     if (!_firstUpsert.isCompleted) _firstUpsert.complete();
     return row;
+  }
+}
+
+class _AuditBlockingGateway extends _SharedMemoryGateway {
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<List<RemoteSyncRow>> fetchChanges({
+    required SupabaseBackupSettings settings,
+    required String entity,
+    required int afterRevision,
+    required int limit,
+  }) async {
+    if (!entered.isCompleted) entered.complete();
+    await release.future;
+    return super.fetchChanges(
+      settings: settings,
+      entity: entity,
+      afterRevision: afterRevision,
+      limit: limit,
+    );
   }
 }
