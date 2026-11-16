@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/providers.dart';
-import '../../color_hex.dart';
-import '../account_refresh.dart';
+import '../../../../core/color_hex.dart';
+import '../../../../features/accounts/account_refresh.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 
 const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};

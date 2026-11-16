@@ -7,7 +7,7 @@ import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../features/transactions/overview.dart';
-import '../../color_hex.dart';
+import '../../../../core/color_hex.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 
 class TransactionsSidePanel extends ConsumerWidget {

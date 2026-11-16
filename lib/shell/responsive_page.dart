@@ -2,10 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../shared/bulk_manage_button.dart';
+import '../ui/shared/bulk_manage_button.dart';
 
-import '../../shell/layout_policy.dart';
-export '../../shell/layout_policy.dart' show mobileBreakpoint;
+import 'layout_policy.dart';
+export 'layout_policy.dart' show mobileBreakpoint;
 
 class ResponsivePage extends ConsumerWidget {
   const ResponsivePage({

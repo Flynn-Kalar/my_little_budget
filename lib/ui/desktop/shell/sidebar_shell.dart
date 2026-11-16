@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/theme/app_theme.dart';
-import '../features/notes/providers.dart';
-import 'layout_policy.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../features/notes/providers.dart';
+import '../../../shell/layout_policy.dart';
 
 class _NavItem {
   const _NavItem({required this.path, required this.label, required this.icon});

@@ -1,0 +1,581 @@
+[
+  {
+    "Case": "windows-happy-path",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Patch https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "windows-new-draft",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Patch https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "dirty-tree",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Commit source changes before publishing a release.",
+    "GitCalls": [
+      "status --porcelain"
+    ],
+    "BuildCalls": [],
+    "HttpCalls": []
+  },
+  {
+    "Case": "pub-fails",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "flutter pub get failed.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD"
+    ],
+    "BuildCalls": [
+      "flutter pub get"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget"
+    ]
+  },
+  {
+    "Case": "flutter-build-fails",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Flutter Windows release build failed.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget"
+    ]
+  },
+  {
+    "Case": "inno-fails",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Inno Setup compilation failed.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget"
+    ]
+  },
+  {
+    "Case": "wrong-exe-version",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Release executable version '1.0.0-rc.16+65' does not match '1.0.0-rc.17+66'. Rebuild without -SkipFlutterBuild.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget"
+    ]
+  },
+  {
+    "Case": "build-modifies-source",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "The build changed source files. Commit and rebuild before publishing.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget"
+    ]
+  },
+  {
+    "Case": "source-push-fails",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Source push failed.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget"
+    ]
+  },
+  {
+    "Case": "conflicting-tag",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "The release tag points to different source. Increase the version.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget"
+    ]
+  },
+  {
+    "Case": "different-existing-asset",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Existing asset differs: MyLittleBudget-Setup-1.0.0-rc.17.exe. Existing releases will not be overwritten.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17"
+    ]
+  },
+  {
+    "Case": "published-release-missing-assets",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "A published release is missing assets; it will not be modified.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17"
+    ]
+  },
+  {
+    "Case": "remote-digest-mismatch",
+    "Target": "Windows",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Asset verification failed. The release remains a draft.",
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "no-test-gate",
+    "Target": "Windows",
+    "Finding": "gap-reproduced",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Patch https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "no-public-version-gate",
+    "Target": "Windows",
+    "Finding": "gap-reproduced",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Patch https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "malformed-aab-accepted",
+    "Target": "Windows",
+    "Finding": "gap-reproduced",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Android-1.0.0-rc.17.aab",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Patch https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "git-status-error-accepted",
+    "Target": "Windows",
+    "Finding": "gap-reproduced",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Patch https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "head-changes-during-build",
+    "Target": "Windows",
+    "Finding": "gap-reproduced",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [
+      "status --porcelain",
+      "rev-parse HEAD",
+      "status --porcelain",
+      "push origin HEAD",
+      "rev-parse -q --verify refs/tags/v1.0.0-rc.17^{commit}",
+      "tag v1.0.0-rc.17 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "push origin refs/tags/v1.0.0-rc.17"
+    ],
+    "BuildCalls": [
+      "flutter pub get",
+      "flutter build windows --release",
+      "inno"
+    ],
+    "HttpCalls": [
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/tags/v1.0.0-rc.17",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Setup-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=MyLittleBudget-Update-1.0.0-rc.17.exe",
+      "Post https://offline.invalid/uploads/99?name=SHA256SUMS.txt",
+      "Get https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99",
+      "Patch https://api.github.com/repos/Flynn-Kalar/my_little_budget/releases/99"
+    ]
+  },
+  {
+    "Case": "play-other-draft",
+    "Target": "Play",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Another internal draft exists. Review it before replacing the track.",
+    "GitCalls": [],
+    "BuildCalls": [],
+    "HttpCalls": [
+      "Post https://oauth2.googleapis.com/token",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles",
+      "Delete https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1"
+    ]
+  },
+  {
+    "Case": "play-long-notes",
+    "Target": "Play",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Release notes must contain 1 to 500 characters.",
+    "GitCalls": [],
+    "BuildCalls": [],
+    "HttpCalls": [
+      "Post https://oauth2.googleapis.com/token",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles",
+      "Delete https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1"
+    ]
+  },
+  {
+    "Case": "play-existing-bundle-mismatch",
+    "Target": "Play",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Version code 66 is already uploaded with different contents. Increase the version code.",
+    "GitCalls": [],
+    "BuildCalls": [],
+    "HttpCalls": [
+      "Post https://oauth2.googleapis.com/token",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles",
+      "Delete https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1"
+    ]
+  },
+  {
+    "Case": "play-upload-version-mismatch",
+    "Target": "Play",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Uploaded bundle version or hash does not match the current source. No track changes committed.",
+    "GitCalls": [],
+    "BuildCalls": [],
+    "HttpCalls": [
+      "Post https://oauth2.googleapis.com/token",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles",
+      "Post https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles?uploadType=media",
+      "Delete https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1"
+    ]
+  },
+  {
+    "Case": "play-validate-fails",
+    "Target": "Play",
+    "Finding": "protection-verified",
+    "MockPublished": false,
+    "Error": "Google Play API (Post): Request failed.",
+    "GitCalls": [],
+    "BuildCalls": [],
+    "HttpCalls": [
+      "Post https://oauth2.googleapis.com/token",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles",
+      "Post https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles?uploadType=media",
+      "Put https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks/internal",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1:validate",
+      "Delete https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1"
+    ]
+  },
+  {
+    "Case": "play-post-commit-verification-fails",
+    "Target": "Play",
+    "Finding": "protection-verified",
+    "MockPublished": true,
+    "Error": "The committed release could not be verified. Check Play Console before retrying.",
+    "GitCalls": [],
+    "BuildCalls": [],
+    "HttpCalls": [
+      "Post https://oauth2.googleapis.com/token",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles",
+      "Post https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles?uploadType=media",
+      "Put https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks/internal",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1:validate",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1:commit",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/2/tracks/internal",
+      "Delete https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/2"
+    ]
+  },
+  {
+    "Case": "play-higher-version-not-guarded",
+    "Target": "Play",
+    "Finding": "gap-reproduced",
+    "MockPublished": true,
+    "Error": null,
+    "GitCalls": [],
+    "BuildCalls": [],
+    "HttpCalls": [
+      "Post https://oauth2.googleapis.com/token",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/bundles",
+      "Put https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1/tracks/internal",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1:validate",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/1:commit",
+      "Post https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits",
+      "Get https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/2/tracks/internal",
+      "Delete https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.my_little_budget/edits/2"
+    ]
+  }
+]

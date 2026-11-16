@@ -10,7 +10,7 @@ import '../../../../data/providers.dart';
 import '../../../../features/transactions/selection.dart';
 import '../../../shared/bulk_transaction_editor.dart';
 import '../../../shared/category_icon.dart';
-import '../../color_hex.dart';
+import '../../../../core/color_hex.dart';
 import '../../settings/widgets/transaction_preset_dialog.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 import 'transaction_edit_dialog.dart';

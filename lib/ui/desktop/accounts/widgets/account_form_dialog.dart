@@ -8,7 +8,7 @@ import '../../../../data/daos/accounts_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/accounts/validation.dart';
 import '../../../shared/amount_input_formatter.dart';
-import '../account_refresh.dart';
+import '../../../../features/accounts/account_refresh.dart';
 import 'color_swatch_picker.dart';
 
 const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};

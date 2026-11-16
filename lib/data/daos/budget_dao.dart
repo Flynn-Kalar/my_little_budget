@@ -320,6 +320,7 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   Future<List<BudgetVsActual>> budgetGroupVsActual(
     String month, {
     ({String start, String end})? period,
+    int? excludingTransactionId,
   }) async {
     final groups = await listBudgetGroups(month);
     if (groups.isEmpty) return [];
@@ -341,6 +342,7 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
           g.accountId!,
           bounds.start,
           bounds.end,
+          excludingTransactionId: excludingTransactionId,
         );
         budgetAmount = flow.available;
         spentAmount = flow.spent;
@@ -354,11 +356,14 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
           final row = await customSelect(
             'SELECT COALESCE(SUM(amount), 0) AS total FROM transactions '
             "WHERE occurred_on BETWEEN ? AND ? AND type = 'expense' "
-            'AND category_id IN (${_placeholders(categoryIds.length)})',
+            'AND category_id IN (${_placeholders(categoryIds.length)}) '
+            '${excludingTransactionId == null ? '' : 'AND id != ?'}',
             variables: [
               Variable<String>(bounds.start),
               Variable<String>(bounds.end),
               ...categoryIds.map(Variable<int>.new),
+              if (excludingTransactionId != null)
+                Variable<int>(excludingTransactionId),
             ],
             readsFrom: {transactions},
           ).getSingle();
@@ -443,8 +448,9 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
   Future<({int available, int spent})> _accountBudget(
     int accountId,
     String monthStart,
-    String monthEnd,
-  ) async {
+    String monthEnd, {
+    int? excludingTransactionId,
+  }) async {
     final acc = await (select(
       accounts,
     )..where((a) => a.id.equals(accountId))).getSingleOrNull();
@@ -453,6 +459,7 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
     final beforeVars = [
       ...List.filled(5, Variable<int>(accountId)),
       Variable<String>(monthStart),
+      if (excludingTransactionId != null) Variable<int>(excludingTransactionId),
     ];
     final before = await customSelect(
       '''
@@ -461,6 +468,7 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
         COALESCE(SUM(CASE WHEN (type = 'expense'  AND account_id      = ?) OR (type = 'transfer' AND from_account_id = ?) THEN amount ELSE 0 END), 0) AS outflow,
         COALESCE(SUM(CASE WHEN  type = 'adjustment' AND account_id    = ? THEN amount ELSE 0 END), 0) AS adjust
       FROM transactions WHERE occurred_on < ?
+      ${excludingTransactionId == null ? '' : 'AND id != ?'}
       ''',
       variables: beforeVars,
       readsFrom: {transactions},
@@ -476,6 +484,7 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
       ...List.filled(4, Variable<int>(accountId)),
       Variable<String>(monthStart),
       Variable<String>(monthEnd),
+      if (excludingTransactionId != null) Variable<int>(excludingTransactionId),
     ];
     final within = await customSelect(
       '''
@@ -483,6 +492,7 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
         COALESCE(SUM(CASE WHEN (type = 'income'  AND account_id      = ?) OR (type = 'transfer' AND to_account_id   = ?) THEN amount ELSE 0 END), 0) AS inflow,
         COALESCE(SUM(CASE WHEN (type = 'expense' AND account_id      = ?) OR (type = 'transfer' AND from_account_id = ?) THEN amount ELSE 0 END), 0) AS outflow
       FROM transactions WHERE occurred_on BETWEEN ? AND ?
+      ${excludingTransactionId == null ? '' : 'AND id != ?'}
       ''',
       variables: withinVars,
       readsFrom: {transactions},
@@ -503,6 +513,90 @@ class BudgetDao extends DatabaseAccessor<AppDatabase> with _$BudgetDaoMixin {
     final bounds = period ?? monthRange(month);
     return _accountBudget(accountId, bounds.start, bounds.end);
   }
+
+  /// Amount keystrokes use the cached rows; database changes refresh the base.
+  Stream<List<BudgetVsActual>> watchEntryBudgetRows(
+    String month, {
+    required ({String start, String end}) period,
+    int? excludingTransactionId,
+  }) =>
+      Stream<void>.multi((controller) {
+        final subscription = db
+            .tableUpdates(
+              TableUpdateQuery.onAllTables([
+                budgetGroups,
+                budgetGroupCategories,
+                categories,
+                accounts,
+                transactions,
+                monthlyIncome,
+              ]),
+            )
+            .listen((_) => controller.add(null), onError: controller.addError);
+        controller.onCancel = subscription.cancel;
+        controller.add(null);
+      }).asyncMap(
+        (_) => budgetGroupVsActual(
+          month,
+          period: period,
+          excludingTransactionId: excludingTransactionId,
+        ),
+      );
+
+  /// Move an allocation atomically. Recheck current balances inside the write
+  /// transaction so a stale preview cannot overdraw the source budget.
+  Future<void> moveBudgetAllocation({
+    required String month,
+    required ({String start, String end}) period,
+    required int fromGroupId,
+    required int toGroupId,
+    required int amount,
+    required TransactionDraft draft,
+    int? editingTransactionId,
+  }) => transaction(() async {
+    if (amount <= 0 ||
+        fromGroupId == toGroupId ||
+        draft.type != 'expense' ||
+        draft.amount <= 0 ||
+        draft.occurredOn.compareTo(period.start) < 0 ||
+        draft.occurredOn.compareTo(period.end) > 0) {
+      throw ArgumentError('이동 금액과 거래를 확인해주세요.');
+    }
+    final actual = await budgetGroupVsActual(month, period: period);
+    final projected = await budgetGroupVsActual(
+      month,
+      period: period,
+      excludingTransactionId: editingTransactionId,
+    );
+    final source = actual.where((r) => r.groupId == fromGroupId).firstOrNull;
+    final target = actual.where((r) => r.groupId == toGroupId).firstOrNull;
+    final previewSource = projected
+        .where((r) => r.groupId == fromGroupId)
+        .firstOrNull;
+    if (source == null ||
+        target == null ||
+        previewSource == null ||
+        source.accountId != null ||
+        target.accountId != null ||
+        !_isAffectedBudget(target, draft)) {
+      throw StateError('같은 기간의 카테고리 예산을 선택해주세요.');
+    }
+    final afterDraft =
+        previewSource.spentAmount +
+        (_isAffectedBudget(previewSource, draft) ? draft.amount : 0);
+    if (source.budgetAmount - source.spentAmount < amount ||
+        previewSource.budgetAmount - afterDraft < amount) {
+      throw StateError('선택한 예산의 남은 금액이 부족합니다.');
+    }
+    await updateBudgetGroupAdjustment(
+      source.groupId,
+      source.budgetAmount - amount - source.baseAmount,
+    );
+    await updateBudgetGroupAdjustment(
+      target.groupId,
+      target.budgetAmount + amount - target.baseAmount,
+    );
+  });
 
   // ── 이전 달 복사 ─────────────────────────────────────────────
   /// SPEC §4.4 — 이전 달 그룹을 대상 월로 복사. carryForward 면 잔금을 조정액으로 이월.

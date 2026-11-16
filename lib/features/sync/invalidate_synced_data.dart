@@ -12,51 +12,57 @@ import '../calendar/providers.dart' as calendar;
 
 /// FutureProviders do not react to raw Drift writes. Call this after a remote
 /// pull so an already-open screen observes the newly applied rows.
-void invalidateSyncedData(WidgetRef ref) {
-  ref.invalidate(notes.notesProvider);
-  ref.invalidate(notes.pendingReminderCountProvider);
-  ref.invalidate(notes.missedReminderCountProvider);
-  ref.invalidate(calendar.calendarEventsProvider);
-  ref.invalidate(accounts.accountBalancesProvider);
-  ref.invalidate(accounts.archivedAccountsProvider);
-  ref.invalidate(accounts.accountByIdProvider);
-  ref.invalidate(accounts.accountTransactionsProvider);
+void invalidateSyncedData(WidgetRef ref) =>
+    ref.read(invalidateSyncedDataProvider)();
 
-  ref.invalidate(budget.monthlyExpectedIncomeProvider);
-  ref.invalidate(budget.budgetRowsProvider);
-  ref.invalidate(budget.budgetExpenseCategoriesProvider);
-  ref.invalidate(budget.budgetActiveAccountsProvider);
-  ref.invalidate(badges.overBudgetCountProvider);
+/// Also available to feature controllers without depending on a mounted screen.
+final invalidateSyncedDataProvider = Provider<void Function()>(
+  (ref) => () {
+    ref.invalidate(notes.notesProvider);
+    ref.invalidate(notes.pendingReminderCountProvider);
+    ref.invalidate(notes.missedReminderCountProvider);
+    ref.invalidate(calendar.calendarEventsProvider);
+    ref.invalidate(accounts.accountBalancesProvider);
+    ref.invalidate(accounts.archivedAccountsProvider);
+    ref.invalidate(accounts.accountByIdProvider);
+    ref.invalidate(accounts.accountTransactionsProvider);
 
-  ref.invalidate(transactions.transactionsListProvider);
-  ref.invalidate(transactions.monthlySummaryProvider);
-  ref.invalidate(transactions.transactionsMonthRowsProvider);
-  ref.invalidate(transactions.transactionsCategoryBreakdownProvider);
-  ref.invalidate(transactions.transactionsMonthlyTrendProvider);
-  ref.invalidate(transactions.activeAccountsProvider);
-  ref.invalidate(transactions.activeCategoriesProvider);
-  ref.invalidate(transactions.allTagsProvider);
-  ref.invalidate(transactions.recentMemosProvider);
-  ref.invalidate(transactions.recentInputEntriesProvider);
+    ref.invalidate(budget.monthlyExpectedIncomeProvider);
+    ref.invalidate(budget.budgetRowsProvider);
+    ref.invalidate(budget.budgetExpenseCategoriesProvider);
+    ref.invalidate(budget.budgetActiveAccountsProvider);
+    ref.invalidate(badges.overBudgetCountProvider);
 
-  ref.invalidate(investments.investmentRowsProvider);
-  ref.invalidate(investments.investmentMonthlySummaryProvider);
-  ref.invalidate(investments.investmentYearlyRowsProvider);
-  ref.invalidate(investments.investmentAccountProvider);
-  ref.invalidate(investments.currentHoldingsProvider);
-  ref.invalidate(investments.realizedPnlProvider);
+    ref.invalidate(transactions.transactionsListProvider);
+    ref.invalidate(transactions.monthlySummaryProvider);
+    ref.invalidate(transactions.transactionsMonthRowsProvider);
+    ref.invalidate(transactions.transactionsCategoryBreakdownProvider);
+    ref.invalidate(transactions.transactionsMonthlyTrendProvider);
+    ref.invalidate(transactions.activeAccountsProvider);
+    ref.invalidate(transactions.activeCategoriesProvider);
+    ref.invalidate(transactions.allTagsProvider);
+    ref.invalidate(transactions.recentMemosProvider);
+    ref.invalidate(transactions.recentInputEntriesProvider);
 
-  ref.invalidate(stats.statsExpenseBreakdownProvider);
-  ref.invalidate(stats.statsMonthlyTrendProvider);
-  ref.invalidate(stats.statsCategoryTransactionsProvider);
-  ref.invalidate(stats.statsTagBreakdownProvider);
-  ref.invalidate(stats.statsTagTransactionsProvider);
-  ref.invalidate(stats.availableStatsYearsProvider);
+    ref.invalidate(investments.investmentRowsProvider);
+    ref.invalidate(investments.investmentMonthlySummaryProvider);
+    ref.invalidate(investments.investmentYearlyRowsProvider);
+    ref.invalidate(investments.investmentAccountProvider);
+    ref.invalidate(investments.currentHoldingsProvider);
+    ref.invalidate(investments.realizedPnlProvider);
 
-  ref.invalidate(settings.allCategoriesProvider);
-  ref.invalidate(settings.settingsActiveCategoriesProvider);
-  ref.invalidate(settings.settingsAccountsProvider);
-  ref.invalidate(settings.settingsTagsProvider);
-  ref.invalidate(settings.recurringItemsProvider);
-  ref.invalidate(settings.transactionPresetItemsProvider);
-}
+    ref.invalidate(stats.statsExpenseBreakdownProvider);
+    ref.invalidate(stats.statsMonthlyTrendProvider);
+    ref.invalidate(stats.statsCategoryTransactionsProvider);
+    ref.invalidate(stats.statsTagBreakdownProvider);
+    ref.invalidate(stats.statsTagTransactionsProvider);
+    ref.invalidate(stats.availableStatsYearsProvider);
+
+    ref.invalidate(settings.allCategoriesProvider);
+    ref.invalidate(settings.settingsActiveCategoriesProvider);
+    ref.invalidate(settings.settingsAccountsProvider);
+    ref.invalidate(settings.settingsTagsProvider);
+    ref.invalidate(settings.recurringItemsProvider);
+    ref.invalidate(settings.transactionPresetItemsProvider);
+  },
+);

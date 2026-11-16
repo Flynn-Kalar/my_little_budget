@@ -6,7 +6,7 @@ import '../../desktop_section.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/accounts_dao.dart';
 import '../../../../features/accounts/grouping.dart';
-import '../../color_hex.dart';
+import '../../../../core/color_hex.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 
 /// SPEC §4.2 — 총 순자산 + 4그룹 색띠 비중 바 + 라벨.

@@ -8,7 +8,7 @@ import '../../../../core/money.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../features/investments/quantity_precision.dart';
-import '../../color_hex.dart';
+import '../../../../core/color_hex.dart';
 import '../../transactions/widgets/transaction_edit_dialog.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import 'adjustment_edit_dialog.dart';

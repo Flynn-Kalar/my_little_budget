@@ -10,7 +10,7 @@ import 'package:my_little_budget/features/calendar/calendar_schedule.dart';
 import 'package:my_little_budget/features/calendar/calendar_reminder_store.dart';
 import 'package:my_little_budget/features/notes/note_schedule.dart';
 import 'package:my_little_budget/features/notes/reminder_store.dart';
-import 'package:my_little_budget/ui/shared/calendar_entries.dart';
+import 'package:my_little_budget/features/calendar/calendar_entries.dart';
 
 void main() {
   late AppDatabase db;

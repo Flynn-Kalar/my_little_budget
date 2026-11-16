@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/date.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../shared/notes_calendar.dart';
+import '../../../features/notes/notes_calendar.dart';
 import 'package:my_little_budget/features/notes/providers.dart';
 import '../mobile_widgets.dart';
 

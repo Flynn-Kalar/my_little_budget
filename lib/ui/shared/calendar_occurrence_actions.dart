@@ -9,7 +9,7 @@ import '../../features/notes/note_schedule.dart';
 import '../../features/notes/providers.dart';
 import '../../features/notes/reminder_calendar.dart';
 import '../../features/notes/reminder_device_zone.dart';
-import 'calendar_entries.dart';
+import '../../features/calendar/calendar_entries.dart';
 
 /// Returns true when the caller should open the original series editor.
 Future<bool> calendarOccurrenceActions(

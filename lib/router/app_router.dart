@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/settings/settings_page.dart';
+import '../ui/desktop/settings/settings_screen.dart';
 import '../ui/desktop/accounts/account_detail_screen.dart';
 import '../ui/desktop/accounts/accounts_screen.dart';
 import '../ui/desktop/budget/budget_screen.dart';
@@ -26,7 +26,7 @@ import '../ui/mobile/budget/mobile_budget_screen.dart';
 import '../ui/mobile/calendar/mobile_calendar_screen.dart';
 import '../ui/mobile/investments/mobile_investments_screen.dart';
 import '../ui/mobile/notes/mobile_notes_screen.dart';
-import '../ui/mobile/responsive_page.dart';
+import '../shell/responsive_page.dart';
 import '../ui/mobile/settings/mobile_about_screen.dart';
 import '../ui/mobile/settings/mobile_categories_screen.dart';
 import '../ui/mobile/settings/mobile_settings_screen.dart';
@@ -35,7 +35,7 @@ import '../ui/mobile/settings/mobile_recurring_screen.dart';
 import '../ui/mobile/settings/mobile_tags_screen.dart';
 import '../ui/mobile/settings/mobile_theme_screen.dart';
 import '../ui/mobile/settings/mobile_transaction_presets_screen.dart';
-import '../ui/mobile/shell/mobile_shell.dart';
+import '../shell/responsive_shell.dart';
 import '../ui/mobile/stats/mobile_stats_screen.dart';
 import '../ui/mobile/stats/mobile_yearly_stats_screen.dart';
 import '../ui/mobile/transactions/mobile_transactions_screen.dart';
@@ -157,7 +157,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const ResponsivePage(
-              desktop: SettingsPage(),
+              desktop: SettingsScreen(),
               mobile: MobileSettingsScreen(),
             ),
             routes: [

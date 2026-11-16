@@ -21,16 +21,13 @@ Source of truth:
 
 Active routes:
 - `/transactions` -> `lib/ui/desktop/transactions/transactions_screen.dart`
-- `/budget` -> `lib/features/budget/budget_page.dart`
-  - `BudgetPage` delegates to `lib/ui/desktop/budget/budget_screen.dart`
-- `/stats` -> `lib/features/stats/stats_page.dart`
-  - `StatsPage` delegates to `lib/ui/desktop/stats/stats_screen.dart`
+- `/budget` -> `lib/ui/desktop/budget/budget_screen.dart`
+- `/stats` -> `lib/ui/desktop/stats/stats_screen.dart`
 - `/stats/yearly` -> `lib/ui/desktop/stats/yearly_stats_screen.dart`
 - `/accounts` -> `lib/ui/desktop/accounts/accounts_screen.dart`
 - `/accounts/:id` -> `lib/ui/desktop/accounts/account_detail_screen.dart`
-- `/investments` -> `lib/features/investments/investments_page.dart`
-  - `InvestmentsPage` delegates to `lib/ui/desktop/investments/investments_screen.dart`
-- `/settings` -> `lib/features/settings/settings_page.dart`
+- `/investments` -> `lib/ui/desktop/investments/investments_screen.dart`
+- `/settings` -> `lib/ui/desktop/settings/settings_screen.dart`
 - `/settings/categories` -> `lib/ui/desktop/settings/categories_screen.dart`
 - `/settings/tags` -> `lib/ui/desktop/settings/tags_screen.dart`
 - `/settings/recurring` -> `lib/ui/desktop/settings/recurring_screen.dart`
@@ -38,7 +35,7 @@ Active routes:
 - `/settings/backup` -> `lib/ui/desktop/settings/data_management_screen.dart`
 - `/settings/data` -> compatibility redirect to `/settings/backup`
 
-No active route currently points to `lib/ui/desktop/settings/settings_screen.dart`.
+The paths above identify desktop implementations. `lib/router/app_router.dart` pairs them with mobile screens through `lib/shell/responsive_page.dart`. `lib/shell/responsive_shell.dart` selects the desktop sidebar or mobile navigation using `lib/shell/layout_policy.dart`.
 
 Placeholder audit:
 - `PlaceholderScaffold` has been removed.
@@ -69,11 +66,11 @@ Placeholder audit:
 Active files:
 - `lib/ui/desktop/transactions/widgets/filter_panel.dart`
 - `lib/ui/desktop/transactions/widgets/transaction_list.dart`
-- `lib/ui/desktop/transactions/providers.dart`
+- `lib/features/transactions/providers.dart`
 - `lib/ui/desktop/accounts/widgets/account_tx_list.dart`
-- `lib/ui/desktop/accounts/providers.dart`
+- `lib/features/accounts/providers.dart`
 - `lib/ui/desktop/investments/investments_screen.dart`
-- `lib/ui/desktop/investments/providers.dart`
+- `lib/features/investments/providers.dart`
 
 Current status:
 - `/transactions` search now debounces text input and keeps the existing detailed filter panel flow.
@@ -94,11 +91,11 @@ Current status:
 ### Settings Main Page
 
 Active file:
-- `lib/features/settings/settings_page.dart`
+- `lib/ui/desktop/settings/settings_screen.dart`
 
 Current status:
 - `PlaceholderScaffold` has been removed.
-- The active `/settings` implementation is `SettingsPage`.
+- The desktop `/settings` implementation is `SettingsScreen`; mobile uses `MobileSettingsScreen`.
 - Settings cards are implemented for:
   - `/settings/categories`
   - `/settings/tags`
@@ -129,12 +126,11 @@ Settings MVP decision:
 ### Budget Editing Step 1
 
 Active files:
-- `lib/features/budget/budget_page.dart`
 - `lib/ui/desktop/budget/budget_screen.dart`
-- `lib/ui/desktop/budget/providers.dart`
+- `lib/features/budget/providers.dart`
 
 Current status:
-- `BudgetPage` delegates to `BudgetScreen`.
+- `ResponsivePage` selects `BudgetScreen` or `MobileBudgetScreen`.
 - `PlaceholderScaffold` has been removed from `/budget`.
 - Screen is implemented with:
   - current-month navigation
@@ -195,13 +191,12 @@ Current status:
 ### Stats Read-Only Screen
 
 Active files:
-- `lib/features/stats/stats_page.dart`
 - `lib/ui/desktop/stats/stats_screen.dart`
 - `lib/ui/desktop/stats/yearly_stats_screen.dart`
-- `lib/ui/desktop/stats/providers.dart`
+- `lib/features/stats/providers.dart`
 
 Current status:
-- `StatsPage` delegates to `StatsScreen`.
+- `ResponsivePage` selects `StatsScreen` or `MobileStatsScreen`.
 - `PlaceholderScaffold` has been removed from `/stats`.
 - Read-only screen is implemented with:
   - current-month navigation
@@ -232,12 +227,11 @@ Current status:
 ### Investments Creation And Realized PnL Step
 
 Active files:
-- `lib/features/investments/investments_page.dart`
 - `lib/ui/desktop/investments/investments_screen.dart`
-- `lib/ui/desktop/investments/providers.dart`
+- `lib/features/investments/providers.dart`
 
 Current status:
-- `InvestmentsPage` delegates to `InvestmentsScreen`.
+- `ResponsivePage` selects `InvestmentsScreen` or `MobileInvestmentsScreen`.
 - `PlaceholderScaffold` has been removed from `/investments`.
 - Read-only screen is implemented with:
   - current-month navigation

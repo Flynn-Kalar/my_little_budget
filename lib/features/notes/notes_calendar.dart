@@ -1,9 +1,9 @@
 import '../../core/date.dart';
 import '../../data/daos/notes_dao.dart';
 import '../../data/database.dart';
-import '../../features/notes/checklist.dart';
-import '../../features/notes/note_format.dart';
-import '../../features/notes/note_schedule.dart';
+import 'checklist.dart';
+import 'note_format.dart';
+import 'note_schedule.dart';
 
 class NoteCalendarEntry {
   const NoteCalendarEntry({

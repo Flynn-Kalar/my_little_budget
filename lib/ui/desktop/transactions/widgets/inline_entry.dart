@@ -11,6 +11,9 @@ import '../../../../features/presets/validation.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 import '../../../shared/amount_input_formatter.dart';
 import '../../../shared/spending_limit_warning.dart';
+import '../../../shared/transaction_budget_preview.dart';
+import '../../../shared/transaction_tag_picker.dart';
+import '../../../../data/tag_category_links.dart';
 import 'form_fields.dart';
 
 class InlineEntry extends ConsumerStatefulWidget {
@@ -354,15 +357,21 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
         ref.watch(activeAccountsProvider).asData?.value ?? const [];
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
-    final tagSuggestions =
-        (ref
-                    .watch(transactionTagSuggestionsProvider(_categoryId))
-                    .asData
-                    ?.value ??
-                ref.watch(allTagsProvider).asData?.value ??
-                const [])
-            .map((t) => t.name)
-            .toList();
+    final tags =
+        ref
+            .watch(transactionTagSuggestionsProvider(_categoryId))
+            .asData
+            ?.value ??
+        ref.watch(allTagsProvider).asData?.value ??
+        const [];
+    final tagSuggestions = tags
+        .where(
+          (t) =>
+              _categoryId != null &&
+              readTagCategoryIds(t.categoryIdsJson).contains(_categoryId),
+        )
+        .map((t) => t.name)
+        .toList();
     final recentEntries =
         ref.watch(recentInputEntriesProvider).asData?.value ?? const [];
     final memoSuggestions = recentEntries
@@ -649,6 +658,27 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                 ),
               ],
             ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _dateCtrl,
+              builder: (context, value, _) => TransactionBudgetPreview(
+                amountController: _amountCtrl,
+                type: _type,
+                date: _parseDateInput(value.text),
+                accountId: _accountId,
+                categoryId: _categoryId,
+                enabled: !_saving,
+              ),
+            ),
+            if (_type != 'transfer')
+              TransactionTagPicker(
+                tags: tags,
+                categoryId: _categoryId,
+                type: _type,
+                value: _tags,
+                enabled: !_saving,
+                keyPrefix: 'desktop',
+                onChanged: (v) => setState(() => _tags = v),
+              ),
           ],
         ),
       ),

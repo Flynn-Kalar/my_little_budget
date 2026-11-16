@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/database.dart';
 import '../../../../features/tags/suggestion_order.dart';
-import '../../color_hex.dart';
+import '../../../../core/color_hex.dart';
 
 typedef FieldSubmitted = void Function(bool committedSuggestion);
 

@@ -2,32 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../shell/sidebar_shell.dart';
 import 'package:my_little_budget/features/notes/providers.dart';
-import '../../../shell/layout_policy.dart';
 import '../../../core/theme/app_theme.dart';
-
-class ResponsiveShell extends StatelessWidget {
-  const ResponsiveShell({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final mobile = usesMobileLayout(constraints.maxWidth);
-        return ShellLayoutScope(
-          mobile: mobile,
-          viewportWidth: constraints.maxWidth,
-          child: mobile
-              ? MobileShell(child: child)
-              : SidebarShell(child: child),
-        );
-      },
-    );
-  }
-}
 
 class MobileShell extends ConsumerWidget {
   const MobileShell({super.key, required this.child});

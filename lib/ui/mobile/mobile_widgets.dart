@@ -381,6 +381,7 @@ class MobileAmountField extends StatefulWidget {
     this.suffixText = '원',
     this.helperText,
     this.onCompleted,
+    this.previewBuilder,
   });
 
   final TextEditingController controller;
@@ -390,6 +391,7 @@ class MobileAmountField extends StatefulWidget {
   final String? suffixText;
   final String? helperText;
   final VoidCallback? onCompleted;
+  final Widget Function(TextEditingController)? previewBuilder;
 
   @override
   State<MobileAmountField> createState() => _MobileAmountFieldState();
@@ -437,6 +439,7 @@ class _MobileAmountFieldState extends State<MobileAmountField> {
         builder: (_) => _MobileAmountCalculatorPage(
           initialValue: widget.controller.text,
           title: widget.label,
+          previewBuilder: widget.previewBuilder,
         ),
       ),
     );
@@ -472,10 +475,12 @@ class _MobileAmountCalculatorPage extends StatefulWidget {
   const _MobileAmountCalculatorPage({
     required this.initialValue,
     required this.title,
+    this.previewBuilder,
   });
 
   final String initialValue;
   final String title;
+  final Widget Function(TextEditingController)? previewBuilder;
 
   @override
   State<_MobileAmountCalculatorPage> createState() =>
@@ -582,6 +587,15 @@ class _MobileAmountCalculatorPageState
                         ),
                   ),
                 ),
+                if (widget.previewBuilder != null)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.24,
+                    ),
+                    child: SingleChildScrollView(
+                      child: widget.previewBuilder!(_controller),
+                    ),
+                  ),
                 const SizedBox(height: 20),
                 ExcludeFocus(
                   child: _MobileAmountKeypad(

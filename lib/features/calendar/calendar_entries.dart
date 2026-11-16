@@ -1,7 +1,7 @@
 import '../../core/date.dart';
 import '../../data/database.dart';
-import '../../features/notes/note_schedule.dart';
-import '../../features/calendar/calendar_schedule.dart';
+import '../notes/note_schedule.dart';
+import 'calendar_schedule.dart';
 
 class CalendarOccurrence {
   const CalendarOccurrence({

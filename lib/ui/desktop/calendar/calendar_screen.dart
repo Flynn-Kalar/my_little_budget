@@ -15,14 +15,14 @@ import '../../../features/notes/reminder_calendar.dart';
 import '../../shared/calendar_schedule_options.dart';
 import '../../shared/calendar_occurrence_actions.dart';
 import '../../shared/calendar_event_status.dart';
-import '../../shared/calendar_entries.dart';
+import '../../../features/calendar/calendar_entries.dart';
 import '../../shared/calendar_event_details.dart';
 import '../../shared/calendar_day_agenda.dart';
 import '../../shared/calendar_dday_list.dart';
 import '../../../features/calendar/calendar_dday.dart';
 import '../../shared/bulk_manage_button.dart';
 import 'package:my_little_budget/features/calendar/providers.dart';
-import '../../shared/notes_calendar.dart' as note_calendar;
+import '../../../features/notes/notes_calendar.dart' as note_calendar;
 import 'package:my_little_budget/features/notes/providers.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {

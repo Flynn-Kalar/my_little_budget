@@ -89,7 +89,7 @@ void main() {
   );
 
   testWidgets(
-    'mobile shows all tags in category order without promoting selected chips',
+    'mobile expands matching tags and preserves selections when category changes',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -134,6 +134,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.byType(FilterChip), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, '#게임'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, '#스팀'), findsNothing);
+      final otherTags = find.byKey(const ValueKey('mobile-other-tags-toggle'));
+      await tester.ensureVisible(otherTags);
+      await tester.tap(otherTags);
+      await tester.pumpAndSettle();
       expect(find.byType(FilterChip), findsNWidgets(25));
       final game = find.widgetWithText(FilterChip, '#게임');
       final steam = find.widgetWithText(FilterChip, '#스팀');
@@ -164,6 +171,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(categories[1].name).last);
       await tester.pumpAndSettle();
+      expect(find.byType(FilterChip), findsOneWidget);
+      expect(find.widgetWithText(InputChip, '#게임'), findsOneWidget);
+      expect(tester.widget<FilterChip>(steam).selected, isTrue);
       expect(
         find.byType(FilterChip).evaluate().first.widget,
         isA<FilterChip>().having(

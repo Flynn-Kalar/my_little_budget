@@ -8,7 +8,7 @@ import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/validation.dart';
 import '../../../shared/amount_input_formatter.dart';
-import '../account_refresh.dart';
+import '../../../../features/accounts/account_refresh.dart';
 
 /// SPEC §4.3 — 자산 잔액 조정 거래 편집. 타입 토글 없이 날짜/시각/금액/메모만.
 class AdjustmentEditDialog extends ConsumerStatefulWidget {

@@ -11,9 +11,10 @@ import '../../../../data/database.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/transactions/providers.dart';
 import '../../../../features/transactions/validation.dart';
-import '../../../../features/tags/suggestion_order.dart';
 import '../../../../features/settings/providers.dart';
 import '../../../shared/spending_limit_warning.dart';
+import '../../../shared/transaction_budget_preview.dart';
+import '../../../shared/transaction_tag_picker.dart';
 import '../../../shared/recent_transaction_suggestions.dart';
 import '../../mobile_widgets.dart';
 
@@ -69,6 +70,7 @@ class _MobileTransactionSheetState
   late final Set<String> _tagNames =
       widget.row?.tags.map((tag) => tag.name).toSet() ?? <String>{};
   bool _busy = false;
+  bool _dateExpanded = false;
 
   bool get _isEdit => widget.row != null && !widget.duplicate;
   bool get _isDuplicate => widget.row != null && widget.duplicate;
@@ -276,273 +278,226 @@ class _MobileTransactionSheetState
         )
         .toList();
     return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: mobileBottomPadding(context, spacing: 16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        mobileBottomPadding(context, spacing: 8),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _isDuplicate ? '거래 복사' : (_isEdit ? '거래 수정' : '거래 추가'),
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            if (!_isEdit) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                key: const ValueKey('mobile-transaction-preset-button'),
-                onPressed: _busy ? null : _pickPreset,
-                icon: const Icon(Icons.bookmarks_outlined),
-                label: const Text('프리셋 불러오기'),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'income', label: Text('수입')),
-                ButtonSegment(value: 'expense', label: Text('지출')),
-                ButtonSegment(value: 'transfer', label: Text('이체')),
-              ],
-              selected: {_type},
-              showSelectedIcon: false,
-              onSelectionChanged: _busy
-                  ? null
-                  : (selected) => setState(() {
-                      _type = selected.first;
-                      _categoryId = null;
-                    }),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _busy ? null : _pickDate,
-                    icon: const Icon(Icons.calendar_today, size: 16),
-                    label: Text(toDateKey(_date)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _isDuplicate ? '거래 복사' : (_isEdit ? '거래 수정' : '거래 추가'),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _busy ? null : _pickTime,
-                    icon: const Icon(Icons.schedule, size: 16),
-                    label: Text(_timeKey(_time)),
-                  ),
+              ),
+              if (!_isEdit)
+                TextButton.icon(
+                  key: const ValueKey('mobile-transaction-preset-button'),
+                  onPressed: _busy ? null : _pickPreset,
+                  icon: const Icon(Icons.bookmarks_outlined),
+                  label: const Text('프리셋 불러오기'),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_type == 'transfer') ...[
-              _AccountField(
-                label: '출금 자산',
-                accounts: accounts,
-                value: _fromAccountId,
-                onChanged: (value) => setState(() => _fromAccountId = value),
-              ),
-              const SizedBox(height: 12),
-              _AccountField(
-                label: '입금 자산',
-                accounts: accounts,
-                value: _toAccountId,
-                onChanged: (value) => setState(() => _toAccountId = value),
-              ),
-            ] else ...[
-              _AccountField(
-                label: '자산',
-                accounts: accounts,
-                value: _accountId,
-                onChanged: (value) => setState(() => _accountId = value),
-              ),
-              const SizedBox(height: 12),
-              _CategoryField(
-                categories: visibleCategories,
-                value: _categoryId,
-                onChanged: (value) => setState(() => _categoryId = value),
-              ),
             ],
-            const SizedBox(height: 12),
-            MobileAmountField(
-              fieldKey: const ValueKey('mobile-transaction-amount-field'),
-              controller: _amount,
-              enabled: !_busy,
-              suffixText: null,
-              onCompleted: _focusMemo,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const ValueKey('mobile-transaction-memo-field'),
-              controller: _memo,
-              focusNode: _memoFocus,
-              enabled: !_busy,
-              decoration: const InputDecoration(
-                labelText: '메모',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (!_isEdit)
-              RecentTransactionSuggestions(
-                controller: _memo,
-                type: _type,
-                enabled: !_busy,
-                onSelected: (row) => setState(() {
-                  _memo.text = row.memo ?? '';
-                  _accountId = row.accountId;
-                  _categoryId = row.categoryId;
-                  _fromAccountId = row.fromAccountId;
-                  _toAccountId = row.toAccountId;
-                  _tagNames
-                    ..clear()
-                    ..addAll(row.tags.map((t) => t.name));
-                }),
-              ),
-            _TagNameSelector(
-              tags: tags,
-              suggestionContext: (_type, _categoryId),
-              selectedNames: _tagNames,
-              enabled: !_busy,
-              onChanged: () => setState(() {}),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                if (_isEdit)
-                  TextButton.icon(
-                    onPressed: _busy ? null : _delete,
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('삭제'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: context.appExpense,
+          ),
+          const SizedBox(height: 8),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'income', label: Text('수입')),
+                      ButtonSegment(value: 'expense', label: Text('지출')),
+                      ButtonSegment(value: 'transfer', label: Text('이체')),
+                    ],
+                    selected: {_type},
+                    showSelectedIcon: false,
+                    onSelectionChanged: _busy
+                        ? null
+                        : (selected) => setState(() {
+                            _type = selected.first;
+                            _categoryId = null;
+                          }),
+                  ),
+                  const SizedBox(height: 10),
+                  MobileAmountField(
+                    fieldKey: const ValueKey('mobile-transaction-amount-field'),
+                    controller: _amount,
+                    enabled: !_busy,
+                    suffixText: null,
+                    onCompleted: _focusMemo,
+                    previewBuilder: _preview,
+                  ),
+                  const SizedBox(height: 10),
+                  if (_type == 'transfer') ...[
+                    _AccountField(
+                      label: '출금 자산',
+                      accounts: accounts,
+                      value: _fromAccountId,
+                      onChanged: _busy
+                          ? null
+                          : (v) => setState(() => _fromAccountId = v),
+                    ),
+                    const SizedBox(height: 10),
+                    _AccountField(
+                      label: '입금 자산',
+                      accounts: accounts,
+                      value: _toAccountId,
+                      onChanged: _busy
+                          ? null
+                          : (v) => setState(() => _toAccountId = v),
+                    ),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _AccountField(
+                            label: '자산',
+                            accounts: accounts,
+                            value: _accountId,
+                            onChanged: _busy
+                                ? null
+                                : (v) => setState(() => _accountId = v),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _CategoryField(
+                            categories: visibleCategories,
+                            value: _categoryId,
+                            onChanged: _busy
+                                ? null
+                                : (v) => setState(() => _categoryId = v),
+                          ),
+                        ),
+                      ],
+                    ),
+                  _preview(_amount),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const ValueKey('mobile-transaction-memo-field'),
+                    controller: _memo,
+                    focusNode: _memoFocus,
+                    enabled: !_busy,
+                    decoration: const InputDecoration(
+                      labelText: '메모',
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                const Spacer(),
-                TextButton(
-                  onPressed: _busy ? null : () => Navigator.pop(context),
-                  child: const Text('취소'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: _busy ? null : _save,
-                  child: const Text('저장'),
-                ),
-              ],
+                  if (!_isEdit)
+                    RecentTransactionSuggestions(
+                      controller: _memo,
+                      type: _type,
+                      enabled: !_busy,
+                      onSelected: (row) => setState(() {
+                        _memo.text = row.memo ?? '';
+                        _accountId = row.accountId;
+                        _categoryId = row.categoryId;
+                        _fromAccountId = row.fromAccountId;
+                        _toAccountId = row.toAccountId;
+                        _tagNames
+                          ..clear()
+                          ..addAll(row.tags.map((t) => t.name));
+                      }),
+                    ),
+                  const SizedBox(height: 8),
+                  TransactionTagPicker(
+                    tags: tags,
+                    categoryId: _categoryId,
+                    type: _type,
+                    value: _tagNames.toList(),
+                    enabled: !_busy,
+                    keyPrefix: 'mobile',
+                    onChanged: (names) => setState(() {
+                      _tagNames
+                        ..clear()
+                        ..addAll(names);
+                    }),
+                  ),
+                  TextButton.icon(
+                    key: const ValueKey('mobile-transaction-date-toggle'),
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() => _dateExpanded = !_dateExpanded),
+                    icon: Icon(
+                      _dateExpanded ? Icons.expand_less : Icons.expand_more,
+                    ),
+                    label: Text(
+                      '날짜·시간  ${toDateKey(_date)} ${_timeKey(_time)}',
+                    ),
+                  ),
+                  if (_dateExpanded)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _busy ? null : _pickDate,
+                            icon: const Icon(Icons.calendar_today, size: 16),
+                            label: Text(toDateKey(_date)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _busy ? null : _pickTime,
+                            icon: const Icon(Icons.schedule, size: 16),
+                            label: Text(_timeKey(_time)),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+          const Divider(height: 16),
+          Row(
+            children: [
+              if (_isEdit)
+                TextButton.icon(
+                  onPressed: _busy ? null : _delete,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('삭제'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.appExpense,
+                  ),
+                ),
+              const Spacer(),
+              TextButton(
+                onPressed: _busy ? null : () => Navigator.pop(context),
+                child: const Text('취소'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _busy ? null : _save,
+                child: const Text('저장'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
-}
 
-class _TagNameSelector extends StatefulWidget {
-  const _TagNameSelector({
-    required this.tags,
-    required this.suggestionContext,
-    required this.selectedNames,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final List<Tag> tags;
-  final Object suggestionContext;
-  final Set<String> selectedNames;
-  final bool enabled;
-  final VoidCallback onChanged;
-
-  @override
-  State<_TagNameSelector> createState() => _TagNameSelectorState();
-}
-
-class _TagNameSelectorState extends State<_TagNameSelector> {
-  final _order = TagSuggestionOrder();
-
-  @override
-  Widget build(BuildContext context) {
-    final byName = {for (final tag in widget.tags) tag.name: tag};
-    final ordered = _order
-        .resolve(byName.keys.toList(), widget.suggestionContext)
-        .map((name) => byName[name]!)
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('태그', style: TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        if (widget.tags.isEmpty)
-          Text(
-            '등록된 태그가 없습니다.',
-            style: TextStyle(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.75),
-            ),
-          )
-        else ...[
-          _TagChipGroup(
-            tags: ordered,
-            selectedNames: widget.selectedNames,
-            enabled: widget.enabled,
-            onChanged: () {
-              _order.lock();
-              widget.onChanged();
-            },
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _TagChipGroup extends StatelessWidget {
-  const _TagChipGroup({
-    required this.tags,
-    required this.selectedNames,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  final List<Tag> tags;
-  final Set<String> selectedNames;
-  final bool enabled;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final tag in tags)
-          FilterChip(
-            key: ValueKey('mobile-tag-choice-${tag.id}'),
-            label: Text('#${tag.name}'),
-            selected: selectedNames.contains(tag.name),
-            showCheckmark: false,
-            avatar: tag.isPinned
-                ? const Icon(Icons.star_rounded, size: 16)
-                : selectedNames.contains(tag.name)
-                ? const Icon(Icons.check, size: 16)
-                : const SizedBox(width: 16, height: 16),
-            onSelected: enabled
-                ? (selected) {
-                    if (selected) {
-                      selectedNames.add(tag.name);
-                    } else {
-                      selectedNames.remove(tag.name);
-                    }
-                    onChanged();
-                  }
-                : null,
-          ),
-      ],
-    );
-  }
+  Widget _preview(TextEditingController controller) => TransactionBudgetPreview(
+    amountController: controller,
+    type: _type,
+    date: _date,
+    accountId: _accountId,
+    categoryId: _categoryId,
+    editingId: _isEdit ? widget.row?.id : null,
+    enabled: !_busy,
+  );
 }
 
 class _AccountField extends StatelessWidget {
@@ -556,17 +511,22 @@ class _AccountField extends StatelessWidget {
   final String label;
   final List<Account> accounts;
   final int? value;
-  final ValueChanged<int?> onChanged;
+  final ValueChanged<int?>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<int>(
+      key: ValueKey(value),
+      isExpanded: true,
       initialValue: accounts.any((account) => account.id == value)
           ? value
           : null,
       items: [
         for (final account in accounts)
-          DropdownMenuItem(value: account.id, child: Text(account.name)),
+          DropdownMenuItem(
+            value: account.id,
+            child: Text(account.name, overflow: TextOverflow.ellipsis),
+          ),
       ],
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -586,17 +546,22 @@ class _CategoryField extends StatelessWidget {
 
   final List<Category> categories;
   final int? value;
-  final ValueChanged<int?> onChanged;
+  final ValueChanged<int?>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<int>(
+      key: ValueKey(value),
+      isExpanded: true,
       initialValue: categories.any((category) => category.id == value)
           ? value
           : null,
       items: [
         for (final category in categories)
-          DropdownMenuItem(value: category.id, child: Text(category.name)),
+          DropdownMenuItem(
+            value: category.id,
+            child: Text(category.name, overflow: TextOverflow.ellipsis),
+          ),
       ],
       onChanged: onChanged,
       decoration: const InputDecoration(

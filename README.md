@@ -4,8 +4,8 @@
 
 ## 공개 버전과 개발 상태
 
-- 최신 GitHub 공개 사전 릴리스: **`1.0.0-rc.16+65`** ([릴리스와 변경 내역](https://github.com/Flynn-Kalar/my_little_budget/releases/tag/v1.0.0-rc.16))
-- 아래의 일반 기능·설치 안내는 공개된 rc.16을 기준으로 합니다.
+- 최신 GitHub 공개 사전 릴리스: **`1.0.0-rc.17+66`** ([릴리스와 변경 내역](https://github.com/Flynn-Kalar/my_little_budget/releases/tag/v1.0.0-rc.17))
+- 아래의 일반 기능·설치 안내는 공개된 rc.17을 기준으로 합니다.
 - GitHub의 Android AAB 공개와 Google Play 배포는 별개입니다. Play 스토어에서 제공하는 버전은 배포 트랙에 따라 다를 수 있습니다.
 
 | 구분 | 상태 |
@@ -23,15 +23,17 @@ rc.10~15에는 투자 포트폴리오, 메모 목표·순서 편집, 시간대 �
 
 rc.16에서는 다중 선택 도구의 하단 겹침, 태그 카테고리의 수입·지출 구분, 동기화 완료 대기와 자동 복구, 집계 설정 변경 시 선택 월 보존을 개선했습니다.
 
+rc.17에서는 입력 중 예산·하루 사용 가능액 미리보기와 예산 이동을 추가했습니다. 모바일 메모는 항상 표시하고 날짜·시간은 접으며, 선택한 카테고리의 태그만 자동으로 펼칩니다. 백업·복원 공통 처리와 내부 파일 구조도 정리했습니다.
+
 ## Windows 버전 설치
 
-**[Windows Setup 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/MyLittleBudget-Setup-1.0.0-rc.16.exe)** · **[Windows Update 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/MyLittleBudget-Update-1.0.0-rc.16.exe)** · **[Android AAB 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/MyLittleBudget-Android-1.0.0-rc.16.aab)**
+**[Windows Setup 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.17/MyLittleBudget-Setup-1.0.0-rc.17.exe)** · **[Windows Update 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.17/MyLittleBudget-Update-1.0.0-rc.17.exe)** · **[Android AAB 다운로드](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.17/MyLittleBudget-Android-1.0.0-rc.17.aab)**
 
-1. 처음 설치할 때는 `MyLittleBudget-Setup-1.0.0-rc.16.exe`, 기존 앱을 업데이트할 때는 `MyLittleBudget-Update-1.0.0-rc.16.exe`를 내려받습니다.
+1. 처음 설치할 때는 `MyLittleBudget-Setup-1.0.0-rc.17.exe`, 기존 앱을 업데이트할 때는 `MyLittleBudget-Update-1.0.0-rc.17.exe`를 내려받습니다.
 2. Setup 파일을 실행하고 설치 안내를 따릅니다.
 3. 설치가 끝나면 시작 메뉴의 `나만의 작은 가계부`를 실행합니다.
 
-사용자별 `%LOCALAPPDATA%\Programs\MyLittleBudget`에 설치되므로 관리자 권한이 필요하지 않습니다. 기존 설치와 같은 AppId 및 데이터 저장 위치를 사용해 업그레이드합니다. 두 EXE는 파일명만 다른 동일한 전체 설치 패키지이며 [SHA256SUMS.txt](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.16/SHA256SUMS.txt)로 검증할 수 있습니다.
+사용자별 `%LOCALAPPDATA%\Programs\MyLittleBudget`에 설치되므로 관리자 권한이 필요하지 않습니다. 기존 설치와 같은 AppId 및 데이터 저장 위치를 사용해 업그레이드합니다. 두 EXE는 파일명만 다른 동일한 전체 설치 패키지이며 [SHA256SUMS.txt](https://github.com/Flynn-Kalar/my_little_budget/releases/download/v1.0.0-rc.17/SHA256SUMS.txt)로 검증할 수 있습니다.
 
 Android AAB는 Google Play 업로드용 번들입니다. 휴대전화에서 직접 설치하는 APK 파일과는 다릅니다.
 
@@ -95,7 +97,10 @@ Android AAB는 Google Play 업로드용 번들입니다. 휴대전화에서 직�
 - 모바일 화면: `lib/ui/mobile/**`
 - 공용 UI: `lib/ui/shared/**`
 - 플랫폼·공통 breakpoint 정책: `lib/shell/layout_policy.dart`
-- shell 및 화면 연결: `lib/shell/**`, `lib/router/app_router.dart`, `lib/ui/mobile/responsive_page.dart`
+- 공통 shell 및 화면 선택: `lib/shell/responsive_shell.dart`, `lib/shell/responsive_page.dart`
+- 데스크톱 사이드바: `lib/ui/desktop/shell/sidebar_shell.dart`
+- 모바일 하단 내비게이션: `lib/ui/mobile/shell/mobile_shell.dart`
+- 경로와 화면 연결: `lib/router/app_router.dart`
 
 모바일 대응을 위해 데스크톱 화면을 변형하지 않습니다. 모바일 기능은 `lib/ui/mobile/**` 아래에 별도로 구현합니다.
 
@@ -177,8 +182,8 @@ release 빌드와 Setup 생성을 한 번에 실행:
 설치·업데이트 산출물:
 
 ```text
-installer\output\MyLittleBudget-Setup-1.0.0-rc.16.exe
-installer\output\MyLittleBudget-Update-1.0.0-rc.16.exe
+installer\output\MyLittleBudget-Setup-1.0.0-rc.17.exe
+installer\output\MyLittleBudget-Update-1.0.0-rc.17.exe
 installer\output\SHA256SUMS.txt
 ```
 
@@ -309,18 +314,22 @@ RLS, 사용자 이전, tombstone 삭제와 revision 처리에 대한 자세한 �
 ## 주요 디렉터리
 
 - `lib/app.dart`: 앱 초기화, 테마, 라우터, 알림과 동기화 시작
-- `lib/router/app_router.dart`: GoRouter 라우팅과 반응형 화면 분기
-- `lib/shell/**`: 홈·사이드바·모바일 내비게이션과 플랫폼별 레이아웃 정책
+- `lib/router/app_router.dart`: GoRouter 경로와 PC·모바일 화면 연결
+- `lib/shell/**`: 공통 화면·shell 선택과 플랫폼별 레이아웃 정책
+- `lib/core/**`: 날짜·금액·색상 변환·테마 등 여러 기능에서 사용하는 공통 도구
 - `lib/data/**`: Drift 테이블, DAO, 백업과 Supabase 동기화
-- `lib/features/**`: 도메인 로직, 검증, 공휴일과 업데이트 확인
-- `lib/ui/desktop/**`: 데스크톱/태블릿 UI
-- `lib/ui/mobile/**`: 모바일 UI
-- `lib/ui/shared/**`: 공용 UI와 provider
+- `lib/features/**`: 기능별 계산·검증·상태 조회·갱신·작업 조율
+- `lib/features/settings/data_management_controller.dart`: 백업·복원·초기화·Supabase 작업과 완료 후 데이터 갱신
+- `lib/ui/desktop/**`: 데스크톱/태블릿 화면·위젯·사이드바 shell
+- `lib/ui/mobile/**`: 모바일 화면·위젯·하단 내비게이션 shell
+- `lib/ui/shared/**`: 공용 위젯과 화면 상호작용·입력 상태, 파일 선택·확인창·진행 표시
 - `installer/**`: Inno Setup 설정과 로컬 산출물
 - `scripts/**`: 빌드 자동화 스크립트
 - `supabase/**`: 동기화 스키마와 운영 문서
 - `test/**`: 데이터, 기능, UI 테스트
 - `.scratch/<feature-slug>/`: 로컬 이슈와 PRD
+
+화면 렌더링과 사용자 상호작용은 `ui`에, 화면과 독립적인 조회·집계·갱신 처리는 `features`에 둡니다. `shell`은 레이아웃 정책과 화면 선택만 담당하고, 실제 플랫폼별 shell UI는 해당 `ui` 폴더에 둡니다. `core`, `data`, `features`는 `ui`의 파일을 가져오지 않습니다.
 
 ## 프로젝트 문서
 

@@ -84,16 +84,21 @@ void refreshReminderBadge(WidgetRef ref) {
   ref.invalidate(pendingReminderCountProvider);
 }
 
-Future<void> rebuildNoteNotifications(WidgetRef ref) async {
-  final dao = ref.read(notesDaoProvider);
-  final service = ref.read(noteNotificationServiceProvider);
-  final revision = ref.read(noteScheduleRevisionProvider.notifier);
-  ref.invalidate(noteNotificationPermissionProvider);
-  try {
-    await service.cleanupUnusedAudio(await dao.listNotes());
-    await service.rebuild(await dao.listNotificationEntries());
-  } catch (error) {
-    debugPrint('note notification rebuild failed: $error');
-  }
-  revision.state++;
-}
+Future<void> rebuildNoteNotifications(WidgetRef ref) =>
+    ref.read(rebuildNoteNotificationsProvider)();
+
+final rebuildNoteNotificationsProvider = Provider<Future<void> Function()>(
+  (ref) => () async {
+    final dao = ref.read(notesDaoProvider);
+    final service = ref.read(noteNotificationServiceProvider);
+    final revision = ref.read(noteScheduleRevisionProvider.notifier);
+    ref.invalidate(noteNotificationPermissionProvider);
+    try {
+      await service.cleanupUnusedAudio(await dao.listNotes());
+      await service.rebuild(await dao.listNotificationEntries());
+    } catch (error) {
+      debugPrint('note notification rebuild failed: $error');
+    }
+    revision.state++;
+  },
+);

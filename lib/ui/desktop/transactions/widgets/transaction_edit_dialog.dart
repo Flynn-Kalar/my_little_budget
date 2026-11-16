@@ -12,6 +12,8 @@ import '../../../../features/transactions/validation.dart';
 import 'package:my_little_budget/features/transactions/providers.dart';
 import '../../../shared/amount_input_formatter.dart';
 import '../../../shared/spending_limit_warning.dart';
+import '../../../shared/transaction_budget_preview.dart';
+import '../../../shared/transaction_tag_picker.dart';
 import 'form_fields.dart';
 
 class TransactionEditDialog extends ConsumerStatefulWidget {
@@ -156,15 +158,13 @@ class _State extends ConsumerState<TransactionEditDialog> {
         ref.watch(activeAccountsProvider).asData?.value ?? const [];
     final categories =
         ref.watch(activeCategoriesProvider).asData?.value ?? const [];
-    final tagSuggestions =
-        (ref
-                    .watch(transactionTagSuggestionsProvider(_categoryId))
-                    .asData
-                    ?.value ??
-                ref.watch(allTagsProvider).asData?.value ??
-                const [])
-            .map((t) => t.name)
-            .toList();
+    final tags =
+        ref
+            .watch(transactionTagSuggestionsProvider(_categoryId))
+            .asData
+            ?.value ??
+        ref.watch(allTagsProvider).asData?.value ??
+        const [];
     final visibleCats = categories
         .where((c) => c.type == (_type == 'income' ? 'income' : 'expense'))
         .toList();
@@ -249,6 +249,15 @@ class _State extends ConsumerState<TransactionEditDialog> {
                 ),
               ),
               const SizedBox(height: 12),
+              TransactionBudgetPreview(
+                amountController: _amountCtrl,
+                type: _type,
+                date: _date,
+                accountId: _accountId,
+                categoryId: _categoryId,
+                editingId: _isEdit ? widget.row.id : null,
+                enabled: !_busy,
+              ),
               TextField(
                 controller: _memoCtrl,
                 decoration: const InputDecoration(
@@ -258,10 +267,14 @@ class _State extends ConsumerState<TransactionEditDialog> {
                 ),
               ),
               const SizedBox(height: 12),
-              TagInput(
+              TransactionTagPicker(
+                tags: tags,
+                categoryId: _categoryId,
+                type: _type,
                 value: _tags,
-                suggestionContext: (_type, _categoryId),
-                suggestions: tagSuggestions,
+                keyPrefix: 'desktop',
+                allowNewTag: true,
+                enabled: !_busy,
                 onChanged: (v) => setState(() => _tags = v),
               ),
             ],

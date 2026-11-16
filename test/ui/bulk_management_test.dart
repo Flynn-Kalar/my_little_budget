@@ -28,7 +28,7 @@ import 'package:my_little_budget/ui/mobile/settings/mobile_categories_screen.dar
 import 'package:my_little_budget/ui/mobile/settings/mobile_recurring_screen.dart';
 import 'package:my_little_budget/ui/mobile/settings/mobile_tags_screen.dart';
 import 'package:my_little_budget/ui/mobile/settings/mobile_transaction_presets_screen.dart';
-import 'package:my_little_budget/ui/mobile/responsive_page.dart';
+import 'package:my_little_budget/shell/responsive_page.dart';
 import 'package:my_little_budget/ui/shared/bulk_manage_button.dart';
 
 Future<void> reveal(WidgetTester tester, Finder finder) async {

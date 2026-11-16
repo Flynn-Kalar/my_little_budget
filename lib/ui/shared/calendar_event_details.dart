@@ -4,7 +4,7 @@ import '../../core/date.dart';
 import '../../features/calendar/calendar_dday.dart';
 import '../../features/calendar/calendar_schedule.dart';
 import '../../features/notes/note_schedule.dart';
-import 'calendar_entries.dart';
+import '../../features/calendar/calendar_entries.dart';
 
 /// Read-only content shared by the desktop dialog and mobile detail sheet.
 class CalendarEventDetails extends StatelessWidget {

@@ -2,7 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/features/notes/note_schedule.dart';
-import 'package:my_little_budget/ui/shared/calendar_entries.dart';
+import 'package:my_little_budget/features/calendar/calendar_entries.dart';
 
 void main() {
   late AppDatabase db;

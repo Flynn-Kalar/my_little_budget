@@ -1,21 +1,21 @@
-import '../../ui/shared/statement_period_settings.dart';
+import '../../shared/statement_period_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme/app_theme.dart';
-import 'app_info.dart';
-import 'update_check.dart';
-import 'windows_update_installer.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../features/settings/app_info.dart';
+import '../../../features/settings/update_check.dart';
+import '../../../features/settings/windows_update_installer.dart';
 
-class SettingsPage extends ConsumerStatefulWidget {
-  const SettingsPage({super.key});
+class SettingsScreen extends ConsumerStatefulWidget {
+  const SettingsScreen({super.key});
 
   @override
-  ConsumerState<SettingsPage> createState() => _SettingsPageState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsPageState extends ConsumerState<SettingsPage> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _checkingForUpdate = false;
   bool _installingUpdate = false;
   double _updateProgress = 0;

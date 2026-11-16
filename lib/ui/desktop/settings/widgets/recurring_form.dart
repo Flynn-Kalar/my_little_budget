@@ -405,15 +405,16 @@ class _RecurringFormState extends ConsumerState<RecurringForm> {
                   },
                 ),
               ),
-              SizedBox(
-                width: 260,
-                child: TagInput(
-                  value: _tagNames,
-                  suggestions: suggestions,
-                  onChanged: (v) => setState(() => _tagNames = v),
-                ),
-              ),
             ],
+          ),
+          SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: TagInput(
+              value: _tagNames,
+              suggestions: suggestions,
+              onChanged: (v) => setState(() => _tagNames = v),
+            ),
           ),
           SizedBox(height: 10),
           TextField(

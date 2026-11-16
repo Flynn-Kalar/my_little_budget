@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 
 /// "#RRGGBB" → Color. 잘못된 값은 기본 회색.
 Color colorFromHex(String? hex) {

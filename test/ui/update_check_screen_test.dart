@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_little_budget/features/settings/settings_page.dart';
+import 'package:my_little_budget/ui/desktop/settings/settings_screen.dart';
 import 'package:my_little_budget/features/settings/update_check.dart';
 import 'package:my_little_budget/features/settings/windows_update_installer.dart';
 import 'package:my_little_budget/ui/mobile/settings/mobile_settings_screen.dart';
@@ -14,7 +14,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final installer = _FakeWindowsUpdateInstaller();
-    await tester.pumpWidget(_app(const SettingsPage(), installer: installer));
+    await tester.pumpWidget(_app(const SettingsScreen(), installer: installer));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('1.0.0-rc.1+42'), findsOneWidget);
@@ -57,7 +57,7 @@ void main() {
     final installer = _FakeWindowsUpdateInstaller();
     await tester.pumpWidget(
       _app(
-        const SettingsPage(),
+        const SettingsScreen(),
         installer: installer,
         service: _FakeUpdateCheckService(digest: null),
       ),
@@ -78,7 +78,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       _app(
-        const SettingsPage(),
+        const SettingsScreen(),
         service: _FakeUpdateCheckService(failCheck: true),
       ),
     );

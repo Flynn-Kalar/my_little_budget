@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
-import '../color_hex.dart';
+import '../../../core/color_hex.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import 'widgets/account_tx_list.dart';
 

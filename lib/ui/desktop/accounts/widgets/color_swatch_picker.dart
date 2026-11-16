@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/colors.dart';
-import '../../color_hex.dart';
+import '../../../../core/color_hex.dart';
 
 /// 16색 팔레트에서 한 색 선택. AccountForm, CategoryForm, TagForm 공용.
 class ColorSwatchPicker extends StatelessWidget {

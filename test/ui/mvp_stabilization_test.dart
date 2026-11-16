@@ -14,7 +14,8 @@ import 'package:my_little_budget/data/providers.dart';
 import 'package:my_little_budget/features/accounts/validation.dart';
 import 'package:my_little_budget/features/investments/validation.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
-import 'package:my_little_budget/ui/desktop/settings/data_management_screen.dart';
+import 'package:my_little_budget/ui/shared/data_management_actions.dart';
+import 'package:my_little_budget/ui/shared/local_backup_panel.dart';
 import 'package:my_little_budget/features/stats/providers.dart';
 
 void main() {
@@ -663,11 +664,14 @@ void main() {
   testWidgets('Settings backup import confirmation warns full replacement', (
     tester,
   ) async {
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    final backup = await db.backupDao.exportBackup();
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => FilledButton(
-            onPressed: () => showImportConfirmationDialog(context),
+            onPressed: () => showBackupRestorePreview(context, backup),
             child: const Text('open'),
           ),
         ),
@@ -677,12 +681,9 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    expect(find.text('백업 데이터 복원'), findsOneWidget);
-    expect(
-      find.text('현재 데이터를 모두 덮어쓰고 백업 데이터를 복원합니다. 되돌릴 수 없습니다.'),
-      findsOneWidget,
-    );
-    expect(find.text('복원'), findsOneWidget);
+    expect(find.text('백업 복원 미리보기'), findsOneWidget);
+    expect(find.textContaining('현재 데이터를 이 백업으로 전체 교체합니다.'), findsOneWidget);
+    expect(find.text('전체 교체하여 복원'), findsOneWidget);
   });
 
   testWidgets('Settings reset confirmation warns destructive reset', (

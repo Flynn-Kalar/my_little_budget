@@ -1,7 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,35 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../data/backup.dart';
-import '../../../data/local_backup_service.dart';
-import '../../shared/local_backup_panel.dart';
-import '../../shared/transaction_csv_panel.dart';
-import '../../../features/sync/invalidate_synced_data.dart';
-import '../../../data/providers.dart';
-import '../../../data/supabase_backup_service.dart';
 import '../../../data/supabase_backup_settings.dart';
 import '../../../data/supabase_operation_status.dart';
-import '../../../data/supabase_sync_auth.dart';
-import '../../../data/supabase_table_sync_service.dart';
-import '../../../data/sync_models.dart';
-import 'package:my_little_budget/features/notes/providers.dart';
-import 'package:my_little_budget/features/accounts/providers.dart'
-    as accounts_providers;
-import 'package:my_little_budget/features/budget/providers.dart'
-    as budget_providers;
-import 'package:my_little_budget/features/investments/providers.dart'
-    as investments_providers;
-import 'package:my_little_budget/features/budget/badges_providers.dart'
-    as badges_providers;
-import 'package:my_little_budget/features/stats/providers.dart'
-    as stats_providers;
-import 'package:my_little_budget/features/transactions/providers.dart'
-    as transactions_providers;
-import 'package:my_little_budget/features/settings/providers.dart'
-    as settings_providers;
-
-enum _SyncMode { local, auto, windows }
+import '../../shared/data_management_actions.dart';
+import '../../shared/local_backup_panel.dart';
+import '../../shared/transaction_csv_panel.dart';
 
 class DataManagementScreen extends ConsumerStatefulWidget {
   const DataManagementScreen({super.key});
@@ -47,457 +19,8 @@ class DataManagementScreen extends ConsumerStatefulWidget {
       _DataManagementScreenState();
 }
 
-class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
-  bool _busy = false;
-  SyncProgress? _syncProgress;
-  _SyncMode _selectedMode = _SyncMode.local;
-  late final _supabaseUrlCtrl = TextEditingController();
-  late final _supabaseAnonKeyCtrl = TextEditingController();
-  late final _supabaseEmailCtrl = TextEditingController();
-  late final _supabasePasswordCtrl = TextEditingController();
-  late final _supabaseBucketCtrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(_loadSupabaseSettings);
-  }
-
-  @override
-  void dispose() {
-    _supabaseUrlCtrl.dispose();
-    _supabaseAnonKeyCtrl.dispose();
-    _supabaseEmailCtrl.dispose();
-    _supabasePasswordCtrl.dispose();
-    _supabaseBucketCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadSupabaseSettings() async {
-    final notifier = ref.read(supabaseBackupSettingsProvider.notifier);
-    await notifier.whenReady;
-    if (!mounted) return;
-    final settings = ref.read(supabaseBackupSettingsProvider);
-    _fillSupabaseControllers(settings);
-    setState(() {
-      _selectedMode = settings.isConfigured || settings.isTableSyncConfigured
-          ? _SyncMode.auto
-          : _SyncMode.local;
-    });
-  }
-
-  void _fillSupabaseControllers(SupabaseBackupSettings settings) {
-    _supabaseUrlCtrl.text = settings.url;
-    _supabaseAnonKeyCtrl.text = settings.anonKey;
-    _supabaseEmailCtrl.text = settings.authEmail;
-    _supabasePasswordCtrl.clear();
-    _supabaseBucketCtrl.text = settings.bucket;
-  }
-
-  Future<void> _refreshSupabaseRemoteStatus() async {
-    final draft = _supabaseDraft();
-    final error = validateSupabaseBackupSettings(draft);
-    if (error != null) {
-      await ref
-          .read(supabaseOperationStatusProvider.notifier)
-          .recordStorageFailure(error);
-      return;
-    }
-
-    final result = await ref
-        .read(supabaseBackupServiceProvider)
-        .getRemoteStatus(draft);
-    final statusNotifier = ref.read(supabaseOperationStatusProvider.notifier);
-    if (result.isOk) {
-      await statusNotifier.recordStorageCheck(
-        exists: result.value!.exists,
-        remoteUpdatedAt: result.value!.updatedAt,
-      );
-    } else {
-      await statusNotifier.recordStorageFailure(result.error!);
-    }
-  }
-
-  Future<void> _exportBackup() async {
-    setState(() => _busy = true);
-    try {
-      final backup = await ref.read(backupDaoProvider).exportBackup();
-      final filename = buildBackupFilename();
-      final json = backup.toJsonString();
-      final path = await FilePicker.saveFile(
-        dialogTitle: '백업 파일 저장',
-        fileName: filename,
-        type: FileType.custom,
-        allowedExtensions: const ['json'],
-        bytes: utf8.encode(json),
-      );
-      if (path == null) return;
-      if (!mounted) return;
-      _showSnack('백업 파일을 만들었습니다: $filename');
-    } catch (e) {
-      if (mounted) _showSnack('백업 파일 생성에 실패했습니다: $e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _importBackup() async {
-    setState(() => _busy = true);
-    try {
-      final picked = await FilePicker.pickFiles(
-        dialogTitle: '복원할 백업 파일 선택',
-        type: FileType.custom,
-        allowedExtensions: const ['json'],
-        allowMultiple: false,
-      );
-      if (picked == null || picked.files.single.path == null) return;
-
-      final file = File(picked.files.single.path!);
-      final content = await file.readAsString();
-      final parsed = parseBackup(content);
-      if (!parsed.isOk) {
-        _showSnack(parsed.error ?? '백업 파일 형식이 올바르지 않습니다.');
-        return;
-      }
-
-      if (!mounted) return;
-      final confirmed = await showBackupRestorePreview(context, parsed.backup!);
-      if (confirmed != true) return;
-
-      await ref.read(localBackupServiceProvider).captureFresh();
-      await ref.read(backupDaoProvider).importBackup(parsed.backup!);
-      _invalidateAfterImport(ref);
-      await rebuildNoteNotifications(ref);
-      if (!mounted) return;
-      _showSnack('백업 데이터를 복원했습니다.');
-    } catch (e) {
-      if (mounted) {
-        _showSnack('복원에 실패했습니다. 기존 데이터는 유지됩니다. $e');
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _resetAllData() async {
-    final confirmed = await showResetConfirmationDialog(context);
-    if (confirmed != true) return;
-
-    setState(() => _busy = true);
-    try {
-      await ref.read(backupDaoProvider).resetAllData();
-      _invalidateAfterImport(ref);
-      await rebuildNoteNotifications(ref);
-      if (!mounted) return;
-      _showSnack('데이터를 초기화했습니다.');
-    } catch (e) {
-      if (mounted) _showSnack('초기화에 실패했습니다: $e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  SupabaseBackupSettings _supabaseDraft() {
-    return SupabaseBackupSettings(
-      url: _supabaseUrlCtrl.text,
-      anonKey: _supabaseAnonKeyCtrl.text,
-      bucket: _supabaseBucketCtrl.text,
-      authEmail: _supabaseEmailCtrl.text,
-      pathPrefix: SupabaseBackupSettings.defaultPathPrefix,
-    );
-  }
-
-  Future<void> _saveSupabaseSettings() async {
-    final draft = _supabaseDraft();
-    final error = validateSupabaseConnectionSettings(draft);
-    if (error != null) {
-      _showSnack(error);
-      return;
-    }
-    final previous = ref.read(supabaseBackupSettingsProvider);
-    final statusNotifier = ref.read(supabaseOperationStatusProvider.notifier);
-
-    setState(() {
-      _busy = true;
-      _syncProgress = const SyncProgress(
-        percent: 0,
-        label: 'Supabase에 로그인하고 있습니다.',
-      );
-    });
-    try {
-      await statusNotifier.recordFullSyncStarted();
-      await ref
-          .read(supabaseSyncAuthServiceProvider)
-          .signInWithPassword(
-            draft,
-            email: _supabaseEmailCtrl.text,
-            password: _supabasePasswordCtrl.text,
-          );
-      await _resetStatusForChangedIdentity(previous, draft);
-      await ref.read(supabaseBackupSettingsProvider.notifier).save(draft);
-      _supabasePasswordCtrl.clear();
-      final syncResult = await ref
-          .read(supabaseSyncCoordinatorProvider)
-          .synchronizeNowWithProgress(_updateSyncProgress);
-      if (!mounted) return;
-      _fillSupabaseControllers(ref.read(supabaseBackupSettingsProvider));
-      setState(() => _selectedMode = _SyncMode.auto);
-      _showSnack(
-        syncResult.isOk
-            ? 'Supabase 연결 설정을 저장하고 동기화했습니다.'
-            : '설정은 저장했지만 동기화하지 못했습니다: ${sanitizeSupabaseError(syncResult.error)}',
-      );
-    } catch (e) {
-      await statusNotifier.recordFullSyncResult(
-        SyncRunResult(error: e.toString(), errorStage: 'auth'),
-      );
-      if (mounted) {
-        _showSnack('Supabase 설정 저장에 실패했습니다: ${sanitizeSupabaseError('$e')}');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _syncProgress = null;
-        });
-      }
-    }
-  }
-
-  void _updateSyncProgress(SyncProgress progress) {
-    if (mounted) setState(() => _syncProgress = progress);
-  }
-
-  Future<void> _resetStatusForChangedIdentity(
-    SupabaseBackupSettings previous,
-    SupabaseBackupSettings next,
-  ) async {
-    final oldValue = previous.normalized();
-    final newValue = next.normalized();
-    final notifier = ref.read(supabaseOperationStatusProvider.notifier);
-    if (oldValue.url != newValue.url ||
-        oldValue.anonKey != newValue.anonKey ||
-        oldValue.authEmail != newValue.authEmail) {
-      await notifier.resetDbStatus();
-    }
-    if (oldValue.url != newValue.url ||
-        oldValue.anonKey != newValue.anonKey ||
-        oldValue.bucket != newValue.bucket) {
-      await notifier.resetStorageStatus();
-    }
-  }
-
-  Future<void> _syncNow() async {
-    final draft = _supabaseDraft();
-    final error = validateSupabaseSyncSettings(draft);
-    if (error != null) {
-      _showSnack(error);
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _syncProgress = const SyncProgress(percent: 0, label: '동기화를 준비하고 있습니다.');
-    });
-    try {
-      final result = await ref
-          .read(supabaseSyncCoordinatorProvider)
-          .synchronizeNowWithProgress(_updateSyncProgress);
-      if (!mounted) return;
-      _showSnack(
-        result.isOk
-            ? '동기화했습니다. 업로드 ${result.uploaded}건, 다운로드 ${result.downloaded}건'
-            : '동기화하지 못했습니다: ${sanitizeSupabaseError(result.error)}',
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _busy = false;
-          _syncProgress = null;
-        });
-      }
-    }
-  }
-
-  Future<void> _testSupabaseSettings() async {
-    final draft = _supabaseDraft();
-    final error = validateSupabaseBackupSettings(draft);
-    if (error != null) {
-      _showSnack(error);
-      return;
-    }
-
-    setState(() => _busy = true);
-    try {
-      final result = await ref
-          .read(supabaseBackupServiceProvider)
-          .testConnection(draft);
-      if (!result.isOk) {
-        await ref
-            .read(supabaseOperationStatusProvider.notifier)
-            .recordStorageFailure(result.error!);
-      }
-      if (!mounted) return;
-      _showSnack(
-        result.isOk
-            ? 'Supabase Storage 연결을 확인했습니다.'
-            : sanitizeSupabaseError(result.error)!,
-      );
-      if (result.isOk) await _refreshSupabaseRemoteStatus();
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _testSupabaseTables() async {
-    final draft = _supabaseDraft();
-    final error = validateSupabaseSyncSettings(draft);
-    if (error != null) {
-      _showSnack(error);
-      return;
-    }
-
-    setState(() => _busy = true);
-    try {
-      final result = await ref
-          .read(supabaseTableSyncServiceProvider)
-          .testConnection(draft);
-      final statusNotifier = ref.read(supabaseOperationStatusProvider.notifier);
-      if (result.isOk) {
-        await statusNotifier.recordDbConnectionSuccess(
-          result.value!.tables.length,
-        );
-      } else {
-        await statusNotifier.recordDbConnectionFailure(result.error!);
-      }
-      if (!mounted) return;
-      _showSnack(
-        result.isOk
-            ? 'Supabase DB 엔티티 테이블 ${result.value!.tables.length}개를 확인했습니다.'
-            : sanitizeSupabaseError(result.error)!,
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _clearSupabaseSettings() async {
-    setState(() => _busy = true);
-    try {
-      await ref.read(supabaseSyncAuthServiceProvider).disconnect();
-      await ref.read(supabaseBackupSettingsProvider.notifier).clear();
-      await ref.read(supabaseOperationStatusProvider.notifier).resetAll();
-      if (!mounted) return;
-      _fillSupabaseControllers(SupabaseBackupSettings.empty);
-      _showSnack('Supabase 연결 설정을 삭제했습니다.');
-      setState(() {
-        _selectedMode = _SyncMode.local;
-      });
-    } catch (e) {
-      if (mounted) _showSnack('Supabase 설정 삭제에 실패했습니다: $e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _uploadSupabaseBackup() async {
-    final draft = _supabaseDraft();
-    final error = validateSupabaseBackupSettings(draft);
-    if (error != null) {
-      _showSnack(error);
-      return;
-    }
-
-    setState(() => _busy = true);
-    try {
-      await _resetStatusForChangedIdentity(
-        ref.read(supabaseBackupSettingsProvider),
-        draft,
-      );
-      await ref.read(supabaseBackupSettingsProvider.notifier).save(draft);
-      final backup = await ref.read(backupDaoProvider).exportBackup();
-      final result = await ref
-          .read(supabaseBackupServiceProvider)
-          .uploadBackup(settings: draft, backup: backup);
-      if (!mounted) return;
-      if (!result.isOk) {
-        await ref
-            .read(supabaseOperationStatusProvider.notifier)
-            .recordStorageFailure(result.error!);
-        _showSnack(sanitizeSupabaseError(result.error)!);
-        return;
-      }
-      await ref.read(supabaseBackupSettingsProvider.notifier).markBackupNow();
-      await _refreshSupabaseRemoteStatus();
-      _showSnack('Supabase에 백업했습니다: ${result.value!.latestPath}');
-    } catch (e) {
-      await ref
-          .read(supabaseOperationStatusProvider.notifier)
-          .recordStorageFailure(e.toString());
-      if (mounted) {
-        _showSnack('Supabase 백업에 실패했습니다: ${sanitizeSupabaseError('$e')}');
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _restoreSupabaseBackup() async {
-    final draft = _supabaseDraft();
-    final error = validateSupabaseBackupSettings(draft);
-    if (error != null) {
-      _showSnack(error);
-      return;
-    }
-
-    setState(() => _busy = true);
-    try {
-      final result = await ref
-          .read(supabaseBackupServiceProvider)
-          .downloadLatestBackup(draft);
-      if (!result.isOk) {
-        await ref
-            .read(supabaseOperationStatusProvider.notifier)
-            .recordStorageFailure(result.error!);
-        if (mounted) _showSnack(sanitizeSupabaseError(result.error)!);
-        return;
-      }
-
-      final parsed = parseBackup(result.value!);
-      if (!parsed.isOk) {
-        if (mounted) _showSnack(parsed.error ?? '백업 파일 형식이 올바르지 않습니다.');
-        return;
-      }
-
-      if (!mounted) return;
-      final confirmed = await showBackupRestorePreview(context, parsed.backup!);
-      if (confirmed != true) return;
-
-      await ref.read(localBackupServiceProvider).captureFresh();
-      await ref.read(backupDaoProvider).importBackup(parsed.backup!);
-      _invalidateAfterImport(ref);
-      await rebuildNoteNotifications(ref);
-      await ref.read(supabaseBackupSettingsProvider.notifier).markRestoreNow();
-      if (!mounted) return;
-      await _refreshSupabaseRemoteStatus();
-      _showSnack('Supabase 백업을 복원했습니다.');
-    } catch (e) {
-      await ref
-          .read(supabaseOperationStatusProvider.notifier)
-          .recordStorageFailure(e.toString());
-      if (mounted) {
-        _showSnack('Supabase 복원에 실패했습니다: ${sanitizeSupabaseError('$e')}');
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
+class _DataManagementScreenState extends ConsumerState<DataManagementScreen>
+    with DataManagementActions<DataManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final supabaseSettings = ref.watch(supabaseBackupSettingsProvider);
@@ -510,7 +33,7 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextButton.icon(
-              onPressed: _busy ? null : () => context.go('/settings'),
+              onPressed: dataBusy ? null : () => context.go('/settings'),
               icon: Icon(Icons.chevron_left),
               label: Text('설정'),
             ),
@@ -526,54 +49,56 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
             ),
             SizedBox(height: 24),
             _SyncModeSelector(
-              selected: _selectedMode,
-              onChanged: (mode) => setState(() => _selectedMode = mode),
+              selected: selectedSyncMode,
+              onChanged: dataBusy
+                  ? null
+                  : (mode) => setState(() => selectedSyncMode = mode),
             ),
             const SizedBox(height: 16),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
-              child: switch (_selectedMode) {
-                _SyncMode.local => _LocalBackupPanel(
+              child: switch (selectedSyncMode) {
+                DataSyncMode.local => _LocalBackupPanel(
                   key: const ValueKey('settings-local-sync-panel'),
-                  busy: _busy,
-                  onExport: _exportBackup,
-                  onImport: _importBackup,
+                  busy: dataBusy,
+                  onExport: exportBackup,
+                  onImport: importBackup,
                   onBusyChanged: (value) {
-                    if (mounted) setState(() => _busy = value);
+                    if (mounted) setState(() => dataBusy = value);
                   },
                 ),
-                _SyncMode.auto => _SupabaseSettingsCard(
+                DataSyncMode.auto => _SupabaseSettingsCard(
                   key: const ValueKey('settings-auto-sync-panel'),
-                  urlController: _supabaseUrlCtrl,
-                  anonKeyController: _supabaseAnonKeyCtrl,
-                  emailController: _supabaseEmailCtrl,
-                  passwordController: _supabasePasswordCtrl,
-                  bucketController: _supabaseBucketCtrl,
+                  urlController: supabaseUrlController,
+                  anonKeyController: supabaseAnonKeyController,
+                  emailController: supabaseEmailController,
+                  passwordController: supabasePasswordController,
+                  bucketController: supabaseBucketController,
                   configured:
                       supabaseSettings.isConfigured ||
                       supabaseSettings.isTableSyncConfigured,
                   settings: supabaseSettings,
                   operationStatus: operationStatus,
-                  busy: _busy,
-                  onSave: _saveSupabaseSettings,
-                  onTest: _testSupabaseSettings,
-                  onTestTables: _testSupabaseTables,
-                  onClear: _clearSupabaseSettings,
-                  onUpload: _uploadSupabaseBackup,
-                  onRestore: _restoreSupabaseBackup,
-                  onRefresh: _refreshSupabaseRemoteStatus,
-                  onSyncNow: _syncNow,
+                  busy: dataBusy,
+                  onSave: saveSupabaseSettings,
+                  onTest: testSupabaseSettings,
+                  onTestTables: testSupabaseTables,
+                  onClear: clearSupabaseSettings,
+                  onUpload: uploadSupabaseBackup,
+                  onRestore: restoreSupabaseBackup,
+                  onRefresh: refreshSupabaseRemoteStatus,
+                  onSyncNow: syncNow,
                 ),
-                _SyncMode.windows => const _WindowsDownloadPanel(
+                DataSyncMode.windows => const _WindowsDownloadPanel(
                   key: ValueKey('settings-windows-download-panel'),
                 ),
               },
             ),
-            if (_busy) ...[
+            if (dataBusy) ...[
               SizedBox(height: 16),
-              if (_syncProgress != null) ...[
+              if (syncProgress != null) ...[
                 Text(
-                  '${_syncProgress!.label} ${_syncProgress!.percent}%',
+                  '${syncProgress!.label} ${syncProgress!.percent}%',
                   key: const ValueKey('settings-supabase-sync-progress-label'),
                 ),
                 const SizedBox(height: 8),
@@ -581,14 +106,14 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
               LinearProgressIndicator(
                 key: const ValueKey('settings-supabase-sync-progress'),
                 minHeight: 3,
-                value: _syncProgress?.fraction,
+                value: syncProgress?.fraction,
               ),
             ],
             SizedBox(height: MediaQuery.sizeOf(context).height * 0.5),
             _ResetDeviceButton(
               key: const ValueKey('settings-data-reset-button'),
-              busy: _busy,
-              onPressed: _resetAllData,
+              busy: dataBusy,
+              onPressed: resetAllData,
             ),
             SizedBox(height: 40),
           ],
@@ -601,8 +126,8 @@ class _DataManagementScreenState extends ConsumerState<DataManagementScreen> {
 class _SyncModeSelector extends StatelessWidget {
   const _SyncModeSelector({required this.selected, required this.onChanged});
 
-  final _SyncMode selected;
-  final ValueChanged<_SyncMode> onChanged;
+  final DataSyncMode selected;
+  final ValueChanged<DataSyncMode>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -614,21 +139,21 @@ class _SyncModeSelector extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SyncModeRow(
-              mode: _SyncMode.local,
+              mode: DataSyncMode.local,
               selected: selected,
               label: '로컬',
               onChanged: onChanged,
             ),
             const SizedBox(height: 10),
             _SyncModeRow(
-              mode: _SyncMode.auto,
+              mode: DataSyncMode.auto,
               selected: selected,
               label: '자동 동기화',
               onChanged: onChanged,
             ),
             const SizedBox(height: 10),
             _SyncModeRow(
-              mode: _SyncMode.windows,
+              mode: DataSyncMode.windows,
               selected: selected,
               label: 'Windows 버전 설치',
               onChanged: onChanged,
@@ -648,10 +173,10 @@ class _SyncModeRow extends StatelessWidget {
     required this.onChanged,
   });
 
-  final _SyncMode mode;
-  final _SyncMode selected;
+  final DataSyncMode mode;
+  final DataSyncMode selected;
   final String label;
-  final ValueChanged<_SyncMode> onChanged;
+  final ValueChanged<DataSyncMode>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -660,7 +185,7 @@ class _SyncModeRow extends StatelessWidget {
 
     return InkWell(
       borderRadius: BorderRadius.circular(8),
-      onTap: () => onChanged(mode),
+      onTap: onChanged == null ? null : () => onChanged!(mode),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
@@ -1583,51 +1108,6 @@ String _storageResultLabel(StorageCheckResult result) => switch (result) {
   StorageCheckResult.failure => '확인 실패',
 };
 
-Future<bool?> showResetConfirmationDialog(BuildContext context) {
-  return showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text('데이터 초기화'),
-      content: Text('현재 데이터를 모두 삭제하고 기본 자산과 카테고리를 복구합니다. 되돌릴 수 없습니다.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: Text('취소'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: Text('초기화'),
-        ),
-      ],
-    ),
-  );
-}
-
-Future<bool?> showImportConfirmationDialog(BuildContext context) {
-  return showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text('\uBC31\uC5C5 \uB370\uC774\uD130 \uBCF5\uC6D0'),
-      content: Text(
-        '\uD604\uC7AC \uB370\uC774\uD130\uB97C \uBAA8\uB450 '
-        '\uB36E\uC5B4\uC4F0\uACE0 \uBC31\uC5C5 \uB370\uC774\uD130\uB97C '
-        '\uBCF5\uC6D0\uD569\uB2C8\uB2E4. \uB418\uB3CC\uB9B4 \uC218 '
-        '\uC5C6\uC2B5\uB2C8\uB2E4.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext, false),
-          child: Text('\uCDE8\uC18C'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogContext, true),
-          child: Text('\uBCF5\uC6D0'),
-        ),
-      ],
-    ),
-  );
-}
-
 class _ActionCard extends StatelessWidget {
   const _ActionCard({
     required this.buttonKey,
@@ -1687,41 +1167,4 @@ class _ActionCard extends StatelessWidget {
       ),
     );
   }
-}
-
-void _invalidateAfterImport(WidgetRef ref) {
-  invalidateSyncedData(ref);
-  ref.invalidate(notesProvider);
-  ref.invalidate(pendingReminderCountProvider);
-  ref.invalidate(accounts_providers.accountBalancesProvider);
-  ref.invalidate(accounts_providers.archivedAccountsProvider);
-
-  ref.invalidate(budget_providers.monthlyExpectedIncomeProvider);
-  ref.invalidate(budget_providers.budgetRowsProvider);
-  ref.invalidate(budget_providers.budgetExpenseCategoriesProvider);
-  ref.invalidate(budget_providers.budgetActiveAccountsProvider);
-  ref.invalidate(badges_providers.overBudgetCountProvider);
-
-  ref.invalidate(transactions_providers.transactionsListProvider);
-  ref.invalidate(transactions_providers.monthlySummaryProvider);
-  ref.invalidate(transactions_providers.activeAccountsProvider);
-  ref.invalidate(transactions_providers.activeCategoriesProvider);
-  ref.invalidate(transactions_providers.allTagsProvider);
-  ref.invalidate(transactions_providers.recentMemosProvider);
-
-  ref.invalidate(investments_providers.investmentRowsProvider);
-  ref.invalidate(investments_providers.investmentMonthlySummaryProvider);
-  ref.invalidate(investments_providers.investmentAccountProvider);
-  ref.invalidate(investments_providers.currentHoldingsProvider);
-  ref.invalidate(investments_providers.realizedPnlProvider);
-
-  ref.invalidate(stats_providers.statsExpenseBreakdownProvider);
-  ref.invalidate(stats_providers.statsMonthlyTrendProvider);
-
-  ref.invalidate(settings_providers.allCategoriesProvider);
-  ref.invalidate(settings_providers.settingsActiveCategoriesProvider);
-  ref.invalidate(settings_providers.settingsAccountsProvider);
-  ref.invalidate(settings_providers.settingsTagsProvider);
-  ref.invalidate(settings_providers.recurringItemsProvider);
-  ref.invalidate(settings_providers.transactionPresetItemsProvider);
 }

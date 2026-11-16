@@ -8,9 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/backup.dart';
 import '../../data/local_backup_service.dart';
-import '../../data/providers.dart';
-import '../../features/notes/providers.dart';
-import '../../features/sync/invalidate_synced_data.dart';
+import '../../features/settings/data_management_controller.dart';
 
 Future<bool?> showBackupRestorePreview(
   BuildContext context,
@@ -89,6 +87,7 @@ class _LocalBackupPanelState extends ConsumerState<LocalBackupPanel> {
   }
 
   Future<void> _run(Future<void> Function() action) async {
+    if (!mounted || _busy || !widget.enabled) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -109,17 +108,14 @@ class _LocalBackupPanelState extends ConsumerState<LocalBackupPanel> {
 
   Future<void> _restore(File file) => _run(() async {
     final service = ref.read(localBackupServiceProvider);
+    final controller = ref.read(dataManagementControllerProvider);
     final backup = await service.read(file);
-    if (!mounted || await showBackupRestorePreview(context, backup) != true) {
+    if (!mounted) return;
+    final confirmed = await showBackupRestorePreview(context, backup);
+    if (confirmed != true || !mounted) {
       return;
     }
-    await service.captureFresh();
-    await ref.read(backupDaoProvider).importBackup(backup);
-    if (!mounted) return;
-    invalidateSyncedData(ref);
-    ref.invalidate(notesProvider);
-    ref.invalidate(pendingReminderCountProvider);
-    await rebuildNoteNotifications(ref);
+    await controller.restoreBackup(backup);
     if (mounted) {
       ScaffoldMessenger.of(
         context,
@@ -129,6 +125,7 @@ class _LocalBackupPanelState extends ConsumerState<LocalBackupPanel> {
 
   Future<void> _export(File file) => _run(() async {
     final backup = await ref.read(localBackupServiceProvider).read(file);
+    if (!mounted) return;
     await FilePicker.saveFile(
       dialogTitle: '복구 지점 내보내기',
       fileName: file.uri.pathSegments.last,

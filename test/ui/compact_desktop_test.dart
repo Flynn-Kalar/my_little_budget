@@ -7,7 +7,7 @@ import 'package:my_little_budget/app.dart';
 import 'package:my_little_budget/router/app_router.dart';
 import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/providers.dart';
-import 'package:my_little_budget/shell/sidebar_shell.dart';
+import 'package:my_little_budget/ui/desktop/shell/sidebar_shell.dart';
 import 'package:my_little_budget/ui/desktop/transactions/transactions_screen.dart';
 import 'package:my_little_budget/core/date.dart';
 import 'package:my_little_budget/features/transactions/validation.dart';
