@@ -559,7 +559,10 @@ class _Row extends ConsumerWidget {
         size: 32,
       );
       title = row.categoryName ?? '(카테고리 없음)';
-      metaParts = [if (showTime) row.occurredTime];
+      metaParts = [
+        if (showTime) row.occurredTime,
+        if (row.installmentMonths != null) '${row.installmentMonths}개월 할부',
+      ];
       secondary = row.accountName ?? '(자산 없음)';
     }
 

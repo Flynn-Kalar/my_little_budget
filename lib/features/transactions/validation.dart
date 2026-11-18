@@ -14,6 +14,7 @@ class TransactionDraft {
     this.categoryId,
     this.fromAccountId,
     this.toAccountId,
+    this.installmentMonths,
   });
 
   final String type; // income | expense | transfer | adjustment
@@ -25,6 +26,7 @@ class TransactionDraft {
   final int? categoryId;
   final int? fromAccountId;
   final int? toAccountId;
+  final int? installmentMonths;
 }
 
 ValidationResult<TransactionDraft> validateTransaction({
@@ -37,14 +39,23 @@ ValidationResult<TransactionDraft> validateTransaction({
   int? categoryId,
   int? fromAccountId,
   int? toAccountId,
+  int? installmentMonths,
 }) {
   final errors = <String, String>{};
+  if (installmentMonths != null &&
+      (type != 'expense' ||
+          installmentMonths < 2 ||
+          installmentMonths > 60 ||
+          (amount != null && amount < installmentMonths))) {
+    errors['installmentMonths'] = '할부는 카드 지출에 2~60개월로 설정하고 회차당 1원 이상이어야 합니다';
+  }
 
   if (!isDateKey(occurredOn)) errors['occurredOn'] = 'YYYY-MM-DD 형식이어야 합니다';
   if (!isTimeKey(occurredTime)) errors['occurredTime'] = 'HH:MM 형식이어야 합니다';
 
-  final cleanedMemo =
-      (memo != null && memo.trim().isNotEmpty) ? memo.trim() : null;
+  final cleanedMemo = (memo != null && memo.trim().isNotEmpty)
+      ? memo.trim()
+      : null;
   if (cleanedMemo != null && cleanedMemo.length > 200) {
     errors['memo'] = '메모는 200자 이하여야 합니다';
   }
@@ -57,15 +68,18 @@ ValidationResult<TransactionDraft> validateTransaction({
       if (categoryId == null) errors['categoryId'] = '카테고리를 선택해주세요';
       if (amount != null && amount <= 0) errors['amount'] = '금액은 0보다 커야 합니다';
       if (errors.isEmpty) {
-        return ValidationResult.ok(TransactionDraft(
-          type: type,
-          amount: amount!,
-          occurredOn: occurredOn,
-          occurredTime: occurredTime,
-          memo: cleanedMemo,
-          accountId: accountId,
-          categoryId: categoryId,
-        ));
+        return ValidationResult.ok(
+          TransactionDraft(
+            type: type,
+            amount: amount!,
+            occurredOn: occurredOn,
+            occurredTime: occurredTime,
+            memo: cleanedMemo,
+            accountId: accountId,
+            categoryId: categoryId,
+            installmentMonths: installmentMonths,
+          ),
+        );
       }
     case 'transfer':
       if (fromAccountId == null) errors['fromAccountId'] = '출금 자산을 선택해주세요';
@@ -77,28 +91,32 @@ ValidationResult<TransactionDraft> validateTransaction({
       }
       if (amount != null && amount <= 0) errors['amount'] = '금액은 0보다 커야 합니다';
       if (errors.isEmpty) {
-        return ValidationResult.ok(TransactionDraft(
-          type: 'transfer',
-          amount: amount!,
-          occurredOn: occurredOn,
-          occurredTime: occurredTime,
-          memo: cleanedMemo,
-          fromAccountId: fromAccountId,
-          toAccountId: toAccountId,
-        ));
+        return ValidationResult.ok(
+          TransactionDraft(
+            type: 'transfer',
+            amount: amount!,
+            occurredOn: occurredOn,
+            occurredTime: occurredTime,
+            memo: cleanedMemo,
+            fromAccountId: fromAccountId,
+            toAccountId: toAccountId,
+          ),
+        );
       }
     case 'adjustment':
       if (accountId == null) errors['accountId'] = '자산을 선택해주세요';
       if (amount != null && amount == 0) errors['amount'] = '0 은 입력할 수 없습니다';
       if (errors.isEmpty) {
-        return ValidationResult.ok(TransactionDraft(
-          type: 'adjustment',
-          amount: amount!,
-          occurredOn: occurredOn,
-          occurredTime: occurredTime,
-          memo: cleanedMemo,
-          accountId: accountId,
-        ));
+        return ValidationResult.ok(
+          TransactionDraft(
+            type: 'adjustment',
+            amount: amount!,
+            occurredOn: occurredOn,
+            occurredTime: occurredTime,
+            memo: cleanedMemo,
+            accountId: accountId,
+          ),
+        );
       }
     default:
       errors['type'] = '거래 종류를 선택해주세요';

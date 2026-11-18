@@ -17,6 +17,7 @@ class TransactionPresetListItem {
     required this.preset,
     required this.tagNames,
     this.accountName,
+    this.accountKind,
     this.categoryName,
     this.fromAccountName,
     this.toAccountName,
@@ -29,6 +30,7 @@ class TransactionPresetListItem {
   final TransactionPreset preset;
   final List<String> tagNames;
   final String? accountName;
+  final String? accountKind;
   final String? categoryName;
   final String? fromAccountName;
   final String? toAccountName;
@@ -38,6 +40,7 @@ class TransactionPresetListItem {
   final bool toAccountArchived;
 
   bool get isUsable {
+    if (preset.installmentMonths != null && accountKind != 'card') return false;
     if (preset.type == 'transfer') {
       return preset.fromAccountId != null &&
           preset.toAccountId != null &&
@@ -74,6 +77,7 @@ class TransactionPresetListItem {
     type: preset.type,
     amount: preset.amount,
     memo: preset.memo,
+    installmentMonths: preset.installmentMonths,
     accountId: preset.accountId,
     categoryId: preset.categoryId,
     fromAccountId: preset.fromAccountId,
@@ -117,6 +121,18 @@ class TransactionPresetsDao extends DatabaseAccessor<AppDatabase>
     int? id,
     required TransactionPresetDraft draft,
   }) async {
+    if (draft.installmentMonths != null) {
+      final account = await (select(
+        accounts,
+      )..where((a) => a.id.equals(draft.accountId ?? -1))).getSingleOrNull();
+      if (draft.type != 'expense' ||
+          account?.kind != 'card' ||
+          draft.installmentMonths! < 2 ||
+          draft.installmentMonths! > 60 ||
+          draft.amount < draft.installmentMonths!) {
+        throw ArgumentError('할부는 신용카드 지출에서 2~60개월로 입력해주세요.');
+      }
+    }
     final tags = draft.tagNames.isEmpty ? null : jsonEncode(draft.tagNames);
     if (id != null) {
       await (update(transactionPresets)..where((p) => p.id.equals(id))).write(
@@ -125,6 +141,7 @@ class TransactionPresetsDao extends DatabaseAccessor<AppDatabase>
           type: Value(draft.type),
           amount: Value(draft.amount),
           memo: Value(draft.memo),
+          installmentMonths: Value(draft.installmentMonths),
           accountId: Value(draft.accountId),
           categoryId: Value(draft.categoryId),
           fromAccountId: Value(draft.fromAccountId),
@@ -142,6 +159,7 @@ class TransactionPresetsDao extends DatabaseAccessor<AppDatabase>
         type: draft.type,
         amount: draft.amount,
         memo: Value(draft.memo),
+        installmentMonths: Value(draft.installmentMonths),
         accountId: Value(draft.accountId),
         categoryId: Value(draft.categoryId),
         fromAccountId: Value(draft.fromAccountId),
@@ -184,6 +202,7 @@ class TransactionPresetsDao extends DatabaseAccessor<AppDatabase>
       preset: preset,
       tagNames: _decodeTags(preset.tagNames),
       accountName: account?.name,
+      accountKind: account?.kind,
       categoryName: category?.name,
       fromAccountName: from?.name,
       toAccountName: to?.name,

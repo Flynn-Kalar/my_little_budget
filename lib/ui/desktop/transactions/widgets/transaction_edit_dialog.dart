@@ -14,6 +14,7 @@ import '../../../shared/amount_input_formatter.dart';
 import '../../../shared/spending_limit_warning.dart';
 import '../../../shared/transaction_budget_preview.dart';
 import '../../../shared/transaction_tag_picker.dart';
+import '../../../shared/installment_field.dart';
 import 'form_fields.dart';
 
 class TransactionEditDialog extends ConsumerStatefulWidget {
@@ -48,6 +49,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
   late String _type = widget.row.type;
   late DateTime _date = parseDateKey(widget.row.occurredOn);
   late int? _accountId = widget.row.accountId;
+  late int? _installmentMonths = widget.row.installmentMonths;
   late int? _categoryId = widget.row.categoryId;
   late int? _fromAccountId = widget.row.fromAccountId;
   late int? _toAccountId = widget.row.toAccountId;
@@ -79,6 +81,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
     categoryId: _categoryId,
     fromAccountId: _fromAccountId,
     toAccountId: _toAccountId,
+    installmentMonths: _type == 'expense' ? _installmentMonths : null,
   );
 
   Future<void> _persist() async {
@@ -120,6 +123,12 @@ class _State extends ConsumerState<TransactionEditDialog> {
         cardWarning: warning,
         budgetWarnings: budgetWarnings,
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('저장하지 못했습니다: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -188,6 +197,7 @@ class _State extends ConsumerState<TransactionEditDialog> {
                 showSelectedIcon: false,
                 onSelectionChanged: (s) => setState(() {
                   _type = s.first;
+                  _installmentMonths = null;
                   _categoryId = null;
                 }),
               ),
@@ -229,7 +239,12 @@ class _State extends ConsumerState<TransactionEditDialog> {
                   hint: '자산',
                   accounts: accounts,
                   value: _accountId,
-                  onChanged: (v) => setState(() => _accountId = v),
+                  onChanged: (v) => setState(() {
+                    _accountId = v;
+                    if (!accounts.any((a) => a.id == v && a.kind == 'card')) {
+                      _installmentMonths = null;
+                    }
+                  }),
                 ),
                 CategoryDropdown(
                   categories: visibleCats,
@@ -258,6 +273,19 @@ class _State extends ConsumerState<TransactionEditDialog> {
                 editingId: _isEdit ? widget.row.id : null,
                 enabled: !_busy,
               ),
+              if (_type == 'expense' &&
+                  accounts.any((a) => a.id == _accountId && a.kind == 'card'))
+                InstallmentField(
+                  months: _installmentMonths,
+                  amountController: _amountCtrl,
+                  purchaseDate: _date,
+                  account: accounts
+                      .where((a) => a.id == _accountId)
+                      .firstOrNull,
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _installmentMonths = value),
+                ),
               TextField(
                 controller: _memoCtrl,
                 decoration: const InputDecoration(

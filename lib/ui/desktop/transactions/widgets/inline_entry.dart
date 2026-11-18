@@ -13,6 +13,7 @@ import '../../../shared/amount_input_formatter.dart';
 import '../../../shared/spending_limit_warning.dart';
 import '../../../shared/transaction_budget_preview.dart';
 import '../../../shared/transaction_tag_picker.dart';
+import '../../../shared/installment_field.dart';
 import '../../../../data/tag_category_links.dart';
 import 'form_fields.dart';
 
@@ -30,6 +31,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
   String _type = 'expense';
   DateTime _date = DateTime.now();
   int? _accountId;
+  int? _installmentMonths;
   int? _categoryId;
   int? _fromAccountId;
   int? _toAccountId;
@@ -76,6 +78,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
       _dateCtrl.text = toDateKey(now);
       _timeCtrl.text = nowTime();
       _accountId = preset.accountId;
+      _installmentMonths = preset.installmentMonths;
       _categoryId = preset.categoryId;
       _fromAccountId = preset.fromAccountId;
       _toAccountId = preset.toAccountId;
@@ -299,6 +302,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
       categoryId: _categoryId,
       fromAccountId: _fromAccountId,
       toAccountId: _toAccountId,
+      installmentMonths: _type == 'expense' ? _installmentMonths : null,
     );
 
     if (result.isFail) {
@@ -340,6 +344,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
       );
       setState(() {
         _amountCtrl.clear();
+        _installmentMonths = null;
         _memoCtrl.clear();
         _tags = [];
         _timeCtrl.text = nowTime();
@@ -414,6 +419,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                   showSelectedIcon: false,
                   onSelectionChanged: (s) => setState(() {
                     _type = s.first;
+                    _installmentMonths = null;
                     _categoryId = null;
                     if (_type == 'transfer') _tags = [];
                   }),
@@ -490,7 +496,14 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                         value: _accountId,
                         width: null,
                         focusNode: _accountFocus,
-                        onChanged: (v) => setState(() => _accountId = v),
+                        onChanged: (v) => setState(() {
+                          _accountId = v;
+                          if (!accounts.any(
+                            (a) => a.id == v && a.kind == 'card',
+                          )) {
+                            _installmentMonths = null;
+                          }
+                        }),
                         onSubmitted: (_) => _focusAfterAccount(),
                       ),
                     ),
@@ -644,6 +657,7 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                         if (row == null) return;
                         setState(() {
                           _accountId = row.accountId;
+                          _installmentMonths = row.installmentMonths;
                           _categoryId = row.categoryId;
                           _fromAccountId = row.fromAccountId;
                           _toAccountId = row.toAccountId;
@@ -658,6 +672,22 @@ class _InlineEntryState extends ConsumerState<InlineEntry> {
                 ),
               ],
             ),
+            if (_type == 'expense' &&
+                accounts.any((a) => a.id == _accountId && a.kind == 'card'))
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _dateCtrl,
+                builder: (context, value, _) => InstallmentField(
+                  months: _installmentMonths,
+                  amountController: _amountCtrl,
+                  purchaseDate: _parseDateInput(value.text),
+                  account: accounts
+                      .where((a) => a.id == _accountId)
+                      .firstOrNull,
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _installmentMonths = value),
+                ),
+              ),
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: _dateCtrl,
               builder: (context, value, _) => TransactionBudgetPreview(

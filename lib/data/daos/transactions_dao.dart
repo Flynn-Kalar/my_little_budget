@@ -37,6 +37,7 @@ class TransactionRow {
     required this.occurredTime,
     required this.amount,
     this.memo,
+    this.installmentMonths,
     this.accountId,
     this.accountName,
     this.categoryId,
@@ -64,6 +65,7 @@ class TransactionRow {
   final String occurredTime;
   final int amount;
   final String? memo;
+  final int? installmentMonths;
   final int? accountId;
   final String? accountName;
   final int? categoryId;
@@ -340,7 +342,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     final rows = await customSelect(
       '''
       SELECT
-        t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo,
+        t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo, t.installment_months,
         t.account_id, a.name AS account_name,
         t.category_id, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
         t.from_account_id, fa.name AS from_account_name,
@@ -615,7 +617,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     final rows = await customSelect(
       '''
       SELECT
-        t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo,
+        t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo, t.installment_months,
         t.account_id, a.name AS account_name,
         t.category_id, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
         t.from_account_id, fa.name AS from_account_name,
@@ -647,7 +649,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     final baseRows = await customSelect(
       '''
       SELECT
-        t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo,
+        t.id, t.type, t.occurred_on, t.occurred_time, t.amount, t.memo, t.installment_months,
         t.account_id, a.name AS account_name,
         t.category_id, c.name AS category_name, c.color AS category_color, c.icon AS category_icon,
         t.from_account_id, fa.name AS from_account_name,
@@ -754,6 +756,19 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     List<String> tagNames = const [],
   }) async {
     return transaction(() async {
+      final months = draft.installmentMonths;
+      if (months != null) {
+        final account = await (select(
+          accounts,
+        )..where((a) => a.id.equals(draft.accountId ?? -1))).getSingleOrNull();
+        if (draft.type != 'expense' ||
+            account?.kind != 'card' ||
+            months < 2 ||
+            months > 60 ||
+            draft.amount < months) {
+          throw ArgumentError('할부는 카드 지출에 2~60개월, 회차당 1원 이상으로 입력해주세요.');
+        }
+      }
       final int txId;
       if (id != null) {
         await (update(transactions)..where((t) => t.id.equals(id))).write(
@@ -762,6 +777,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
             occurredOn: Value(draft.occurredOn),
             occurredTime: Value(draft.occurredTime),
             amount: Value(draft.amount),
+            installmentMonths: Value(draft.installmentMonths),
             memo: Value(draft.memo),
             accountId: Value(draft.accountId),
             categoryId: Value(draft.categoryId),
@@ -779,6 +795,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
             occurredOn: draft.occurredOn,
             occurredTime: Value(draft.occurredTime),
             amount: draft.amount,
+            installmentMonths: Value(draft.installmentMonths),
             memo: Value(draft.memo),
             accountId: Value(draft.accountId),
             categoryId: Value(draft.categoryId),
@@ -1062,6 +1079,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       occurredTime: r.read<String>('occurred_time'),
       amount: r.read<int>('amount'),
       memo: r.readNullable<String>('memo'),
+      installmentMonths: r.readNullable<int>('installment_months'),
       accountId: r.readNullable<int>('account_id'),
       accountName: r.readNullable<String>('account_name'),
       categoryId: r.readNullable<int>('category_id'),
@@ -1084,6 +1102,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       occurredTime: row.occurredTime,
       amount: row.amount,
       memo: row.memo,
+      installmentMonths: row.installmentMonths,
       accountId: row.accountId,
       accountName: row.accountName,
       categoryId: row.categoryId,

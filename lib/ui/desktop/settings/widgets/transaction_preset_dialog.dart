@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/money.dart';
+import '../../../shared/installment_field.dart';
 import '../../../../data/daos/transaction_presets_dao.dart';
 import '../../../../data/daos/transactions_dao.dart';
 import '../../../../data/database.dart';
@@ -32,6 +33,8 @@ class TransactionPresetDialog extends ConsumerStatefulWidget {
 class _State extends ConsumerState<TransactionPresetDialog> {
   late String _type =
       widget.item?.preset.type ?? widget.source?.type ?? 'expense';
+  late int? _installmentMonths =
+      widget.item?.preset.installmentMonths ?? widget.source?.installmentMonths;
   late int? _accountId =
       widget.item?.preset.accountId ?? widget.source?.accountId;
   late int? _categoryId =
@@ -74,6 +77,7 @@ class _State extends ConsumerState<TransactionPresetDialog> {
       name: _name.text,
       type: _type,
       amount: parseKRW(_amount.text),
+      installmentMonths: _type == 'expense' ? _installmentMonths : null,
       memo: _memo.text,
       accountId: _accountId,
       categoryId: _categoryId,
@@ -94,6 +98,12 @@ class _State extends ConsumerState<TransactionPresetDialog> {
           .savePreset(id: widget.item?.preset.id, draft: result.value!);
       refreshTransactionPresets(ref);
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('저장하지 못했습니다: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -131,6 +141,7 @@ class _State extends ConsumerState<TransactionPresetDialog> {
                     ? null
                     : (value) => setState(() {
                         _type = value.first;
+                        _installmentMonths = null;
                         _accountId = null;
                         _categoryId = null;
                         _fromAccountId = null;
@@ -175,7 +186,14 @@ class _State extends ConsumerState<TransactionPresetDialog> {
                   label: '자산',
                   accounts: accounts,
                   value: _accountId,
-                  onChanged: (value) => setState(() => _accountId = value),
+                  onChanged: (value) => setState(() {
+                    _accountId = value;
+                    if (!accounts.any(
+                      (a) => a.id == value && a.kind == 'card',
+                    )) {
+                      _installmentMonths = null;
+                    }
+                  }),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
@@ -198,6 +216,19 @@ class _State extends ConsumerState<TransactionPresetDialog> {
                 ),
               ],
               const SizedBox(height: 12),
+              if (_type == 'expense' &&
+                  accounts.any((a) => a.id == _accountId && a.kind == 'card'))
+                InstallmentField(
+                  months: _installmentMonths,
+                  amountController: _amount,
+                  purchaseDate: null,
+                  account: accounts
+                      .where((a) => a.id == _accountId)
+                      .firstOrNull,
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _installmentMonths = value),
+                ),
               TextField(
                 controller: _memo,
                 decoration: const InputDecoration(

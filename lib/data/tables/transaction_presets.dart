@@ -15,6 +15,7 @@ class TransactionPresets extends Table {
   IntColumn get amount =>
       integer().customConstraint('NOT NULL CHECK (amount > 0)')();
   TextColumn get memo => text().nullable()();
+  IntColumn get installmentMonths => integer().nullable()();
   @ReferenceName('presetAccount')
   IntColumn get accountId => integer().nullable().references(
     Accounts,

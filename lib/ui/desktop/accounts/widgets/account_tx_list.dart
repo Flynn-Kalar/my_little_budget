@@ -342,6 +342,7 @@ class _GeneralRow extends ConsumerWidget {
       title = row.categoryName ?? '(카테고리 없음)';
       metaParts = [
         if (showTime) row.occurredTime,
+        if (row.installmentMonths != null) '${row.installmentMonths}개월 할부',
         if (row.memo != null) row.memo!,
       ];
       amountColor = isIncome ? context.desktopIncome : context.desktopExpense;

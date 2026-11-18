@@ -15,6 +15,7 @@ import '../../../../features/settings/providers.dart';
 import '../../../shared/spending_limit_warning.dart';
 import '../../../shared/transaction_budget_preview.dart';
 import '../../../shared/transaction_tag_picker.dart';
+import '../../../shared/installment_field.dart';
 import '../../../shared/recent_transaction_suggestions.dart';
 import '../../mobile_widgets.dart';
 
@@ -59,6 +60,7 @@ class _MobileTransactionSheetState
       _parseTimeOfDay(widget.row?.occurredTime) ??
       TimeOfDay.fromDateTime(DateTime.now());
   late int? _accountId = widget.row?.accountId;
+  late int? _installmentMonths = widget.row?.installmentMonths;
   late int? _categoryId = widget.row?.categoryId;
   late int? _fromAccountId = widget.row?.fromAccountId;
   late int? _toAccountId = widget.row?.toAccountId;
@@ -151,6 +153,7 @@ class _MobileTransactionSheetState
       _date = now;
       _time = TimeOfDay.fromDateTime(now);
       _accountId = draft.accountId;
+      _installmentMonths = draft.installmentMonths;
       _categoryId = draft.categoryId;
       _fromAccountId = draft.fromAccountId;
       _toAccountId = draft.toAccountId;
@@ -173,6 +176,7 @@ class _MobileTransactionSheetState
       categoryId: _categoryId,
       fromAccountId: _fromAccountId,
       toAccountId: _toAccountId,
+      installmentMonths: _type == 'expense' ? _installmentMonths : null,
     );
     if (result.isFail) {
       _showSnack(_transactionErrorMessage(result.errors.keys.first));
@@ -326,6 +330,7 @@ class _MobileTransactionSheetState
                         ? null
                         : (selected) => setState(() {
                             _type = selected.first;
+                            _installmentMonths = null;
                             _categoryId = null;
                           }),
                   ),
@@ -367,7 +372,14 @@ class _MobileTransactionSheetState
                             value: _accountId,
                             onChanged: _busy
                                 ? null
-                                : (v) => setState(() => _accountId = v),
+                                : (v) => setState(() {
+                                    _accountId = v;
+                                    if (!accounts.any(
+                                      (a) => a.id == v && a.kind == 'card',
+                                    )) {
+                                      _installmentMonths = null;
+                                    }
+                                  }),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -383,6 +395,22 @@ class _MobileTransactionSheetState
                       ],
                     ),
                   _preview(_amount),
+                  if (_type == 'expense' &&
+                      accounts.any(
+                        (a) => a.id == _accountId && a.kind == 'card',
+                      ))
+                    InstallmentField(
+                      months: _installmentMonths,
+                      amountController: _amount,
+                      purchaseDate: _date,
+                      account: accounts
+                          .where((a) => a.id == _accountId)
+                          .firstOrNull,
+                      onChanged: _busy
+                          ? null
+                          : (value) =>
+                                setState(() => _installmentMonths = value),
+                    ),
                   const SizedBox(height: 8),
                   TextField(
                     key: const ValueKey('mobile-transaction-memo-field'),
@@ -402,6 +430,7 @@ class _MobileTransactionSheetState
                       onSelected: (row) => setState(() {
                         _memo.text = row.memo ?? '';
                         _accountId = row.accountId;
+                        _installmentMonths = row.installmentMonths;
                         _categoryId = row.categoryId;
                         _fromAccountId = row.fromAccountId;
                         _toAccountId = row.toAccountId;

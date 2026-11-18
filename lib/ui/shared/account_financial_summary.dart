@@ -116,6 +116,66 @@ class AccountFinancialSummary extends StatelessWidget {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
+          if (billing == null && account.cardInstallmentCount > 0)
+            Text(
+              '할부 ${account.cardInstallmentCount}건 · 결제일·마감일을 설정하면 회차와 잔여 원금을 확인할 수 있습니다.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          if (billing != null && billing.installments.isNotEmpty)
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 8),
+              title: Text(
+                '할부 ${billing.installments.length}건',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                '이후 청구 원금 ${formatKRW(billing.installments.fold<int>(0, (sum, plan) => sum + plan.laterPrincipal))}',
+                style: const TextStyle(fontSize: 12),
+              ),
+              children: [
+                for (final plan in billing.installments)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          plan.title,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          '${plan.purchaseDate} · ${formatKRW(plan.totalAmount)} · ${plan.months}개월 할부',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (plan.current != null)
+                          line(
+                            '이번 청구 ${plan.current!.round}/${plan.months}회차',
+                            formatKRW(plan.current!.amount),
+                          ),
+                        if (plan.current == null && plan.future.isNotEmpty)
+                          line('첫 청구 예정', plan.future.first.paymentDate),
+                        line(
+                          '이후 ${plan.future.length}회 · 잔여 원금',
+                          formatKRW(plan.laterPrincipal),
+                        ),
+                        for (final part in plan.future)
+                          line(
+                            '${part.paymentDate} · ${part.round}/${plan.months}회차',
+                            formatKRW(part.amount),
+                          ),
+                      ],
+                    ),
+                  ),
+                Text(
+                  '회차별 금액은 상환·환급 차감 전 예정 원금입니다. 수수료는 별도이며 실제 카드사 청구액과 다를 수 있습니다.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
         ],
       ],
     );

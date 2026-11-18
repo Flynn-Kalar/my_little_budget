@@ -417,6 +417,10 @@ WHERE uuid = ?
     final values = <String, Object?>{};
     for (final column in _payloadColumns[entity]!) {
       if (!payload.containsKey(column)) {
+        if ((entity == 'transactions' || entity == 'transaction_presets') &&
+            column == 'installment_months') {
+          continue; // Old clients preserve an existing plan; new rows use NULL.
+        }
         if (entity == 'accounts' &&
             const {
               'card_payment_day',
@@ -855,6 +859,7 @@ const _payloadColumns = <String, List<String>>{
   ],
   'transactions': [
     'type',
+    'installment_months',
     'occurred_on',
     'occurred_time',
     'amount',
@@ -903,6 +908,7 @@ const _payloadColumns = <String, List<String>>{
     'created_at',
   ],
   'transaction_presets': [
+    'installment_months',
     'name',
     'type',
     'amount',

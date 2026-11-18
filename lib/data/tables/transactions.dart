@@ -25,6 +25,9 @@ class Transactions extends Table {
   TextColumn get occurredOn => text()();
   TextColumn get occurredTime => text().withDefault(const Constant('00:00'))();
   IntColumn get amount => integer()();
+
+  /// NULL is a single payment, preserving older backups and synced rows.
+  IntColumn get installmentMonths => integer().nullable()();
   TextColumn get memo => text().nullable()();
   @ReferenceName('txAccount')
   IntColumn get accountId => integer().nullable().references(Accounts, #id)();

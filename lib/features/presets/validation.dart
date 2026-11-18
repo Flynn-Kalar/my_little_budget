@@ -8,6 +8,7 @@ class TransactionPresetDraft {
     required this.amount,
     this.name,
     this.memo,
+    this.installmentMonths,
     this.accountId,
     this.categoryId,
     this.fromAccountId,
@@ -19,6 +20,7 @@ class TransactionPresetDraft {
   final String type;
   final int amount;
   final String? memo;
+  final int? installmentMonths;
   final int? accountId;
   final int? categoryId;
   final int? fromAccountId;
@@ -33,6 +35,7 @@ class TransactionPresetDraft {
         '${now.hour.toString().padLeft(2, '0')}:'
         '${now.minute.toString().padLeft(2, '0')}',
     memo: memo,
+    installmentMonths: installmentMonths,
     accountId: accountId,
     categoryId: categoryId,
     fromAccountId: fromAccountId,
@@ -45,6 +48,7 @@ ValidationResult<TransactionPresetDraft> validateTransactionPreset({
   required String type,
   required int? amount,
   String? memo,
+  int? installmentMonths,
   int? accountId,
   int? categoryId,
   int? fromAccountId,
@@ -57,6 +61,7 @@ ValidationResult<TransactionPresetDraft> validateTransactionPreset({
     occurredOn: '2000-01-01',
     occurredTime: '00:00',
     memo: memo,
+    installmentMonths: installmentMonths,
     accountId: accountId,
     categoryId: categoryId,
     fromAccountId: fromAccountId,
@@ -82,6 +87,7 @@ ValidationResult<TransactionPresetDraft> validateTransactionPreset({
       type: tx.type,
       amount: tx.amount,
       memo: tx.memo,
+      installmentMonths: tx.installmentMonths,
       accountId: tx.accountId,
       categoryId: tx.categoryId,
       fromAccountId: tx.fromAccountId,

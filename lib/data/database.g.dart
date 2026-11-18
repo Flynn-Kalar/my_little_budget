@@ -1838,6 +1838,17 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _installmentMonthsMeta = const VerificationMeta(
+    'installmentMonths',
+  );
+  @override
+  late final GeneratedColumn<int> installmentMonths = GeneratedColumn<int>(
+    'installment_months',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _memoMeta = const VerificationMeta('memo');
   @override
   late final GeneratedColumn<String> memo = GeneratedColumn<String>(
@@ -1958,6 +1969,7 @@ class $TransactionsTable extends Transactions
     occurredOn,
     occurredTime,
     amount,
+    installmentMonths,
     memo,
     accountId,
     categoryId,
@@ -2021,6 +2033,15 @@ class $TransactionsTable extends Transactions
       );
     } else if (isInserting) {
       context.missing(_amountMeta);
+    }
+    if (data.containsKey('installment_months')) {
+      context.handle(
+        _installmentMonthsMeta,
+        installmentMonths.isAcceptableOrUnknown(
+          data['installment_months']!,
+          _installmentMonthsMeta,
+        ),
+      );
     }
     if (data.containsKey('memo')) {
       context.handle(
@@ -2115,6 +2136,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.int,
         data['${effectivePrefix}amount'],
       )!,
+      installmentMonths: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}installment_months'],
+      ),
       memo: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}memo'],
@@ -2167,6 +2192,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String occurredOn;
   final String occurredTime;
   final int amount;
+
+  /// NULL is a single payment, preserving older backups and synced rows.
+  final int? installmentMonths;
   final String? memo;
   final int? accountId;
   final int? categoryId;
@@ -2183,6 +2211,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.occurredOn,
     required this.occurredTime,
     required this.amount,
+    this.installmentMonths,
     this.memo,
     this.accountId,
     this.categoryId,
@@ -2202,6 +2231,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['occurred_on'] = Variable<String>(occurredOn);
     map['occurred_time'] = Variable<String>(occurredTime);
     map['amount'] = Variable<int>(amount);
+    if (!nullToAbsent || installmentMonths != null) {
+      map['installment_months'] = Variable<int>(installmentMonths);
+    }
     if (!nullToAbsent || memo != null) {
       map['memo'] = Variable<String>(memo);
     }
@@ -2234,6 +2266,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       occurredOn: Value(occurredOn),
       occurredTime: Value(occurredTime),
       amount: Value(amount),
+      installmentMonths: installmentMonths == null && nullToAbsent
+          ? const Value.absent()
+          : Value(installmentMonths),
       memo: memo == null && nullToAbsent ? const Value.absent() : Value(memo),
       accountId: accountId == null && nullToAbsent
           ? const Value.absent()
@@ -2268,6 +2303,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       occurredOn: serializer.fromJson<String>(json['occurredOn']),
       occurredTime: serializer.fromJson<String>(json['occurredTime']),
       amount: serializer.fromJson<int>(json['amount']),
+      installmentMonths: serializer.fromJson<int?>(json['installmentMonths']),
       memo: serializer.fromJson<String?>(json['memo']),
       accountId: serializer.fromJson<int?>(json['accountId']),
       categoryId: serializer.fromJson<int?>(json['categoryId']),
@@ -2289,6 +2325,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'occurredOn': serializer.toJson<String>(occurredOn),
       'occurredTime': serializer.toJson<String>(occurredTime),
       'amount': serializer.toJson<int>(amount),
+      'installmentMonths': serializer.toJson<int?>(installmentMonths),
       'memo': serializer.toJson<String?>(memo),
       'accountId': serializer.toJson<int?>(accountId),
       'categoryId': serializer.toJson<int?>(categoryId),
@@ -2308,6 +2345,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     String? occurredOn,
     String? occurredTime,
     int? amount,
+    Value<int?> installmentMonths = const Value.absent(),
     Value<String?> memo = const Value.absent(),
     Value<int?> accountId = const Value.absent(),
     Value<int?> categoryId = const Value.absent(),
@@ -2324,6 +2362,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     occurredOn: occurredOn ?? this.occurredOn,
     occurredTime: occurredTime ?? this.occurredTime,
     amount: amount ?? this.amount,
+    installmentMonths: installmentMonths.present
+        ? installmentMonths.value
+        : this.installmentMonths,
     memo: memo.present ? memo.value : this.memo,
     accountId: accountId.present ? accountId.value : this.accountId,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
@@ -2348,6 +2389,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? data.occurredTime.value
           : this.occurredTime,
       amount: data.amount.present ? data.amount.value : this.amount,
+      installmentMonths: data.installmentMonths.present
+          ? data.installmentMonths.value
+          : this.installmentMonths,
       memo: data.memo.present ? data.memo.value : this.memo,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
       categoryId: data.categoryId.present
@@ -2377,6 +2421,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('occurredOn: $occurredOn, ')
           ..write('occurredTime: $occurredTime, ')
           ..write('amount: $amount, ')
+          ..write('installmentMonths: $installmentMonths, ')
           ..write('memo: $memo, ')
           ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
@@ -2398,6 +2443,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     occurredOn,
     occurredTime,
     amount,
+    installmentMonths,
     memo,
     accountId,
     categoryId,
@@ -2418,6 +2464,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.occurredOn == this.occurredOn &&
           other.occurredTime == this.occurredTime &&
           other.amount == this.amount &&
+          other.installmentMonths == this.installmentMonths &&
           other.memo == this.memo &&
           other.accountId == this.accountId &&
           other.categoryId == this.categoryId &&
@@ -2436,6 +2483,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> occurredOn;
   final Value<String> occurredTime;
   final Value<int> amount;
+  final Value<int?> installmentMonths;
   final Value<String?> memo;
   final Value<int?> accountId;
   final Value<int?> categoryId;
@@ -2452,6 +2500,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.occurredOn = const Value.absent(),
     this.occurredTime = const Value.absent(),
     this.amount = const Value.absent(),
+    this.installmentMonths = const Value.absent(),
     this.memo = const Value.absent(),
     this.accountId = const Value.absent(),
     this.categoryId = const Value.absent(),
@@ -2469,6 +2518,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required String occurredOn,
     this.occurredTime = const Value.absent(),
     required int amount,
+    this.installmentMonths = const Value.absent(),
     this.memo = const Value.absent(),
     this.accountId = const Value.absent(),
     this.categoryId = const Value.absent(),
@@ -2488,6 +2538,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? occurredOn,
     Expression<String>? occurredTime,
     Expression<int>? amount,
+    Expression<int>? installmentMonths,
     Expression<String>? memo,
     Expression<int>? accountId,
     Expression<int>? categoryId,
@@ -2505,6 +2556,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (occurredOn != null) 'occurred_on': occurredOn,
       if (occurredTime != null) 'occurred_time': occurredTime,
       if (amount != null) 'amount': amount,
+      if (installmentMonths != null) 'installment_months': installmentMonths,
       if (memo != null) 'memo': memo,
       if (accountId != null) 'account_id': accountId,
       if (categoryId != null) 'category_id': categoryId,
@@ -2524,6 +2576,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String>? occurredOn,
     Value<String>? occurredTime,
     Value<int>? amount,
+    Value<int?>? installmentMonths,
     Value<String?>? memo,
     Value<int?>? accountId,
     Value<int?>? categoryId,
@@ -2541,6 +2594,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       occurredOn: occurredOn ?? this.occurredOn,
       occurredTime: occurredTime ?? this.occurredTime,
       amount: amount ?? this.amount,
+      installmentMonths: installmentMonths ?? this.installmentMonths,
       memo: memo ?? this.memo,
       accountId: accountId ?? this.accountId,
       categoryId: categoryId ?? this.categoryId,
@@ -2573,6 +2627,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     }
     if (amount.present) {
       map['amount'] = Variable<int>(amount.value);
+    }
+    if (installmentMonths.present) {
+      map['installment_months'] = Variable<int>(installmentMonths.value);
     }
     if (memo.present) {
       map['memo'] = Variable<String>(memo.value);
@@ -2613,6 +2670,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('occurredOn: $occurredOn, ')
           ..write('occurredTime: $occurredTime, ')
           ..write('amount: $amount, ')
+          ..write('installmentMonths: $installmentMonths, ')
           ..write('memo: $memo, ')
           ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
@@ -11361,6 +11419,17 @@ class $TransactionPresetsTable extends TransactionPresets
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _installmentMonthsMeta = const VerificationMeta(
+    'installmentMonths',
+  );
+  @override
+  late final GeneratedColumn<int> installmentMonths = GeneratedColumn<int>(
+    'installment_months',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _accountIdMeta = const VerificationMeta(
     'accountId',
   );
@@ -11483,6 +11552,7 @@ class $TransactionPresetsTable extends TransactionPresets
     type,
     amount,
     memo,
+    installmentMonths,
     accountId,
     categoryId,
     fromAccountId,
@@ -11540,6 +11610,15 @@ class $TransactionPresetsTable extends TransactionPresets
       context.handle(
         _memoMeta,
         memo.isAcceptableOrUnknown(data['memo']!, _memoMeta),
+      );
+    }
+    if (data.containsKey('installment_months')) {
+      context.handle(
+        _installmentMonthsMeta,
+        installmentMonths.isAcceptableOrUnknown(
+          data['installment_months']!,
+          _installmentMonthsMeta,
+        ),
       );
     }
     if (data.containsKey('account_id')) {
@@ -11635,6 +11714,10 @@ class $TransactionPresetsTable extends TransactionPresets
         DriftSqlType.string,
         data['${effectivePrefix}memo'],
       ),
+      installmentMonths: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}installment_months'],
+      ),
       accountId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}account_id'],
@@ -11688,6 +11771,7 @@ class TransactionPreset extends DataClass
   final String type;
   final int amount;
   final String? memo;
+  final int? installmentMonths;
   final int? accountId;
   final int? categoryId;
   final int? fromAccountId;
@@ -11704,6 +11788,7 @@ class TransactionPreset extends DataClass
     required this.type,
     required this.amount,
     this.memo,
+    this.installmentMonths,
     this.accountId,
     this.categoryId,
     this.fromAccountId,
@@ -11726,6 +11811,9 @@ class TransactionPreset extends DataClass
     map['amount'] = Variable<int>(amount);
     if (!nullToAbsent || memo != null) {
       map['memo'] = Variable<String>(memo);
+    }
+    if (!nullToAbsent || installmentMonths != null) {
+      map['installment_months'] = Variable<int>(installmentMonths);
     }
     if (!nullToAbsent || accountId != null) {
       map['account_id'] = Variable<int>(accountId);
@@ -11759,6 +11847,9 @@ class TransactionPreset extends DataClass
       type: Value(type),
       amount: Value(amount),
       memo: memo == null && nullToAbsent ? const Value.absent() : Value(memo),
+      installmentMonths: installmentMonths == null && nullToAbsent
+          ? const Value.absent()
+          : Value(installmentMonths),
       accountId: accountId == null && nullToAbsent
           ? const Value.absent()
           : Value(accountId),
@@ -11795,6 +11886,7 @@ class TransactionPreset extends DataClass
       type: serializer.fromJson<String>(json['type']),
       amount: serializer.fromJson<int>(json['amount']),
       memo: serializer.fromJson<String?>(json['memo']),
+      installmentMonths: serializer.fromJson<int?>(json['installmentMonths']),
       accountId: serializer.fromJson<int?>(json['accountId']),
       categoryId: serializer.fromJson<int?>(json['categoryId']),
       fromAccountId: serializer.fromJson<int?>(json['fromAccountId']),
@@ -11816,6 +11908,7 @@ class TransactionPreset extends DataClass
       'type': serializer.toJson<String>(type),
       'amount': serializer.toJson<int>(amount),
       'memo': serializer.toJson<String?>(memo),
+      'installmentMonths': serializer.toJson<int?>(installmentMonths),
       'accountId': serializer.toJson<int?>(accountId),
       'categoryId': serializer.toJson<int?>(categoryId),
       'fromAccountId': serializer.toJson<int?>(fromAccountId),
@@ -11835,6 +11928,7 @@ class TransactionPreset extends DataClass
     String? type,
     int? amount,
     Value<String?> memo = const Value.absent(),
+    Value<int?> installmentMonths = const Value.absent(),
     Value<int?> accountId = const Value.absent(),
     Value<int?> categoryId = const Value.absent(),
     Value<int?> fromAccountId = const Value.absent(),
@@ -11851,6 +11945,9 @@ class TransactionPreset extends DataClass
     type: type ?? this.type,
     amount: amount ?? this.amount,
     memo: memo.present ? memo.value : this.memo,
+    installmentMonths: installmentMonths.present
+        ? installmentMonths.value
+        : this.installmentMonths,
     accountId: accountId.present ? accountId.value : this.accountId,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
     fromAccountId: fromAccountId.present
@@ -11871,6 +11968,9 @@ class TransactionPreset extends DataClass
       type: data.type.present ? data.type.value : this.type,
       amount: data.amount.present ? data.amount.value : this.amount,
       memo: data.memo.present ? data.memo.value : this.memo,
+      installmentMonths: data.installmentMonths.present
+          ? data.installmentMonths.value
+          : this.installmentMonths,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
       categoryId: data.categoryId.present
           ? data.categoryId.value
@@ -11900,6 +12000,7 @@ class TransactionPreset extends DataClass
           ..write('type: $type, ')
           ..write('amount: $amount, ')
           ..write('memo: $memo, ')
+          ..write('installmentMonths: $installmentMonths, ')
           ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
           ..write('fromAccountId: $fromAccountId, ')
@@ -11921,6 +12022,7 @@ class TransactionPreset extends DataClass
     type,
     amount,
     memo,
+    installmentMonths,
     accountId,
     categoryId,
     fromAccountId,
@@ -11941,6 +12043,7 @@ class TransactionPreset extends DataClass
           other.type == this.type &&
           other.amount == this.amount &&
           other.memo == this.memo &&
+          other.installmentMonths == this.installmentMonths &&
           other.accountId == this.accountId &&
           other.categoryId == this.categoryId &&
           other.fromAccountId == this.fromAccountId &&
@@ -11959,6 +12062,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
   final Value<String> type;
   final Value<int> amount;
   final Value<String?> memo;
+  final Value<int?> installmentMonths;
   final Value<int?> accountId;
   final Value<int?> categoryId;
   final Value<int?> fromAccountId;
@@ -11975,6 +12079,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
     this.type = const Value.absent(),
     this.amount = const Value.absent(),
     this.memo = const Value.absent(),
+    this.installmentMonths = const Value.absent(),
     this.accountId = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.fromAccountId = const Value.absent(),
@@ -11992,6 +12097,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
     required String type,
     required int amount,
     this.memo = const Value.absent(),
+    this.installmentMonths = const Value.absent(),
     this.accountId = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.fromAccountId = const Value.absent(),
@@ -12010,6 +12116,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
     Expression<String>? type,
     Expression<int>? amount,
     Expression<String>? memo,
+    Expression<int>? installmentMonths,
     Expression<int>? accountId,
     Expression<int>? categoryId,
     Expression<int>? fromAccountId,
@@ -12027,6 +12134,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
       if (type != null) 'type': type,
       if (amount != null) 'amount': amount,
       if (memo != null) 'memo': memo,
+      if (installmentMonths != null) 'installment_months': installmentMonths,
       if (accountId != null) 'account_id': accountId,
       if (categoryId != null) 'category_id': categoryId,
       if (fromAccountId != null) 'from_account_id': fromAccountId,
@@ -12046,6 +12154,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
     Value<String>? type,
     Value<int>? amount,
     Value<String?>? memo,
+    Value<int?>? installmentMonths,
     Value<int?>? accountId,
     Value<int?>? categoryId,
     Value<int?>? fromAccountId,
@@ -12063,6 +12172,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
       type: type ?? this.type,
       amount: amount ?? this.amount,
       memo: memo ?? this.memo,
+      installmentMonths: installmentMonths ?? this.installmentMonths,
       accountId: accountId ?? this.accountId,
       categoryId: categoryId ?? this.categoryId,
       fromAccountId: fromAccountId ?? this.fromAccountId,
@@ -12095,6 +12205,9 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
     }
     if (memo.present) {
       map['memo'] = Variable<String>(memo.value);
+    }
+    if (installmentMonths.present) {
+      map['installment_months'] = Variable<int>(installmentMonths.value);
     }
     if (accountId.present) {
       map['account_id'] = Variable<int>(accountId.value);
@@ -12135,6 +12248,7 @@ class TransactionPresetsCompanion extends UpdateCompanion<TransactionPreset> {
           ..write('type: $type, ')
           ..write('amount: $amount, ')
           ..write('memo: $memo, ')
+          ..write('installmentMonths: $installmentMonths, ')
           ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
           ..write('fromAccountId: $fromAccountId, ')
@@ -14755,6 +14869,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required String occurredOn,
       Value<String> occurredTime,
       required int amount,
+      Value<int?> installmentMonths,
       Value<String?> memo,
       Value<int?> accountId,
       Value<int?> categoryId,
@@ -14773,6 +14888,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String> occurredOn,
       Value<String> occurredTime,
       Value<int> amount,
+      Value<int?> installmentMonths,
       Value<String?> memo,
       Value<int?> accountId,
       Value<int?> categoryId,
@@ -14924,6 +15040,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<int> get amount => $composableBuilder(
     column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get installmentMonths => $composableBuilder(
+    column: $table.installmentMonths,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15109,6 +15230,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get installmentMonths => $composableBuilder(
+    column: $table.installmentMonths,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get memo => $composableBuilder(
     column: $table.memo,
     builder: (column) => ColumnOrderings(column),
@@ -15257,6 +15383,11 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<int> get amount =>
       $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<int> get installmentMonths => $composableBuilder(
+    column: $table.installmentMonths,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get memo =>
       $composableBuilder(column: $table.memo, builder: (column) => column);
@@ -15433,6 +15564,7 @@ class $$TransactionsTableTableManager
                 Value<String> occurredOn = const Value.absent(),
                 Value<String> occurredTime = const Value.absent(),
                 Value<int> amount = const Value.absent(),
+                Value<int?> installmentMonths = const Value.absent(),
                 Value<String?> memo = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
@@ -15449,6 +15581,7 @@ class $$TransactionsTableTableManager
                 occurredOn: occurredOn,
                 occurredTime: occurredTime,
                 amount: amount,
+                installmentMonths: installmentMonths,
                 memo: memo,
                 accountId: accountId,
                 categoryId: categoryId,
@@ -15467,6 +15600,7 @@ class $$TransactionsTableTableManager
                 required String occurredOn,
                 Value<String> occurredTime = const Value.absent(),
                 required int amount,
+                Value<int?> installmentMonths = const Value.absent(),
                 Value<String?> memo = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
@@ -15483,6 +15617,7 @@ class $$TransactionsTableTableManager
                 occurredOn: occurredOn,
                 occurredTime: occurredTime,
                 amount: amount,
+                installmentMonths: installmentMonths,
                 memo: memo,
                 accountId: accountId,
                 categoryId: categoryId,
@@ -21462,6 +21597,7 @@ typedef $$TransactionPresetsTableCreateCompanionBuilder =
       required String type,
       required int amount,
       Value<String?> memo,
+      Value<int?> installmentMonths,
       Value<int?> accountId,
       Value<int?> categoryId,
       Value<int?> fromAccountId,
@@ -21480,6 +21616,7 @@ typedef $$TransactionPresetsTableUpdateCompanionBuilder =
       Value<String> type,
       Value<int> amount,
       Value<String?> memo,
+      Value<int?> installmentMonths,
       Value<int?> accountId,
       Value<int?> categoryId,
       Value<int?> fromAccountId,
@@ -21623,6 +21760,11 @@ class $$TransactionPresetsTableFilterComposer
 
   ColumnFilters<String> get memo => $composableBuilder(
     column: $table.memo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get installmentMonths => $composableBuilder(
+    column: $table.installmentMonths,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -21783,6 +21925,11 @@ class $$TransactionPresetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get installmentMonths => $composableBuilder(
+    column: $table.installmentMonths,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get tagNames => $composableBuilder(
     column: $table.tagNames,
     builder: (column) => ColumnOrderings(column),
@@ -21927,6 +22074,11 @@ class $$TransactionPresetsTableAnnotationComposer
 
   GeneratedColumn<String> get memo =>
       $composableBuilder(column: $table.memo, builder: (column) => column);
+
+  GeneratedColumn<int> get installmentMonths => $composableBuilder(
+    column: $table.installmentMonths,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get tagNames =>
       $composableBuilder(column: $table.tagNames, builder: (column) => column);
@@ -22082,6 +22234,7 @@ class $$TransactionPresetsTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<int> amount = const Value.absent(),
                 Value<String?> memo = const Value.absent(),
+                Value<int?> installmentMonths = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
                 Value<int?> fromAccountId = const Value.absent(),
@@ -22098,6 +22251,7 @@ class $$TransactionPresetsTableTableManager
                 type: type,
                 amount: amount,
                 memo: memo,
+                installmentMonths: installmentMonths,
                 accountId: accountId,
                 categoryId: categoryId,
                 fromAccountId: fromAccountId,
@@ -22116,6 +22270,7 @@ class $$TransactionPresetsTableTableManager
                 required String type,
                 required int amount,
                 Value<String?> memo = const Value.absent(),
+                Value<int?> installmentMonths = const Value.absent(),
                 Value<int?> accountId = const Value.absent(),
                 Value<int?> categoryId = const Value.absent(),
                 Value<int?> fromAccountId = const Value.absent(),
@@ -22132,6 +22287,7 @@ class $$TransactionPresetsTableTableManager
                 type: type,
                 amount: amount,
                 memo: memo,
+                installmentMonths: installmentMonths,
                 accountId: accountId,
                 categoryId: categoryId,
                 fromAccountId: fromAccountId,

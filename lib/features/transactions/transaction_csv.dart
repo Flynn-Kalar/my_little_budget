@@ -15,6 +15,7 @@ const transactionCsvColumns = [
   '입금계좌',
   '메모',
   '태그',
+  '할부개월',
 ];
 
 const transactionCsvTypeLabels = {
@@ -108,6 +109,7 @@ String exportTransactionCsv(Backup backup) {
         _safeText(accounts[t.toAccountId] ?? ''),
         _safeText(t.memo ?? ''),
         jsonEncode(links[t.id] ?? <String>[]),
+        t.installmentMonths?.toString() ?? '',
       ],
   ];
   return '\uFEFF${rows.map((row) => row.map(_quote).join(',')).join('\r\n')}\r\n';
@@ -146,6 +148,7 @@ String _fingerprint(TransactionDraft t, List<String> tags) => jsonEncode([
   t.fromAccountId,
   t.toAccountId,
   t.memo?.trim() ?? '',
+  t.installmentMonths,
   tags.toSet().toList()..sort(),
 ]);
 
@@ -190,6 +193,7 @@ class TransactionCsvService {
             fromAccountId: t.fromAccountId,
             toAccountId: t.toAccountId,
             memo: t.memo,
+            installmentMonths: t.installmentMonths,
           ),
           links[t.id] ?? [],
         ),
@@ -251,7 +255,25 @@ class TransactionCsvService {
         if (tags.any((t) => t.length > 20)) {
           throw const FormatException('태그는 각각 20자 이하여야 합니다.');
         }
+        final monthsCell = cell('할부개월');
+        final months =
+            monthsCell.isEmpty || monthsCell == '1' || monthsCell == '일시불'
+            ? null
+            : int.tryParse(monthsCell);
+        if (monthsCell.isNotEmpty &&
+            monthsCell != '1' &&
+            monthsCell != '일시불' &&
+            months == null) {
+          throw const FormatException('할부개월은 2~60 사이의 정수로 입력해주세요.');
+        }
+        if (months != null &&
+            !backup.accounts.any(
+              (a) => a.id == accounts[cell('계좌')] && a.kind == 'card',
+            )) {
+          throw const FormatException('할부는 신용카드 지출에만 설정할 수 있습니다.');
+        }
         final result = validateTransaction(
+          installmentMonths: months,
           type: type,
           amount: int.tryParse(
             cell('금액').replaceAll(',', '').replaceAll('₩', '').trim(),

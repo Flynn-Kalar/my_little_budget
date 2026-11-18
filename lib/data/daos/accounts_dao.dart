@@ -37,6 +37,7 @@ class AccountBalance {
     this.cardPaymentAccountUuid,
     this.cardPaymentAccountName,
     this.cardBilling,
+    this.cardInstallmentCount = 0,
     this.cardSpendingToDate = 0,
     this.cardMonthSpending = 0,
     this.fundPurpose = 'living',
@@ -59,6 +60,7 @@ class AccountBalance {
   final String? cardPaymentAccountUuid;
   final String? cardPaymentAccountName;
   final CardBillingSummary? cardBilling;
+  final int cardInstallmentCount;
 
   /// Spending in the current period, independent of card repayment transfers.
   final int cardSpendingToDate;
@@ -193,10 +195,23 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
                     t.toAccountId.isIn(cardIds),
               ))
               .get();
-      void add(int? id, String date, int amount, {bool isAdjustment = false}) {
+      void add(
+        int? id,
+        String date,
+        int amount, {
+        bool isAdjustment = false,
+        int? installmentMonths,
+        String? title,
+      }) {
         if (cardIds.contains(id)) {
           (cardEntries[id!] ??= []).add(
-            CardBillingEntry(date, amount, isAdjustment: isAdjustment),
+            CardBillingEntry(
+              date,
+              amount,
+              isAdjustment: isAdjustment,
+              installmentMonths: installmentMonths,
+              title: title,
+            ),
           );
         }
       }
@@ -211,6 +226,12 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
             movement.occurredOn,
             movement.type == 'expense' ? -movement.amount : movement.amount,
             isAdjustment: movement.type == 'adjustment',
+            installmentMonths: movement.type == 'expense'
+                ? movement.installmentMonths
+                : null,
+            title: movement.memo?.trim().isNotEmpty == true
+                ? movement.memo!.trim()
+                : '카드 할부',
           );
         }
       }
@@ -246,6 +267,9 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
         cardPaymentAccountName: r.readNullable<String>(
           'card_payment_account_name',
         ),
+        cardInstallmentCount: (cardEntries[id] ?? const <CardBillingEntry>[])
+            .where((e) => e.installmentMonths != null)
+            .length,
         cardBilling:
             r.read<String>('kind') == 'card' &&
                 paymentDay != null &&
@@ -344,6 +368,17 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
   }) async {
     await transaction(() async {
       final today = asOf ?? DateTime.now();
+      if (id != null && draft.kind != 'card') {
+        final plans =
+            await (select(transactions)..where(
+                  (t) =>
+                      t.accountId.equals(id) & t.installmentMonths.isNotNull(),
+                ))
+                .get();
+        if (plans.isNotEmpty) {
+          throw ArgumentError('할부 거래를 일시불로 변경하거나 다른 카드로 옮긴 뒤 자산 종류를 변경해주세요.');
+        }
+      }
       if (currentCardSpending != null && draft.kind != 'card') {
         throw ArgumentError('카드 사용액은 신용카드 자산에만 적용할 수 있습니다.');
       }

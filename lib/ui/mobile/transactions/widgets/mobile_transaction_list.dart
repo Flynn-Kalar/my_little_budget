@@ -508,6 +508,11 @@ class _TransactionCard extends ConsumerWidget {
                       if (row.occurredTime != '00:00')
                         Text(row.occurredTime, style: _metaStyle(context)),
                       Text(_typeLabel(row.type), style: _metaStyle(context)),
+                      if (row.installmentMonths != null)
+                        Text(
+                          '${row.installmentMonths}개월 할부',
+                          style: _metaStyle(context),
+                        ),
                       if (!isTransfer && account.isNotEmpty)
                         Text(account, style: _metaStyle(context)),
                     ],

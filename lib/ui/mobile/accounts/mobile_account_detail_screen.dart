@@ -478,6 +478,11 @@ class _AccountTransactionCard extends ConsumerWidget {
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
               ),
             ),
+            if (row.installmentMonths != null)
+              Text(
+                '${row.installmentMonths}개월 할부',
+                style: theme.textTheme.bodySmall,
+              ),
             if (row.memo?.trim().isNotEmpty == true) ...[
               const SizedBox(height: 4),
               Text(
