@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/money.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/color_hex.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import 'widgets/account_tx_list.dart';
+import '../../shared/account_financial_summary.dart';
 
 /// SPEC §4.3 — 자산 상세 (PC).
 class AccountDetailScreen extends ConsumerWidget {
@@ -74,13 +74,9 @@ class AccountDetailScreen extends ConsumerWidget {
                       ],
                     ),
                     SizedBox(height: 4),
-                    Text(
-                      formatKRW(account.balance),
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                        color: account.balance < 0 ? context.desktopExpense : null,
-                      ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: AccountFinancialSummary(account: account),
                     ),
                     SizedBox(height: 32),
                     AccountTxList(

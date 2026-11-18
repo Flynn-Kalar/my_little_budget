@@ -14,6 +14,7 @@ import '../../../features/transactions/validation.dart';
 import '../transactions/sheets/mobile_transaction_sheet.dart';
 import '../mobile_widgets.dart';
 import '../../shared/account_transaction_month_header.dart';
+import '../../shared/account_financial_summary.dart';
 
 class MobileAccountDetailScreen extends ConsumerWidget {
   const MobileAccountDetailScreen({super.key, required this.accountId});
@@ -53,13 +54,7 @@ class MobileAccountDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  AmountLine(
-                    label: _kindLabel(value.kind),
-                    value: formatKRW(value.balance),
-                    valueColor: value.balance < 0
-                        ? context.appExpense
-                        : context.appIncome,
-                  ),
+                  AccountFinancialSummary(account: value),
                   if (value.isInvestment)
                     Text(
                       '투자 자산',
@@ -711,12 +706,4 @@ String _typeLabel(String type) => switch (type) {
   'transfer' => '이체',
   'adjustment' => '잔액 조정',
   _ => type,
-};
-
-String _kindLabel(String kind) => switch (kind) {
-  'cash' => '현금',
-  'bank' => '은행',
-  'card' => '카드',
-  'other' => '기타',
-  _ => kind,
 };

@@ -26,6 +26,9 @@ class NoteGoalBlock {
     'current': goal.currentAmount,
     'start': formatGoalDate(goal.startDate),
     'due': goal.dueDate == null ? null : formatGoalDate(goal.dueDate!),
+    'source': goal.source,
+    'accountUuid': goal.accountUuid,
+    'tagUuid': goal.tagUuid,
   });
 
   static NoteGoalBlock? decode(dynamic data) {
@@ -38,6 +41,9 @@ class NoteGoalBlock {
         dueDate: map['due'] == null
             ? null
             : DateTime.parse(map['due'] as String),
+        source: map['source'] as String? ?? 'manual',
+        accountUuid: map['accountUuid'] as String?,
+        tagUuid: map['tagUuid'] as String?,
       );
       if (goal.validationError != null) return null;
       return NoteGoalBlock(
@@ -50,10 +56,11 @@ class NoteGoalBlock {
     }
   }
 
-  String get plainText =>
-      '${title.isEmpty ? '금액 목표' : title}\n'
-      '${formatNoteAmount(goal.currentAmount)} / ${formatNoteAmount(goal.targetAmount)}원 '
-      '(${goal.percentage})\n남은 금액 ${formatNoteAmount(goal.remaining)}원';
+  String get plainText => goal.isLinked
+      ? '${title.isEmpty ? '금액 목표' : title}\n자동 집계 목표 · ${formatNoteAmount(goal.targetAmount)}원'
+      : '${title.isEmpty ? '금액 목표' : title}\n'
+            '${formatNoteAmount(goal.currentAmount)} / ${formatNoteAmount(goal.targetAmount)}원 '
+            '(${goal.percentage})\n남은 금액 ${formatNoteAmount(goal.remaining)}원';
 }
 
 /// A standalone block at the selection, with a writable line on either side.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/money.dart';
+import '../../../shared/fund_purpose.dart';
 import '../../desktop_section.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/accounts_dao.dart';
@@ -20,6 +21,10 @@ class TotalAssetsCard extends ConsumerWidget {
     final included = balances.where((a) => !a.excludeFromTotal).toList();
     final excluded = balances.where((a) => a.excludeFromTotal).toList();
     final netTotal = included.fold<int>(0, (s, a) => s + a.balance);
+    final projectedTotal = included.fold<int>(
+      0,
+      (s, a) => s + a.projectedBalance,
+    );
     final excludedTotal = excluded.fold<int>(0, (s, a) => s + a.balance);
 
     final byGroup = <AccountGroup, List<AccountBalance>>{};
@@ -90,6 +95,17 @@ class TotalAssetsCard extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          Text(
+            '이번 달 예상 순자산 ${formatKRW(projectedTotal)}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '현재 잔액은 오늘까지 · 예상 잔액은 등록된 예정 거래 포함',
+            style: TextStyle(fontSize: 12, color: context.desktopMuted),
+          ),
+          FundPurposeSummary(accounts: balances),
           if (groupRows.isNotEmpty) ...[
             SizedBox(height: 16),
             _GroupBar(rows: groupRows, positiveTotal: positiveTotal),

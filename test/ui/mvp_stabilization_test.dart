@@ -564,9 +564,12 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(
-        find.byKey(ValueKey('account-restore-${seeded.archiveId}')),
+      final restoreAccount = find.byKey(
+        ValueKey('account-restore-${seeded.archiveId}'),
       );
+      await tester.ensureVisible(restoreAccount);
+      await tester.pumpAndSettle();
+      await tester.tap(restoreAccount);
       await tester.pumpAndSettle();
 
       expect(
@@ -574,9 +577,12 @@ void main() {
         findsNothing,
       );
 
-      await tester.tap(
-        find.byKey(ValueKey('account-delete-${seeded.guardedId}')),
+      final guardedDelete = find.byKey(
+        ValueKey('account-delete-${seeded.guardedId}'),
       );
+      await tester.ensureVisible(guardedDelete);
+      await tester.pumpAndSettle();
+      await tester.tap(guardedDelete);
       await tester.pumpAndSettle();
 
       expect(

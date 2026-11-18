@@ -107,34 +107,38 @@ void main() {
     expect(await balanceAsOf(cashId), 1000000);
   });
 
-  test(
-    'C/D: card includes this month future but excludes next month',
-    () async {
-      final cardId = await createAccount(
-        name: 'scenario-cd-card',
-        kind: 'card',
-        balance: 0,
-      );
-      await addTransaction(
-        type: 'expense',
-        amount: 200000,
-        occurredOn: '2026-08-10',
-        accountId: cardId,
-      );
-      await addTransaction(
-        type: 'expense',
-        amount: 100000,
-        occurredOn: '2026-08-20',
-        accountId: cardId,
-      );
-      await addTransaction(
-        type: 'expense',
-        amount: 400000,
-        occurredOn: '2026-09-01',
-        accountId: cardId,
-      );
+  test('card separates current balance from this month projection', () async {
+    final cardId = await createAccount(
+      name: 'scenario-cd-card',
+      kind: 'card',
+      balance: 0,
+    );
+    await addTransaction(
+      type: 'expense',
+      amount: 200000,
+      occurredOn: '2026-08-10',
+      accountId: cardId,
+    );
+    await addTransaction(
+      type: 'expense',
+      amount: 100000,
+      occurredOn: '2026-08-20',
+      accountId: cardId,
+    );
+    await addTransaction(
+      type: 'expense',
+      amount: 400000,
+      occurredOn: '2026-09-01',
+      accountId: cardId,
+    );
 
-      expect(await balanceAsOf(cardId), -300000);
-    },
-  );
+    expect(await balanceAsOf(cardId), -200000);
+    final rows = await db.accountsDao.getAccountBalances(
+      asOf: DateTime(2026, 8, 16),
+    );
+    expect(
+      rows.singleWhere((row) => row.accountId == cardId).projectedBalance,
+      -300000,
+    );
+  });
 }

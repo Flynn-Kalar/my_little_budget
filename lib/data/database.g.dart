@@ -80,6 +80,50 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _cardPaymentDayMeta = const VerificationMeta(
+    'cardPaymentDay',
+  );
+  @override
+  late final GeneratedColumn<int> cardPaymentDay = GeneratedColumn<int>(
+    'card_payment_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cardClosingDayMeta = const VerificationMeta(
+    'cardClosingDay',
+  );
+  @override
+  late final GeneratedColumn<int> cardClosingDay = GeneratedColumn<int>(
+    'card_closing_day',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cardPaymentAccountUuidMeta =
+      const VerificationMeta('cardPaymentAccountUuid');
+  @override
+  late final GeneratedColumn<String> cardPaymentAccountUuid =
+      GeneratedColumn<String>(
+        'card_payment_account_uuid',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _fundPurposeMeta = const VerificationMeta(
+    'fundPurpose',
+  );
+  @override
+  late final GeneratedColumn<String> fundPurpose = GeneratedColumn<String>(
+    'fund_purpose',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _colorMeta = const VerificationMeta('color');
   @override
   late final GeneratedColumn<String> color = GeneratedColumn<String>(
@@ -198,6 +242,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     kind,
     initialBalance,
     cardLimit,
+    cardPaymentDay,
+    cardClosingDay,
+    cardPaymentAccountUuid,
+    fundPurpose,
     color,
     excludeFromTotal,
     isInvestment,
@@ -258,6 +306,42 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       context.handle(
         _cardLimitMeta,
         cardLimit.isAcceptableOrUnknown(data['card_limit']!, _cardLimitMeta),
+      );
+    }
+    if (data.containsKey('card_payment_day')) {
+      context.handle(
+        _cardPaymentDayMeta,
+        cardPaymentDay.isAcceptableOrUnknown(
+          data['card_payment_day']!,
+          _cardPaymentDayMeta,
+        ),
+      );
+    }
+    if (data.containsKey('card_closing_day')) {
+      context.handle(
+        _cardClosingDayMeta,
+        cardClosingDay.isAcceptableOrUnknown(
+          data['card_closing_day']!,
+          _cardClosingDayMeta,
+        ),
+      );
+    }
+    if (data.containsKey('card_payment_account_uuid')) {
+      context.handle(
+        _cardPaymentAccountUuidMeta,
+        cardPaymentAccountUuid.isAcceptableOrUnknown(
+          data['card_payment_account_uuid']!,
+          _cardPaymentAccountUuidMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fund_purpose')) {
+      context.handle(
+        _fundPurposeMeta,
+        fundPurpose.isAcceptableOrUnknown(
+          data['fund_purpose']!,
+          _fundPurposeMeta,
+        ),
       );
     }
     if (data.containsKey('color')) {
@@ -353,6 +437,22 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}card_limit'],
       ),
+      cardPaymentDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}card_payment_day'],
+      ),
+      cardClosingDay: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}card_closing_day'],
+      ),
+      cardPaymentAccountUuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}card_payment_account_uuid'],
+      ),
+      fundPurpose: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fund_purpose'],
+      ),
       color: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}color'],
@@ -405,6 +505,10 @@ class Account extends DataClass implements Insertable<Account> {
   final String kind;
   final int initialBalance;
   final int? cardLimit;
+  final int? cardPaymentDay;
+  final int? cardClosingDay;
+  final String? cardPaymentAccountUuid;
+  final String? fundPurpose;
   final String color;
   final bool excludeFromTotal;
   final bool isInvestment;
@@ -421,6 +525,10 @@ class Account extends DataClass implements Insertable<Account> {
     required this.kind,
     required this.initialBalance,
     this.cardLimit,
+    this.cardPaymentDay,
+    this.cardClosingDay,
+    this.cardPaymentAccountUuid,
+    this.fundPurpose,
     required this.color,
     required this.excludeFromTotal,
     required this.isInvestment,
@@ -441,6 +549,20 @@ class Account extends DataClass implements Insertable<Account> {
     map['initial_balance'] = Variable<int>(initialBalance);
     if (!nullToAbsent || cardLimit != null) {
       map['card_limit'] = Variable<int>(cardLimit);
+    }
+    if (!nullToAbsent || cardPaymentDay != null) {
+      map['card_payment_day'] = Variable<int>(cardPaymentDay);
+    }
+    if (!nullToAbsent || cardClosingDay != null) {
+      map['card_closing_day'] = Variable<int>(cardClosingDay);
+    }
+    if (!nullToAbsent || cardPaymentAccountUuid != null) {
+      map['card_payment_account_uuid'] = Variable<String>(
+        cardPaymentAccountUuid,
+      );
+    }
+    if (!nullToAbsent || fundPurpose != null) {
+      map['fund_purpose'] = Variable<String>(fundPurpose);
     }
     map['color'] = Variable<String>(color);
     map['exclude_from_total'] = Variable<bool>(excludeFromTotal);
@@ -468,6 +590,18 @@ class Account extends DataClass implements Insertable<Account> {
       cardLimit: cardLimit == null && nullToAbsent
           ? const Value.absent()
           : Value(cardLimit),
+      cardPaymentDay: cardPaymentDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cardPaymentDay),
+      cardClosingDay: cardClosingDay == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cardClosingDay),
+      cardPaymentAccountUuid: cardPaymentAccountUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cardPaymentAccountUuid),
+      fundPurpose: fundPurpose == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fundPurpose),
       color: Value(color),
       excludeFromTotal: Value(excludeFromTotal),
       isInvestment: Value(isInvestment),
@@ -496,6 +630,12 @@ class Account extends DataClass implements Insertable<Account> {
       kind: serializer.fromJson<String>(json['kind']),
       initialBalance: serializer.fromJson<int>(json['initialBalance']),
       cardLimit: serializer.fromJson<int?>(json['cardLimit']),
+      cardPaymentDay: serializer.fromJson<int?>(json['cardPaymentDay']),
+      cardClosingDay: serializer.fromJson<int?>(json['cardClosingDay']),
+      cardPaymentAccountUuid: serializer.fromJson<String?>(
+        json['cardPaymentAccountUuid'],
+      ),
+      fundPurpose: serializer.fromJson<String?>(json['fundPurpose']),
       color: serializer.fromJson<String>(json['color']),
       excludeFromTotal: serializer.fromJson<bool>(json['excludeFromTotal']),
       isInvestment: serializer.fromJson<bool>(json['isInvestment']),
@@ -517,6 +657,12 @@ class Account extends DataClass implements Insertable<Account> {
       'kind': serializer.toJson<String>(kind),
       'initialBalance': serializer.toJson<int>(initialBalance),
       'cardLimit': serializer.toJson<int?>(cardLimit),
+      'cardPaymentDay': serializer.toJson<int?>(cardPaymentDay),
+      'cardClosingDay': serializer.toJson<int?>(cardClosingDay),
+      'cardPaymentAccountUuid': serializer.toJson<String?>(
+        cardPaymentAccountUuid,
+      ),
+      'fundPurpose': serializer.toJson<String?>(fundPurpose),
       'color': serializer.toJson<String>(color),
       'excludeFromTotal': serializer.toJson<bool>(excludeFromTotal),
       'isInvestment': serializer.toJson<bool>(isInvestment),
@@ -536,6 +682,10 @@ class Account extends DataClass implements Insertable<Account> {
     String? kind,
     int? initialBalance,
     Value<int?> cardLimit = const Value.absent(),
+    Value<int?> cardPaymentDay = const Value.absent(),
+    Value<int?> cardClosingDay = const Value.absent(),
+    Value<String?> cardPaymentAccountUuid = const Value.absent(),
+    Value<String?> fundPurpose = const Value.absent(),
     String? color,
     bool? excludeFromTotal,
     bool? isInvestment,
@@ -552,6 +702,16 @@ class Account extends DataClass implements Insertable<Account> {
     kind: kind ?? this.kind,
     initialBalance: initialBalance ?? this.initialBalance,
     cardLimit: cardLimit.present ? cardLimit.value : this.cardLimit,
+    cardPaymentDay: cardPaymentDay.present
+        ? cardPaymentDay.value
+        : this.cardPaymentDay,
+    cardClosingDay: cardClosingDay.present
+        ? cardClosingDay.value
+        : this.cardClosingDay,
+    cardPaymentAccountUuid: cardPaymentAccountUuid.present
+        ? cardPaymentAccountUuid.value
+        : this.cardPaymentAccountUuid,
+    fundPurpose: fundPurpose.present ? fundPurpose.value : this.fundPurpose,
     color: color ?? this.color,
     excludeFromTotal: excludeFromTotal ?? this.excludeFromTotal,
     isInvestment: isInvestment ?? this.isInvestment,
@@ -572,6 +732,18 @@ class Account extends DataClass implements Insertable<Account> {
           ? data.initialBalance.value
           : this.initialBalance,
       cardLimit: data.cardLimit.present ? data.cardLimit.value : this.cardLimit,
+      cardPaymentDay: data.cardPaymentDay.present
+          ? data.cardPaymentDay.value
+          : this.cardPaymentDay,
+      cardClosingDay: data.cardClosingDay.present
+          ? data.cardClosingDay.value
+          : this.cardClosingDay,
+      cardPaymentAccountUuid: data.cardPaymentAccountUuid.present
+          ? data.cardPaymentAccountUuid.value
+          : this.cardPaymentAccountUuid,
+      fundPurpose: data.fundPurpose.present
+          ? data.fundPurpose.value
+          : this.fundPurpose,
       color: data.color.present ? data.color.value : this.color,
       excludeFromTotal: data.excludeFromTotal.present
           ? data.excludeFromTotal.value
@@ -601,6 +773,10 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('kind: $kind, ')
           ..write('initialBalance: $initialBalance, ')
           ..write('cardLimit: $cardLimit, ')
+          ..write('cardPaymentDay: $cardPaymentDay, ')
+          ..write('cardClosingDay: $cardClosingDay, ')
+          ..write('cardPaymentAccountUuid: $cardPaymentAccountUuid, ')
+          ..write('fundPurpose: $fundPurpose, ')
           ..write('color: $color, ')
           ..write('excludeFromTotal: $excludeFromTotal, ')
           ..write('isInvestment: $isInvestment, ')
@@ -622,6 +798,10 @@ class Account extends DataClass implements Insertable<Account> {
     kind,
     initialBalance,
     cardLimit,
+    cardPaymentDay,
+    cardClosingDay,
+    cardPaymentAccountUuid,
+    fundPurpose,
     color,
     excludeFromTotal,
     isInvestment,
@@ -642,6 +822,10 @@ class Account extends DataClass implements Insertable<Account> {
           other.kind == this.kind &&
           other.initialBalance == this.initialBalance &&
           other.cardLimit == this.cardLimit &&
+          other.cardPaymentDay == this.cardPaymentDay &&
+          other.cardClosingDay == this.cardClosingDay &&
+          other.cardPaymentAccountUuid == this.cardPaymentAccountUuid &&
+          other.fundPurpose == this.fundPurpose &&
           other.color == this.color &&
           other.excludeFromTotal == this.excludeFromTotal &&
           other.isInvestment == this.isInvestment &&
@@ -660,6 +844,10 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> kind;
   final Value<int> initialBalance;
   final Value<int?> cardLimit;
+  final Value<int?> cardPaymentDay;
+  final Value<int?> cardClosingDay;
+  final Value<String?> cardPaymentAccountUuid;
+  final Value<String?> fundPurpose;
   final Value<String> color;
   final Value<bool> excludeFromTotal;
   final Value<bool> isInvestment;
@@ -676,6 +864,10 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.kind = const Value.absent(),
     this.initialBalance = const Value.absent(),
     this.cardLimit = const Value.absent(),
+    this.cardPaymentDay = const Value.absent(),
+    this.cardClosingDay = const Value.absent(),
+    this.cardPaymentAccountUuid = const Value.absent(),
+    this.fundPurpose = const Value.absent(),
     this.color = const Value.absent(),
     this.excludeFromTotal = const Value.absent(),
     this.isInvestment = const Value.absent(),
@@ -693,6 +885,10 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required String kind,
     this.initialBalance = const Value.absent(),
     this.cardLimit = const Value.absent(),
+    this.cardPaymentDay = const Value.absent(),
+    this.cardClosingDay = const Value.absent(),
+    this.cardPaymentAccountUuid = const Value.absent(),
+    this.fundPurpose = const Value.absent(),
     this.color = const Value.absent(),
     this.excludeFromTotal = const Value.absent(),
     this.isInvestment = const Value.absent(),
@@ -711,6 +907,10 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? kind,
     Expression<int>? initialBalance,
     Expression<int>? cardLimit,
+    Expression<int>? cardPaymentDay,
+    Expression<int>? cardClosingDay,
+    Expression<String>? cardPaymentAccountUuid,
+    Expression<String>? fundPurpose,
     Expression<String>? color,
     Expression<bool>? excludeFromTotal,
     Expression<bool>? isInvestment,
@@ -728,6 +928,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (kind != null) 'kind': kind,
       if (initialBalance != null) 'initial_balance': initialBalance,
       if (cardLimit != null) 'card_limit': cardLimit,
+      if (cardPaymentDay != null) 'card_payment_day': cardPaymentDay,
+      if (cardClosingDay != null) 'card_closing_day': cardClosingDay,
+      if (cardPaymentAccountUuid != null)
+        'card_payment_account_uuid': cardPaymentAccountUuid,
+      if (fundPurpose != null) 'fund_purpose': fundPurpose,
       if (color != null) 'color': color,
       if (excludeFromTotal != null) 'exclude_from_total': excludeFromTotal,
       if (isInvestment != null) 'is_investment': isInvestment,
@@ -747,6 +952,10 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String>? kind,
     Value<int>? initialBalance,
     Value<int?>? cardLimit,
+    Value<int?>? cardPaymentDay,
+    Value<int?>? cardClosingDay,
+    Value<String?>? cardPaymentAccountUuid,
+    Value<String?>? fundPurpose,
     Value<String>? color,
     Value<bool>? excludeFromTotal,
     Value<bool>? isInvestment,
@@ -764,6 +973,11 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       kind: kind ?? this.kind,
       initialBalance: initialBalance ?? this.initialBalance,
       cardLimit: cardLimit ?? this.cardLimit,
+      cardPaymentDay: cardPaymentDay ?? this.cardPaymentDay,
+      cardClosingDay: cardClosingDay ?? this.cardClosingDay,
+      cardPaymentAccountUuid:
+          cardPaymentAccountUuid ?? this.cardPaymentAccountUuid,
+      fundPurpose: fundPurpose ?? this.fundPurpose,
       color: color ?? this.color,
       excludeFromTotal: excludeFromTotal ?? this.excludeFromTotal,
       isInvestment: isInvestment ?? this.isInvestment,
@@ -796,6 +1010,20 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     }
     if (cardLimit.present) {
       map['card_limit'] = Variable<int>(cardLimit.value);
+    }
+    if (cardPaymentDay.present) {
+      map['card_payment_day'] = Variable<int>(cardPaymentDay.value);
+    }
+    if (cardClosingDay.present) {
+      map['card_closing_day'] = Variable<int>(cardClosingDay.value);
+    }
+    if (cardPaymentAccountUuid.present) {
+      map['card_payment_account_uuid'] = Variable<String>(
+        cardPaymentAccountUuid.value,
+      );
+    }
+    if (fundPurpose.present) {
+      map['fund_purpose'] = Variable<String>(fundPurpose.value);
     }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
@@ -836,6 +1064,10 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('kind: $kind, ')
           ..write('initialBalance: $initialBalance, ')
           ..write('cardLimit: $cardLimit, ')
+          ..write('cardPaymentDay: $cardPaymentDay, ')
+          ..write('cardClosingDay: $cardClosingDay, ')
+          ..write('cardPaymentAccountUuid: $cardPaymentAccountUuid, ')
+          ..write('fundPurpose: $fundPurpose, ')
           ..write('color: $color, ')
           ..write('excludeFromTotal: $excludeFromTotal, ')
           ..write('isInvestment: $isInvestment, ')
@@ -12205,6 +12437,10 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required String kind,
       Value<int> initialBalance,
       Value<int?> cardLimit,
+      Value<int?> cardPaymentDay,
+      Value<int?> cardClosingDay,
+      Value<String?> cardPaymentAccountUuid,
+      Value<String?> fundPurpose,
       Value<String> color,
       Value<bool> excludeFromTotal,
       Value<bool> isInvestment,
@@ -12223,6 +12459,10 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> kind,
       Value<int> initialBalance,
       Value<int?> cardLimit,
+      Value<int?> cardPaymentDay,
+      Value<int?> cardClosingDay,
+      Value<String?> cardPaymentAccountUuid,
+      Value<String?> fundPurpose,
       Value<String> color,
       Value<bool> excludeFromTotal,
       Value<bool> isInvestment,
@@ -12506,6 +12746,26 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<int> get cardLimit => $composableBuilder(
     column: $table.cardLimit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cardPaymentDay => $composableBuilder(
+    column: $table.cardPaymentDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cardClosingDay => $composableBuilder(
+    column: $table.cardClosingDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cardPaymentAccountUuid => $composableBuilder(
+    column: $table.cardPaymentAccountUuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fundPurpose => $composableBuilder(
+    column: $table.fundPurpose,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12872,6 +13132,26 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get cardPaymentDay => $composableBuilder(
+    column: $table.cardPaymentDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cardClosingDay => $composableBuilder(
+    column: $table.cardClosingDay,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cardPaymentAccountUuid => $composableBuilder(
+    column: $table.cardPaymentAccountUuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fundPurpose => $composableBuilder(
+    column: $table.fundPurpose,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get color => $composableBuilder(
     column: $table.color,
     builder: (column) => ColumnOrderings(column),
@@ -12946,6 +13226,26 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<int> get cardLimit =>
       $composableBuilder(column: $table.cardLimit, builder: (column) => column);
+
+  GeneratedColumn<int> get cardPaymentDay => $composableBuilder(
+    column: $table.cardPaymentDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get cardClosingDay => $composableBuilder(
+    column: $table.cardClosingDay,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cardPaymentAccountUuid => $composableBuilder(
+    column: $table.cardPaymentAccountUuid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fundPurpose => $composableBuilder(
+    column: $table.fundPurpose,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
@@ -13310,6 +13610,10 @@ class $$AccountsTableTableManager
                 Value<String> kind = const Value.absent(),
                 Value<int> initialBalance = const Value.absent(),
                 Value<int?> cardLimit = const Value.absent(),
+                Value<int?> cardPaymentDay = const Value.absent(),
+                Value<int?> cardClosingDay = const Value.absent(),
+                Value<String?> cardPaymentAccountUuid = const Value.absent(),
+                Value<String?> fundPurpose = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<bool> excludeFromTotal = const Value.absent(),
                 Value<bool> isInvestment = const Value.absent(),
@@ -13326,6 +13630,10 @@ class $$AccountsTableTableManager
                 kind: kind,
                 initialBalance: initialBalance,
                 cardLimit: cardLimit,
+                cardPaymentDay: cardPaymentDay,
+                cardClosingDay: cardClosingDay,
+                cardPaymentAccountUuid: cardPaymentAccountUuid,
+                fundPurpose: fundPurpose,
                 color: color,
                 excludeFromTotal: excludeFromTotal,
                 isInvestment: isInvestment,
@@ -13344,6 +13652,10 @@ class $$AccountsTableTableManager
                 required String kind,
                 Value<int> initialBalance = const Value.absent(),
                 Value<int?> cardLimit = const Value.absent(),
+                Value<int?> cardPaymentDay = const Value.absent(),
+                Value<int?> cardClosingDay = const Value.absent(),
+                Value<String?> cardPaymentAccountUuid = const Value.absent(),
+                Value<String?> fundPurpose = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<bool> excludeFromTotal = const Value.absent(),
                 Value<bool> isInvestment = const Value.absent(),
@@ -13360,6 +13672,10 @@ class $$AccountsTableTableManager
                 kind: kind,
                 initialBalance: initialBalance,
                 cardLimit: cardLimit,
+                cardPaymentDay: cardPaymentDay,
+                cardClosingDay: cardClosingDay,
+                cardPaymentAccountUuid: cardPaymentAccountUuid,
+                fundPurpose: fundPurpose,
                 color: color,
                 excludeFromTotal: excludeFromTotal,
                 isInvestment: isInvestment,

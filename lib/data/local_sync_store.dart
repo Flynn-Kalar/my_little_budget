@@ -417,6 +417,15 @@ WHERE uuid = ?
     final values = <String, Object?>{};
     for (final column in _payloadColumns[entity]!) {
       if (!payload.containsKey(column)) {
+        if (entity == 'accounts' &&
+            const {
+              'card_payment_day',
+              'card_closing_day',
+              'card_payment_account_uuid',
+              'fund_purpose',
+            }.contains(column)) {
+          continue; // Older clients preserve account settings; new rows use NULL.
+        }
         if ((entity == 'recurring_transactions' || entity == 'notes') &&
             column == 'sort_order') {
           continue; // Older clients preserve the local order; new rows use zero.
@@ -735,6 +744,11 @@ ON CONFLICT(key) DO UPDATE SET value = excluded.value
       return row.data['kind'] == item.kind &&
           row.data['initial_balance'] == 0 &&
           row.data['card_limit'] == null &&
+          row.data['card_payment_day'] == null &&
+          row.data['card_closing_day'] == null &&
+          row.data['card_payment_account_uuid'] == null &&
+          (row.data['fund_purpose'] == null ||
+              row.data['fund_purpose'] == 'living') &&
           row.data['color'] == item.color &&
           !_sqliteBool(row.data['exclude_from_total']) &&
           _sqliteBool(row.data['is_investment']) == item.isInvestment &&
@@ -819,6 +833,10 @@ const _payloadColumns = <String, List<String>>{
     'kind',
     'initial_balance',
     'card_limit',
+    'card_payment_day',
+    'card_closing_day',
+    'card_payment_account_uuid',
+    'fund_purpose',
     'color',
     'exclude_from_total',
     'is_investment',

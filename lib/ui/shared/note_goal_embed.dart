@@ -53,6 +53,9 @@ class _GoalBlockDialogState extends State<_GoalBlockDialog> {
       draft.current.text = formatNoteAmount(block.goal.currentAmount);
       draft.start = block.goal.startDate;
       draft.due = block.goal.dueDate;
+      draft.source = block.goal.source;
+      draft.accountUuid = block.goal.accountUuid;
+      draft.tagUuid = block.goal.tagUuid;
     }
   }
 
@@ -81,6 +84,7 @@ class _GoalBlockDialogState extends State<_GoalBlockDialog> {
               NoteGoalForm(
                 draft: draft,
                 showAdditionControls: widget.showAdditionControls,
+                allowLinking: true,
               ),
               if (error != null)
                 Text(

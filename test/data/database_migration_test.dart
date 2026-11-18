@@ -4,6 +4,65 @@ import 'package:my_little_budget/data/database.dart';
 import 'package:my_little_budget/data/sync_metadata.dart';
 
 void main() {
+  test('v26 accounts retain balances and gain optional card settings', () async {
+    final db = AppDatabase.forTesting(
+      NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''CREATE TABLE accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL UNIQUE, kind TEXT NOT NULL,
+        initial_balance INTEGER NOT NULL DEFAULT 0, card_limit INTEGER,
+        color TEXT NOT NULL DEFAULT '#94a3b8',
+        exclude_from_total INTEGER NOT NULL DEFAULT 0,
+        is_investment INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0,
+        archived_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        deleted_at TEXT, sync_status TEXT NOT NULL DEFAULT 'pending')''');
+          raw.execute(
+            "INSERT INTO accounts (uuid, name, kind, initial_balance, created_at, updated_at) VALUES ('existing-card', '기존 카드', 'card', -123456, '2026-11-01', '2026-11-01')",
+          );
+          raw.execute('PRAGMA user_version = 26');
+        },
+      ),
+    );
+    addTearDown(db.close);
+    final account = (await db.accountsDao.getActiveAccounts()).single;
+    expect(account.initialBalance, -123456);
+    expect(account.uuid, 'existing-card');
+    expect(account.cardPaymentDay, isNull);
+    expect(account.cardClosingDay, isNull);
+    expect(account.cardPaymentAccountUuid, isNull);
+    expect(account.fundPurpose, isNull);
+  });
+  test(
+    'v27 accounts retain card settings and gain optional fund purpose',
+    () async {
+      final db = AppDatabase.forTesting(
+        NativeDatabase.memory(
+          setup: (raw) {
+            raw.execute('''CREATE TABLE accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL UNIQUE, kind TEXT NOT NULL,
+        initial_balance INTEGER NOT NULL DEFAULT 0, card_limit INTEGER,
+        card_payment_day INTEGER, card_closing_day INTEGER, card_payment_account_uuid TEXT,
+        color TEXT NOT NULL DEFAULT '#94a3b8', exclude_from_total INTEGER NOT NULL DEFAULT 0,
+        is_investment INTEGER NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0,
+        archived_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        deleted_at TEXT, sync_status TEXT NOT NULL DEFAULT 'pending')''');
+            raw.execute(
+              "INSERT INTO accounts (uuid, name, kind, initial_balance, card_payment_day, card_closing_day, created_at, updated_at) VALUES ('card', '기존 카드', 'card', -123456, 14, 31, '2026-11-01', '2026-11-01')",
+            );
+            raw.execute('PRAGMA user_version = 27');
+          },
+        ),
+      );
+      addTearDown(db.close);
+      final account = (await db.accountsDao.getActiveAccounts()).single;
+      expect(account.initialBalance, -123456);
+      expect(account.cardPaymentDay, 14);
+      expect(account.cardClosingDay, 31);
+      expect(account.fundPurpose, isNull);
+    },
+  );
   test(
     'repairs nullable tag fields and creates readable tags after upgrade',
     () async {

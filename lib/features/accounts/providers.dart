@@ -13,9 +13,11 @@ final accountBalancesProvider =
       final dao = ref.watch(accountsDaoProvider);
       final today = ref.watch(statementTodayProvider);
       final policy = await ref.watch(statementPeriodProvider.future);
+      final period = policy.range(policy.anchorForDate(today));
       return dao.getAccountBalances(
         asOf: today,
-        statementEnd: policy.range(policy.anchorForDate(today)).end,
+        statementStart: period.start,
+        statementEnd: period.end,
       );
     });
 

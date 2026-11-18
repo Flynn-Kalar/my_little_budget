@@ -7,7 +7,10 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../data/daos/accounts_dao.dart';
 import '../../../../data/providers.dart';
 import '../../../../features/accounts/validation.dart';
+import '../../../../features/settings/statement_period.dart';
 import '../../../shared/amount_input_formatter.dart';
+import '../../../shared/card_billing_fields.dart';
+import '../../../shared/fund_purpose.dart';
 import '../../../../features/accounts/account_refresh.dart';
 import 'color_swatch_picker.dart';
 
@@ -34,12 +37,21 @@ class _State extends ConsumerState<AccountFormDialog> {
     text: widget.account?.name ?? '',
   );
   late final _balanceCtrl = TextEditingController(
-    text: formatAmountInput((widget.account?.balance ?? 0).toString()),
+    text: formatAmountInput(
+      (widget.account?.kind == 'card'
+              ? widget.account!.cardSpendingToDate
+              : widget.account?.balance ?? 0)
+          .toString(),
+    ),
   );
   late final _cardLimitCtrl = TextEditingController(
     text: formatAmountInput(widget.account?.cardLimit?.toString() ?? ''),
   );
   late String _kind = widget.account?.kind ?? 'bank';
+  late String _fundPurpose = widget.account?.fundPurpose ?? 'living';
+  late int? _paymentDay = widget.account?.cardPaymentDay;
+  late int? _closingDay = widget.account?.cardClosingDay;
+  late String? _paymentAccountUuid = widget.account?.cardPaymentAccountUuid;
   late String _color =
       widget.account?.color ?? randomColor(); // 신규는 마운트 시 1회 랜덤
   late bool _excludeFromTotal = widget.account?.excludeFromTotal ?? false;
@@ -47,6 +59,19 @@ class _State extends ConsumerState<AccountFormDialog> {
   bool _busy = false;
 
   bool get _isEditing => widget.account != null;
+
+  void _changeKind(String kind) {
+    if (kind == _kind) return;
+    setState(() {
+      _kind = kind;
+      _balanceCtrl.text = formatAmountInput(
+        (kind == 'card'
+                ? widget.account?.cardSpendingToDate ?? 0
+                : widget.account?.balance ?? 0)
+            .toString(),
+      );
+    });
+  }
 
   @override
   void dispose() {
@@ -64,6 +89,12 @@ class _State extends ConsumerState<AccountFormDialog> {
       name: _nameCtrl.text,
       kind: _kind,
       cardLimit: cardLimit,
+      fundPurpose: (_kind == 'bank' || _kind == 'cash') && !_isInvestment
+          ? _fundPurpose
+          : 'living',
+      cardPaymentDay: _kind == 'card' ? _paymentDay : null,
+      cardClosingDay: _kind == 'card' ? _closingDay : null,
+      cardPaymentAccountUuid: _kind == 'card' ? _paymentAccountUuid : null,
       color: _color,
       excludeFromTotal: _excludeFromTotal,
       isInvestment: _isInvestment,
@@ -76,18 +107,33 @@ class _State extends ConsumerState<AccountFormDialog> {
     }
     setState(() => _busy = true);
     try {
+      final today = ref.read(statementTodayProvider);
+      final policy = await ref.read(statementPeriodProvider.future);
+      final period = policy.range(policy.anchorForDate(today));
       await ref
           .read(accountsDaoProvider)
           .saveAccount(
             id: widget.account?.accountId,
             draft: result.value!,
             currentBalance: parseKRW(_balanceCtrl.text),
+            asOf: today,
+            currentCardSpending: _kind == 'card'
+                ? parseKRW(_balanceCtrl.text)
+                : null,
+            statementStart: period.start,
+            statementEnd: period.end,
           );
       refreshAccountMetadata(ref, accountId: widget.account?.accountId);
       if (widget.account != null) {
         refreshAccountTransactionMutation(ref, widget.account!.accountId);
       }
       if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('자산 저장에 실패했습니다: $error')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -160,9 +206,32 @@ class _State extends ConsumerState<AccountFormDialog> {
                           DropdownMenuItem(value: e.key, child: Text(e.value)),
                     )
                     .toList(),
-                onChanged: (v) => setState(() => _kind = v ?? 'bank'),
+                onChanged: _busy ? null : (v) => _changeKind(v ?? 'bank'),
               ),
+              if ((_kind == 'bank' || _kind == 'cash') && !_isInvestment) ...[
+                const SizedBox(height: 12),
+                FundPurposeField(
+                  value: _fundPurpose,
+                  onChanged: _busy
+                      ? null
+                      : (value) => setState(() => _fundPurpose = value),
+                ),
+              ],
               if (_kind == 'card') ...[
+                const SizedBox(height: 12),
+                CardBillingFields(
+                  paymentDay: _paymentDay,
+                  closingDay: _closingDay,
+                  paymentAccountUuid: _paymentAccountUuid,
+                  paymentAccountName: widget.account?.cardPaymentAccountName,
+                  enabled: !_busy,
+                  onPaymentDayChanged: (value) =>
+                      setState(() => _paymentDay = value),
+                  onClosingDayChanged: (value) =>
+                      setState(() => _closingDay = value),
+                  onPaymentAccountChanged: (value) =>
+                      setState(() => _paymentAccountUuid = value),
+                ),
                 SizedBox(height: 12),
                 TextField(
                   controller: _cardLimitCtrl,
@@ -183,11 +252,18 @@ class _State extends ConsumerState<AccountFormDialog> {
                 keyboardType: TextInputType.number,
                 inputFormatters: const [amountInputFormatter],
                 decoration: InputDecoration(
-                  labelText: _isEditing ? '현재 잔액' : '초기 잔액',
+                  labelText: _kind == 'card'
+                      ? '오늘까지 쓴 금액'
+                      : _isEditing
+                      ? '현재 잔액'
+                      : '초기 잔액',
                   isDense: true,
                   border: const OutlineInputBorder(),
-                  helperText: _isEditing
-                      ? '변경분은 오늘 날짜의 잔액 조정 거래로 기록됩니다.'
+                  helperMaxLines: 3,
+                  helperText: _kind == 'card'
+                      ? '이번 달 오늘까지의 사용액을 입력하세요. 변경분은 오늘의 사용액 조정으로 기록하고 예정 지출은 유지합니다.'
+                      : _isEditing
+                      ? '오늘까지의 잔액을 수정합니다. 예정 거래는 그대로 두고 변경분을 오늘의 잔액 조정으로 기록합니다.'
                       : null,
                 ),
               ),

@@ -11,6 +11,8 @@ import '../../../../features/accounts/account_refresh.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import 'account_form_dialog.dart';
 import '../../../shared/bulk_manage_button.dart';
+import '../../../shared/account_financial_summary.dart';
+import '../../../../features/accounts/fund_purpose.dart';
 
 const _kindLabels = {'cash': '현금', 'bank': '은행', 'card': '카드', 'other': '기타'};
 
@@ -231,29 +233,52 @@ class _DisplayRow extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _ColorDot(color: account.color),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(account.name, style: TextStyle(fontSize: 14)),
+              Row(
+                children: [
+                  _ColorDot(color: account.color),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          account.name,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        if (account.fundPurpose != 'living')
+                          Text(
+                            fundPurposeLabels[account.fundPurpose]!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.desktopMuted,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _Meta(account: account),
+                  SizedBox(width: 8),
+                  SizedBox(width: 200, child: _BalanceText(account: account)),
+                  SizedBox(
+                    width: 30,
+                    child: showEditIcon
+                        ? IconButton(
+                            key: ValueKey('account-edit-${account.accountId}'),
+                            icon: Icon(Icons.edit_outlined, size: 16),
+                            color: context.desktopMuted,
+                            tooltip: '편집',
+                            onPressed: onEdit,
+                            visualDensity: VisualDensity.compact,
+                          )
+                        : null,
+                  ),
+                ],
               ),
-              _Meta(account: account),
-              SizedBox(width: 8),
-              SizedBox(width: 150, child: _BalanceText(account: account)),
-              SizedBox(
-                width: 30,
-                child: showEditIcon
-                    ? IconButton(
-                        key: ValueKey('account-edit-${account.accountId}'),
-                        icon: Icon(Icons.edit_outlined, size: 16),
-                        color: context.desktopMuted,
-                        tooltip: '편집',
-                        onPressed: onEdit,
-                        visualDensity: VisualDensity.compact,
-                      )
-                    : null,
-              ),
+              if (account.kind == 'card')
+                AccountFinancialSummary(account: account, showBalances: false),
             ],
           ),
         ),
@@ -384,14 +409,50 @@ class _BalanceText extends StatelessWidget {
   final AccountBalance account;
   @override
   Widget build(BuildContext context) {
+    if (account.kind == 'card') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '오늘까지 쓴 금액 ${formatKRW(account.cardSpendingToDate)}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: context.desktopExpense,
+            ),
+          ),
+          Text(
+            '이번 달 전체 지출액 ${formatKRW(account.cardMonthSpending)}',
+            style: TextStyle(fontSize: 11, color: context.desktopMuted),
+          ),
+          Text(
+            '예정 지출 포함 · 상환 이체 제외',
+            style: TextStyle(fontSize: 10, color: context.desktopMuted),
+          ),
+        ],
+      );
+    }
     final color = account.excludeFromTotal
         ? context.desktopMuted
         : account.balance < 0
         ? context.desktopExpense
         : null;
-    return Text(
-      formatKRW(account.balance),
-      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '오늘 ${formatKRW(account.balance)}',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        Text(
+          '이번 달 예상 ${formatKRW(account.projectedBalance)}',
+          style: TextStyle(fontSize: 11, color: context.desktopMuted),
+        ),
+      ],
     );
   }
 }

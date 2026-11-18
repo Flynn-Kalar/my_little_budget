@@ -8,10 +8,15 @@ import '../../../data/daos/accounts_dao.dart';
 import '../../../data/database.dart';
 import '../../../data/providers.dart';
 import '../../../features/accounts/validation.dart';
+import '../../../features/accounts/account_refresh.dart';
+import '../../../features/settings/statement_period.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import '../mobile_widgets.dart';
 import '../../shared/bulk_manage_button.dart';
 import '../../shared/inline_order_editor.dart';
+import '../../shared/card_billing_fields.dart';
+import '../../shared/account_financial_summary.dart';
+import '../../shared/fund_purpose.dart';
 
 class MobileAccountsScreen extends ConsumerWidget {
   const MobileAccountsScreen({super.key});
@@ -89,6 +94,20 @@ class MobileAccountsScreen extends ConsumerWidget {
                           value: formatKRW(netWorth),
                           valueColor: netWorth < 0 ? expense : income,
                         ),
+                        AmountLine(
+                          label: '이번 달 예상 순자산',
+                          value: formatKRW(
+                            included.fold<int>(
+                              0,
+                              (sum, row) => sum + row.projectedBalance,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          '현재 잔액은 오늘까지 · 예상 잔액은 등록된 예정 거래 포함',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        FundPurposeSummary(accounts: value),
                       ],
                     ),
                   ),
@@ -170,125 +189,117 @@ class _AccountCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final income = context.appIncome;
-    final expense = context.appExpense;
     return MobileCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: InkWell(
         onTap: () => context.go('/accounts/${account.accountId}'),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              child: Icon(
-                _kindIcon(account.kind, account.isInvestment),
-                size: 18,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    account.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.onSurface,
-                    ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  child: Icon(
+                    _kindIcon(account.kind, account.isInvestment),
+                    size: 18,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.78),
                   ),
-                  const SizedBox(height: 3),
-                  Row(
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _kindLabel(account.kind),
+                        account.name,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.78,
-                          ),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
-                      if (account.isInvestment) ...[
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.trending_up,
-                          size: 14,
-                          color: context.appIncome,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          '투자',
-                          style: TextStyle(
-                            color: context.appIncome,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Text(
+                            _kindLabel(account.kind),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.78,
+                              ),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                      ],
+                          if (account.isInvestment) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.trending_up,
+                              size: 14,
+                              color: context.appIncome,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '투자',
+                              style: TextStyle(
+                                color: context.appIncome,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 132),
-              child: Text(
-                formatKRW(account.balance),
-                textAlign: TextAlign.end,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: account.balance < 0 ? expense : income,
-                  fontWeight: FontWeight.w900,
                 ),
-              ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 42,
+                  child: PopupMenuButton<String>(
+                    tooltip: '자산 메뉴',
+                    iconSize: 22,
+                    padding: EdgeInsets.zero,
+                    onSelected: (value) {
+                      if (value == 'detail') {
+                        context.go('/accounts/${account.accountId}');
+                      } else if (value == 'edit') {
+                        _AccountSheet.show(context, account: account);
+                      } else if (value == 'archive') {
+                        _archive(context, ref);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'detail',
+                        child: ListTile(
+                          leading: Icon(Icons.receipt_long_outlined),
+                          title: Text('거래내역 보기'),
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(
+                          leading: Icon(Icons.edit_outlined),
+                          title: Text('수정'),
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'archive',
+                        child: ListTile(
+                          leading: Icon(Icons.archive_outlined),
+                          title: Text('보관'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            SizedBox(
-              width: 42,
-              child: PopupMenuButton<String>(
-                tooltip: '자산 메뉴',
-                iconSize: 22,
-                padding: EdgeInsets.zero,
-                onSelected: (value) {
-                  if (value == 'detail') {
-                    context.go('/accounts/${account.accountId}');
-                  } else if (value == 'edit') {
-                    _AccountSheet.show(context, account: account);
-                  } else if (value == 'archive') {
-                    _archive(context, ref);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'detail',
-                    child: ListTile(
-                      leading: Icon(Icons.receipt_long_outlined),
-                      title: Text('거래내역 보기'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: ListTile(
-                      leading: Icon(Icons.edit_outlined),
-                      title: Text('수정'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'archive',
-                    child: ListTile(
-                      leading: Icon(Icons.archive_outlined),
-                      title: Text('보관'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 6),
+            AccountFinancialSummary(account: account),
           ],
         ),
       ),
@@ -400,17 +411,37 @@ class _AccountSheet extends ConsumerStatefulWidget {
 class _AccountSheetState extends ConsumerState<_AccountSheet> {
   late final _name = TextEditingController(text: widget.account?.name ?? '');
   late final _balance = TextEditingController(
-    text: (widget.account?.balance ?? 0).toString(),
+    text:
+        (widget.account?.kind == 'card'
+                ? widget.account!.cardSpendingToDate
+                : widget.account?.balance ?? 0)
+            .toString(),
   );
   late final _cardLimit = TextEditingController(
     text: widget.account?.cardLimit?.toString() ?? '',
   );
   late String _kind = widget.account?.kind ?? 'bank';
+  late String _fundPurpose = widget.account?.fundPurpose ?? 'living';
+  late int? _paymentDay = widget.account?.cardPaymentDay;
+  late int? _closingDay = widget.account?.cardClosingDay;
+  late String? _paymentAccountUuid = widget.account?.cardPaymentAccountUuid;
   late bool _exclude = widget.account?.excludeFromTotal ?? false;
   late bool _investment = widget.account?.isInvestment ?? false;
   bool _busy = false;
 
   bool get _isEdit => widget.account != null;
+
+  void _changeKind(String kind) {
+    if (kind == _kind) return;
+    setState(() {
+      _kind = kind;
+      _balance.text =
+          (kind == 'card'
+                  ? widget.account?.cardSpendingToDate ?? 0
+                  : widget.account?.balance ?? 0)
+              .toString();
+    });
+  }
 
   @override
   void dispose() {
@@ -429,25 +460,44 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
       kind: _kind,
       initialBalance: parseKRW(_balance.text),
       cardLimit: cardLimit,
+      fundPurpose: (_kind == 'bank' || _kind == 'cash') && !_investment
+          ? _fundPurpose
+          : 'living',
+      cardPaymentDay: _kind == 'card' ? _paymentDay : null,
+      cardClosingDay: _kind == 'card' ? _closingDay : null,
+      cardPaymentAccountUuid: _kind == 'card' ? _paymentAccountUuid : null,
+      color: widget.account?.color ?? '#94a3b8',
       excludeFromTotal: _exclude,
       isInvestment: _investment,
     );
     if (result.isFail) {
-      _showSnack('자산 이름을 입력해주세요.');
+      _showSnack(result.errors.values.first);
       return;
     }
 
     setState(() => _busy = true);
     try {
+      final today = ref.read(statementTodayProvider);
+      final policy = await ref.read(statementPeriodProvider.future);
+      final period = policy.range(policy.anchorForDate(today));
       await ref
           .read(accountsDaoProvider)
           .saveAccount(
             id: widget.account?.accountId,
             draft: result.value!,
             currentBalance: parseKRW(_balance.text),
+            asOf: today,
+            currentCardSpending: _kind == 'card'
+                ? parseKRW(_balance.text)
+                : null,
+            statementStart: period.start,
+            statementEnd: period.end,
           );
       if (!mounted) return;
-      refreshAccountsList(ref);
+      refreshAccountMetadata(ref, accountId: widget.account?.accountId);
+      if (widget.account != null) {
+        refreshAccountTransactionMutation(ref, widget.account!.accountId);
+      }
       Navigator.pop(context);
       _showSnack(_isEdit ? '자산을 수정했습니다.' : '자산을 추가했습니다.');
     } catch (e) {
@@ -533,16 +583,37 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
                 DropdownMenuItem(value: 'card', child: Text('카드')),
                 DropdownMenuItem(value: 'other', child: Text('기타')),
               ],
-              onChanged: _busy
-                  ? null
-                  : (value) => setState(() => _kind = value!),
+              onChanged: _busy ? null : (value) => _changeKind(value!),
               decoration: const InputDecoration(
                 labelText: '종류',
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
+            if ((_kind == 'bank' || _kind == 'cash') && !_investment) ...[
+              FundPurposeField(
+                value: _fundPurpose,
+                onChanged: _busy
+                    ? null
+                    : (value) => setState(() => _fundPurpose = value),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (_kind == 'card') ...[
+              CardBillingFields(
+                paymentDay: _paymentDay,
+                closingDay: _closingDay,
+                paymentAccountUuid: _paymentAccountUuid,
+                paymentAccountName: widget.account?.cardPaymentAccountName,
+                enabled: !_busy,
+                onPaymentDayChanged: (value) =>
+                    setState(() => _paymentDay = value),
+                onClosingDayChanged: (value) =>
+                    setState(() => _closingDay = value),
+                onPaymentAccountChanged: (value) =>
+                    setState(() => _paymentAccountUuid = value),
+              ),
+              const SizedBox(height: 12),
               MobileAmountField(
                 controller: _cardLimit,
                 enabled: !_busy,
@@ -554,7 +625,16 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
             MobileAmountField(
               controller: _balance,
               enabled: !_busy,
-              label: '현재 금액',
+              label: _kind == 'card'
+                  ? '오늘까지 쓴 금액'
+                  : _isEdit
+                  ? '현재 잔액'
+                  : '초기 잔액',
+              helperText: _kind == 'card'
+                  ? '이번 달 사용액 수정 · 예정 지출 유지'
+                  : _isEdit
+                  ? '오늘까지의 잔액을 수정합니다. 예정 거래를 제외한 차액을 오늘의 잔액 조정으로 기록합니다.'
+                  : null,
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -77,6 +77,22 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (m, from, to) async {
+      if (from < 28 &&
+          await _tableExists('accounts') &&
+          !await _columnExists('accounts', 'fund_purpose')) {
+        await m.addColumn(accounts, accounts.fundPurpose);
+      }
+      if (from < 27 && await _tableExists('accounts')) {
+        for (final column in [
+          accounts.cardPaymentDay,
+          accounts.cardClosingDay,
+          accounts.cardPaymentAccountUuid,
+        ]) {
+          if (!await _columnExists('accounts', column.$name)) {
+            await m.addColumn(accounts, column);
+          }
+        }
+      }
       if (from < 26 &&
           await _tableExists('notes') &&
           !await _columnExists('notes', 'sort_order')) {

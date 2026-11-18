@@ -28,6 +28,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('복원'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('보관된 자산'), findsOneWidget);
     await tester.tap(find.text('복원'));
     await tester.pumpAndSettle();

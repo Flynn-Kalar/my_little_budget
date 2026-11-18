@@ -15,6 +15,10 @@ class Accounts extends Table {
   )();
   IntColumn get initialBalance => integer().withDefault(const Constant(0))();
   IntColumn get cardLimit => integer().nullable()();
+  IntColumn get cardPaymentDay => integer().nullable()();
+  IntColumn get cardClosingDay => integer().nullable()();
+  TextColumn get cardPaymentAccountUuid => text().nullable()();
+  TextColumn get fundPurpose => text().nullable()();
   TextColumn get color => text().withDefault(const Constant('#94a3b8'))();
   BoolColumn get excludeFromTotal =>
       boolean().withDefault(const Constant(false))();
