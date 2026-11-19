@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../core/colors.dart';
 import '../../core/date.dart';
+import '../../features/accounts/card_billing.dart';
 import '../../features/investments/cost_basis.dart';
 import '../../features/transactions/validation.dart';
 import '../database.dart';
@@ -57,6 +58,7 @@ class TransactionRow {
     this.costBasis,
     this.balanceImpact,
     this.balanceAfter,
+    this.cardSpendingAfter,
   });
 
   final int id;
@@ -87,6 +89,9 @@ class TransactionRow {
   final int? costBasis;
   final int? balanceImpact;
   final int? balanceAfter;
+
+  /// Usage in this row's period after the transaction; excludes repayments.
+  final int? cardSpendingAfter;
 }
 
 /// SPEC §4.5 — 지출 카테고리 도넛/범례.
@@ -640,7 +645,10 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
   /// SPEC §4.3 — 자산 상세의 거래 목록. 일반 거래(income/expense/transfer/adjustment)
   /// + 그 자산에 귀속된 투자 이벤트를 가상 행으로 끼워넣고 최신순 정렬.
   /// 같은 시각이면 일반 거래 > 투자 (안정 정렬).
-  Future<List<TransactionRow>> listTransactionsByAccount(int accountId) async {
+  Future<List<TransactionRow>> listTransactionsByAccount(
+    int accountId, {
+    String Function(DateTime date)? fallbackSpendingPeriodKey,
+  }) async {
     final account = await (select(
       accounts,
     )..where((a) => a.id.equals(accountId))).getSingleOrNull();
@@ -728,6 +736,8 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
 
     var runningBalance = initialBalance;
     final balanceAfterByKey = <String, int>{};
+    final spendingByPeriod = <String, int>{};
+    final spendingAfterByKey = <String, int>{};
     final ledgerRows = [...merged]
       ..sort((a, b) {
         final d = a.occurredOn.compareTo(b.occurredOn);
@@ -742,10 +752,31 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     for (final row in ledgerRows) {
       runningBalance += _accountBalanceImpact(row, accountId);
       balanceAfterByKey[_accountRowKey(row)] = runningBalance;
+      if (account?.kind == 'card') {
+        final date = DateTime.parse(row.occurredOn);
+        final closingDay = account!.cardClosingDay;
+        final periodKey = closingDay != null
+            ? cardSpendingPeriod(date, closingDay).start
+            : fallbackSpendingPeriodKey?.call(date) ?? toMonthKey(date);
+        final impact = row.source == 'investment'
+            ? 0
+            : switch (row.type) {
+                'expense' => row.amount,
+                'income' || 'adjustment' => -row.amount,
+                _ => 0,
+              };
+        final spending = (spendingByPeriod[periodKey] ?? 0) + impact;
+        spendingByPeriod[periodKey] = spending;
+        spendingAfterByKey[_accountRowKey(row)] = spending;
+      }
     }
     return [
       for (final row in merged)
-        _rowWithBalanceAfter(row, balanceAfterByKey[_accountRowKey(row)]),
+        _rowWithBalanceAfter(
+          row,
+          balanceAfterByKey[_accountRowKey(row)],
+          spendingAfterByKey[_accountRowKey(row)],
+        ),
     ];
   }
 
@@ -1094,7 +1125,11 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  TransactionRow _rowWithBalanceAfter(TransactionRow row, int? balanceAfter) {
+  TransactionRow _rowWithBalanceAfter(
+    TransactionRow row,
+    int? balanceAfter,
+    int? cardSpendingAfter,
+  ) {
     return TransactionRow(
       id: row.id,
       type: row.type,
@@ -1122,6 +1157,7 @@ class TransactionsDao extends DatabaseAccessor<AppDatabase>
       costBasis: row.costBasis,
       balanceImpact: row.balanceImpact,
       balanceAfter: balanceAfter,
+      cardSpendingAfter: cardSpendingAfter,
     );
   }
 }

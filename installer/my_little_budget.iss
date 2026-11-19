@@ -41,14 +41,39 @@ SetupLogging=yes
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "바탕 화면 바로가기 만들기"; GroupDescription: "추가 아이콘:"; Flags: unchecked
+Name: "desktopicon"; Description: "바탕 화면 바로가기 만들기"; GroupDescription: "추가 아이콘:"; Flags: unchecked; Check: IsFirstInstall
 
 [Files]
 Source: "..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Excludes: "*.stale*"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Check: IsFirstInstall
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{#MyAppName} 실행"; Flags: nowait postinstall
+
+[Code]
+var
+  ExistingInstall: Boolean;
+
+function InitializeSetup(): Boolean;
+var
+  UninstallKey: String;
+begin
+  UninstallKey := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\' +
+    ExpandConstant('{#SetupSetting("AppId")}') + '_is1';
+  { Capture before installation writes its own registration. This also detects
+    upgrades launched by older apps or directly from a downloaded installer. }
+  ExistingInstall := RegKeyExists(HKCU32, UninstallKey) or
+    RegKeyExists(HKLM32, UninstallKey);
+  if IsWin64 then
+    ExistingInstall := ExistingInstall or RegKeyExists(HKCU64, UninstallKey) or
+      RegKeyExists(HKLM64, UninstallKey);
+  Result := True;
+end;
+
+function IsFirstInstall(): Boolean;
+begin
+  Result := not ExistingInstall;
+end;

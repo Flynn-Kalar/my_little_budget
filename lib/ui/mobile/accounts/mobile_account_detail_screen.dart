@@ -15,6 +15,7 @@ import '../transactions/sheets/mobile_transaction_sheet.dart';
 import '../mobile_widgets.dart';
 import '../../shared/account_transaction_month_header.dart';
 import '../../shared/account_financial_summary.dart';
+import '../../shared/account_transaction_balance.dart';
 
 class MobileAccountDetailScreen extends ConsumerWidget {
   const MobileAccountDetailScreen({super.key, required this.accountId});
@@ -455,16 +456,7 @@ class _AccountTransactionCard extends ConsumerWidget {
                       ),
                     ),
                     if (row.balanceAfter != null)
-                      Text(
-                        formatKRW(row.balanceAfter!),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.75,
-                          ),
-                        ),
-                      ),
+                      AccountTransactionBalance(row: row),
                   ],
                 ),
               ],

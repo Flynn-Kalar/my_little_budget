@@ -19,6 +19,7 @@ void main() {
   final today = DateTime(2026, 11, 10);
   Future<({AppDatabase db, Account card})> seed({
     bool configured = true,
+    bool reportedAmounts = false,
   }) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
     final accounts = await db.accountsDao.getActiveAccounts();
@@ -44,9 +45,9 @@ void main() {
       'expense',
     )).first;
     for (final entry in [
-      ('2026-10-31', 100000),
-      ('2026-11-05', 30000),
-      ('2026-11-20', 50000),
+      if (!reportedAmounts) ('2026-10-31', 100000),
+      ('2026-11-05', reportedAmounts ? 431210 : 30000),
+      ('2026-11-20', reportedAmounts ? 48000 : 50000),
     ]) {
       await db.transactionsDao.saveTransaction(
         draft: TransactionDraft(
@@ -56,6 +57,18 @@ void main() {
           occurredTime: '12:00',
           accountId: card.id,
           categoryId: category.id,
+        ),
+      );
+    }
+    if (reportedAmounts) {
+      await db.transactionsDao.saveTransaction(
+        draft: TransactionDraft(
+          type: 'transfer',
+          amount: 11368,
+          occurredOn: '2026-10-31',
+          occurredTime: '00:00',
+          fromAccountId: bank.id,
+          toAccountId: card.id,
         ),
       );
     }
@@ -177,12 +190,15 @@ void main() {
           data.card.id,
           asOf: today,
         ))!;
-        expect(saved.balance, -120000);
-        expect(saved.projectedBalance, -170000);
+        // Closing on the 5th means the new usage period starts on Nov 6.
+        // The Nov 5 purchase remains in the previous period.
+        expect(saved.balance, -150000);
+        expect(saved.projectedBalance, -200000);
         expect(saved.cardSpendingToDate, 20000);
         expect(saved.cardMonthSpending, 70000);
         expect(saved.cardPaymentDay, 3);
         expect(saved.cardClosingDay, 5);
+        expect(saved.cardSpendingStart, '2026-11-06');
         expect(saved.cardPaymentAccountName, '주거래 통장');
         expect(tester.takeException(), isNull);
       } finally {
@@ -255,4 +271,95 @@ void main() {
       }
     },
   );
+
+  for (final mobile in [false, true]) {
+    testWidgets(
+      '${mobile ? 'mobile' : 'desktop'} entered 415191 is shown separately from 403823 debt',
+      (tester) async {
+        final data = await seed(reportedAmounts: true);
+        try {
+          final account = (await data.db.accountsDao.getAccountBalance(
+            data.card.id,
+            asOf: today,
+          ))!;
+          final size = mobile ? const Size(390, 1000) : const Size(1000, 1200);
+          await pump(
+            tester,
+            data.db,
+            mobile
+                ? const MobileAccountsScreen()
+                : Builder(
+                    builder: (context) => TextButton(
+                      onPressed: () =>
+                          AccountFormDialog.show(context, account: account),
+                      child: const Text('편집 열기'),
+                    ),
+                  ),
+            size,
+          );
+          if (mobile) {
+            final cardWidget = find
+                .ancestor(
+                  of: find.text('신용카드'),
+                  matching: find.byType(MobileCard),
+                )
+                .first;
+            final menu = find.descendant(
+              of: cardWidget,
+              matching: find.byType(PopupMenuButton<String>),
+            );
+            await tester.ensureVisible(menu);
+            await tester.tap(menu);
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('수정'));
+          } else {
+            await tester.tap(find.text('편집 열기'));
+          }
+          await tester.pumpAndSettle();
+          final field = find.byWidgetPredicate(
+            (widget) =>
+                widget is TextField &&
+                widget.decoration?.labelText == '오늘까지 쓴 금액',
+          );
+          await tester.ensureVisible(field);
+          expect(
+            tester
+                .widget<TextField>(field)
+                .controller!
+                .text
+                .replaceAll(',', ''),
+            '431210',
+          );
+          if (mobile) {
+            await tester.tap(field);
+            await tester.pumpAndSettle();
+            for (final label in ['C', '4', '1', '5', '1', '9', '1', '=']) {
+              await tester.tap(find.text(label).last);
+              await tester.pumpAndSettle();
+            }
+          } else {
+            await tester.enterText(field, '415191');
+          }
+          await tester.ensureVisible(find.text('저장'));
+          await tester.tap(find.text('저장'));
+          await tester.pumpAndSettle();
+          await pump(
+            tester,
+            data.db,
+            mobile
+                ? MobileAccountDetailScreen(accountId: data.card.id)
+                : AccountDetailScreen(accountId: data.card.id),
+            size,
+          );
+          expect(find.text('기간 사용액 ${formatKRW(415191)}'), findsOneWidget);
+          expect(find.text('미결제 잔액 ${formatKRW(403823)}'), findsOneWidget);
+          expect(find.text(formatKRW(415191)), findsOneWidget);
+          expect(find.text('사용액 집계 2026-11-01 ~ 2026-11-30'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await close(tester, data.db);
+        }
+      },
+    );
+  }
 }

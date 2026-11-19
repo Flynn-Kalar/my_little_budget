@@ -86,6 +86,22 @@ DateTime _closingDate(DateTime nominal, int closingDay) {
       : _dayInMonth(nominal.year, nominal.month - 1, closingDay);
 }
 
+/// The closing day ends the existing usage period, inclusively. The next
+/// calendar day starts a new period, independently of the payment date.
+({String start, String end}) cardSpendingPeriod(DateTime date, int closingDay) {
+  if (closingDay < 1 || closingDay > 31) {
+    throw ArgumentError.value(closingDay, 'closingDay');
+  }
+  final day = DateTime(date.year, date.month, date.day);
+  final closing = _dayInMonth(day.year, day.month, closingDay);
+  final endMonth = day.isAfter(closing) ? day.month + 1 : day.month;
+  final previous = _dayInMonth(day.year, endMonth - 1, closingDay);
+  return (
+    start: toDateKey(DateTime(previous.year, previous.month, previous.day + 1)),
+    end: toDateKey(_dayInMonth(day.year, endMonth, closingDay)),
+  );
+}
+
 /// Principal only. Keep each original payment day when crossing short months.
 /// A payment cycle's identity is its nominal month, not its shifted holiday date.
 List<CardInstallment> cardInstallmentSchedule({

@@ -135,6 +135,7 @@ class WindowsUpdateInstaller {
         '/SILENT',
         '/CLOSEAPPLICATIONS',
         '/NORESTART',
+        '/MERGETASKS=!desktopicon',
       ]);
       _exitApp(0);
     } on WindowsUpdateException {

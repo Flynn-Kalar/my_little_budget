@@ -90,6 +90,15 @@ class AccountFinancialSummary extends StatelessWidget {
           ),
         ],
         if (account.kind == 'card') ...[
+          if (account.cardSpendingStart != null &&
+              account.cardSpendingEnd != null)
+            Text(
+              '사용액 집계 ${account.cardSpendingStart} ~ ${account.cardSpendingEnd}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
           const Divider(height: 16),
           line(
             billing == null ? '이번 결제일에 빠질 돈' : '이번 결제 · ${billing.paymentDate}',

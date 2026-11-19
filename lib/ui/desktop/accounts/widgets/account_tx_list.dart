@@ -13,6 +13,7 @@ import '../../transactions/widgets/transaction_edit_dialog.dart';
 import 'package:my_little_budget/features/accounts/providers.dart';
 import 'adjustment_edit_dialog.dart';
 import '../../../shared/account_transaction_month_header.dart';
+import '../../../shared/account_transaction_balance.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -422,7 +423,7 @@ class _GeneralRow extends ConsumerWidget {
                       ),
                     ),
                     if (row.balanceAfter != null)
-                      _BalanceAfterText(balance: row.balanceAfter!),
+                      AccountTransactionBalance(row: row),
                   ],
                 ),
               ],
@@ -520,7 +521,7 @@ class _AdjustmentRow extends ConsumerWidget {
                       ),
                     ),
                     if (row.balanceAfter != null)
-                      _BalanceAfterText(balance: row.balanceAfter!),
+                      AccountTransactionBalance(row: row),
                   ],
                 ),
               ],
@@ -643,7 +644,7 @@ class _InvestmentVirtualRow extends StatelessWidget {
                       ),
                     ),
                     if (row.balanceAfter != null)
-                      _BalanceAfterText(balance: row.balanceAfter!),
+                      AccountTransactionBalance(row: row),
                   ],
                 ),
               ],
@@ -676,21 +677,6 @@ class _TagChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text('#$name', style: TextStyle(fontSize: 10, color: c)),
-    );
-  }
-}
-
-class _BalanceAfterText extends StatelessWidget {
-  const _BalanceAfterText({required this.balance});
-  final int balance;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      formatKRW(balance),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 12, color: context.desktopMuted),
     );
   }
 }

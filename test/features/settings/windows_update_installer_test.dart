@@ -54,6 +54,7 @@ void main() {
       '/SILENT',
       '/CLOSEAPPLICATIONS',
       '/NORESTART',
+      '/MERGETASKS=!desktopicon',
     ]);
     expect(exitCode, 0);
     expect(progress.last, 1);
@@ -190,6 +191,7 @@ void main() {
       launcher: (file, args) async {
         launched = file;
         expect(args, contains('/SILENT'));
+        expect(args, contains('/MERGETASKS=!desktopicon'));
       },
       exitApp: (_) => exited = true,
       isWindows: true,

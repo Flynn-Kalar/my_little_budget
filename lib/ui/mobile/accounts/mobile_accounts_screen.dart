@@ -486,6 +486,11 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
             id: widget.account?.accountId,
             draft: result.value!,
             currentBalance: parseKRW(_balance.text),
+            adjustBalance:
+                _kind != 'card' ||
+                !_isEdit ||
+                widget.account!.kind != 'card' ||
+                parseKRW(_balance.text) != widget.account!.cardSpendingToDate,
             asOf: today,
             currentCardSpending: _kind == 'card'
                 ? parseKRW(_balance.text)
@@ -631,7 +636,7 @@ class _AccountSheetState extends ConsumerState<_AccountSheet> {
                   ? '현재 잔액'
                   : '초기 잔액',
               helperText: _kind == 'card'
-                  ? '이번 달 사용액 수정 · 예정 지출 유지'
+                  ? '마감일 다음 날부터 오늘까지 사용액 · 미설정 시 공통 집계기간'
                   : _isEdit
                   ? '오늘까지의 잔액을 수정합니다. 예정 거래를 제외한 차액을 오늘의 잔액 조정으로 기록합니다.'
                   : null,

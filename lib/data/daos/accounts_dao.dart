@@ -40,6 +40,8 @@ class AccountBalance {
     this.cardInstallmentCount = 0,
     this.cardSpendingToDate = 0,
     this.cardMonthSpending = 0,
+    this.cardSpendingStart,
+    this.cardSpendingEnd,
     this.fundPurpose = 'living',
   }) : _projectedBalance = projectedBalance;
 
@@ -65,6 +67,8 @@ class AccountBalance {
   /// Spending in the current period, independent of card repayment transfers.
   final int cardSpendingToDate;
   final int cardMonthSpending;
+  final String? cardSpendingStart;
+  final String? cardSpendingEnd;
   final String fundPurpose;
 }
 
@@ -139,14 +143,6 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
           SUM(CASE WHEN occurred_on <= ? THEN amount ELSE 0 END) AS current_amount,
           SUM(CASE WHEN occurred_on <= ? THEN amount ELSE 0 END) AS projected_amount
         FROM movements GROUP BY aid
-      ), spending AS (
-        SELECT account_id AS aid,
-          SUM(CASE WHEN occurred_on <= ? THEN
-            CASE WHEN type = 'expense' THEN amount ELSE -amount END ELSE 0 END) AS spent_to_date,
-          SUM(CASE WHEN type = 'expense' THEN amount ELSE -amount END) AS month_spending
-        FROM transactions
-        WHERE type IN ('expense', 'income', 'adjustment') AND occurred_on >= ? AND occurred_on <= ?
-        GROUP BY account_id
       )
       SELECT
         a.id AS id, a.name AS name, a.kind AS kind, a.color AS color,
@@ -162,21 +158,12 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
         a.exclude_from_total AS exclude_from_total,
         a.is_investment AS is_investment,
         a.initial_balance + COALESCE(t.current_amount, 0) AS balance,
-        a.initial_balance + COALESCE(t.projected_amount, 0) AS projected_balance,
-        COALESCE(s.spent_to_date, 0) AS spent_to_date,
-        COALESCE(s.month_spending, 0) AS month_spending
+        a.initial_balance + COALESCE(t.projected_amount, 0) AS projected_balance
       FROM accounts a LEFT JOIN totals t ON t.aid = a.id
-      LEFT JOIN spending s ON s.aid = a.id
       WHERE a.archived_at IS NULL
       ORDER BY a.sort_order, a.id
       ''',
-      variables: [
-        Variable<String>(today),
-        Variable<String>(currentMonthEnd),
-        Variable<String>(today),
-        Variable<String>(currentMonthStart),
-        Variable<String>(currentMonthEnd),
-      ],
+      variables: [Variable<String>(today), Variable<String>(currentMonthEnd)],
       readsFrom: {accounts, transactions},
     ).get();
 
@@ -186,6 +173,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
         .map((r) => r.read<int>('id'))
         .toSet();
     final cardEntries = <int, List<CardBillingEntry>>{};
+    final cardSpendingEntries = <int, List<Transaction>>{};
     if (cardIds.isNotEmpty) {
       final movements =
           await (select(transactions)..where(
@@ -221,6 +209,9 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
           add(movement.fromAccountId, movement.occurredOn, -movement.amount);
           add(movement.toAccountId, movement.occurredOn, movement.amount);
         } else {
+          if (cardIds.contains(movement.accountId)) {
+            (cardSpendingEntries[movement.accountId!] ??= []).add(movement);
+          }
           add(
             movement.accountId,
             movement.occurredOn,
@@ -241,6 +232,21 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
       final id = r.read<int>('id');
       final paymentDay = r.readNullable<int>('card_payment_day');
       final closingDay = r.readNullable<int>('card_closing_day');
+      final isCard = r.read<String>('kind') == 'card';
+      final spendingPeriod = isCard && closingDay != null
+          ? cardSpendingPeriod(localAsOf, closingDay)
+          : (start: currentMonthStart, end: currentMonthEnd);
+      var spendingToDate = 0;
+      var monthSpending = 0;
+      for (final entry in cardSpendingEntries[id] ?? <Transaction>[]) {
+        if (entry.occurredOn.compareTo(spendingPeriod.start) < 0 ||
+            entry.occurredOn.compareTo(spendingPeriod.end) > 0) {
+          continue;
+        }
+        final amount = entry.type == 'expense' ? entry.amount : -entry.amount;
+        monthSpending += amount;
+        if (entry.occurredOn.compareTo(today) <= 0) spendingToDate += amount;
+      }
       return AccountBalance(
         accountId: id,
         name: r.read<String>('name'),
@@ -257,8 +263,10 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
         fundPurpose: normalizeFundPurpose(
           r.readNullable<String>('fund_purpose'),
         ),
-        cardSpendingToDate: r.read<int>('spent_to_date'),
-        cardMonthSpending: r.read<int>('month_spending'),
+        cardSpendingToDate: spendingToDate,
+        cardMonthSpending: monthSpending,
+        cardSpendingStart: isCard ? spendingPeriod.start : null,
+        cardSpendingEnd: isCard ? spendingPeriod.end : null,
         cardPaymentDay: paymentDay,
         cardClosingDay: closingDay,
         cardPaymentAccountUuid: r.readNullable<String>(
@@ -363,6 +371,7 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
     required int currentBalance,
     DateTime? asOf,
     int? currentCardSpending,
+    bool adjustBalance = true,
     String? statementStart,
     String? statementEnd,
   }) async {
@@ -425,10 +434,6 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
           statementStart: statementStart,
           statementEnd: statementEnd,
         );
-        final delta = currentCardSpending == null
-            ? currentBalance - (before?.balance ?? 0)
-            : (before?.cardSpendingToDate ?? 0) - currentCardSpending;
-
         await (update(accounts)..where((a) => a.id.equals(id))).write(
           AccountsCompanion(
             name: Value(draft.name),
@@ -456,6 +461,21 @@ class AccountsDao extends DatabaseAccessor<AppDatabase>
           ),
         );
 
+        // If the cutoff changed, compare the entered usage with the newly
+        // selected period, which is also the period displayed after saving.
+        final usageBefore = currentCardSpending != null && adjustBalance
+            ? await getAccountBalance(
+                id,
+                asOf: today,
+                statementStart: statementStart,
+                statementEnd: statementEnd,
+              )
+            : null;
+        final delta = !adjustBalance
+            ? 0
+            : currentCardSpending == null
+            ? currentBalance - (before?.balance ?? 0)
+            : (usageBefore?.cardSpendingToDate ?? 0) - currentCardSpending;
         if (delta != 0) {
           await into(transactions).insert(
             TransactionsCompanion.insert(

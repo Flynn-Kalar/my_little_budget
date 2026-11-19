@@ -116,6 +116,12 @@ class _State extends ConsumerState<AccountFormDialog> {
             id: widget.account?.accountId,
             draft: result.value!,
             currentBalance: parseKRW(_balanceCtrl.text),
+            adjustBalance:
+                _kind != 'card' ||
+                !_isEditing ||
+                widget.account!.kind != 'card' ||
+                parseKRW(_balanceCtrl.text) !=
+                    widget.account!.cardSpendingToDate,
             asOf: today,
             currentCardSpending: _kind == 'card'
                 ? parseKRW(_balanceCtrl.text)
@@ -261,7 +267,7 @@ class _State extends ConsumerState<AccountFormDialog> {
                   border: const OutlineInputBorder(),
                   helperMaxLines: 3,
                   helperText: _kind == 'card'
-                      ? '이번 달 오늘까지의 사용액을 입력하세요. 변경분은 오늘의 사용액 조정으로 기록하고 예정 지출은 유지합니다.'
+                      ? '마감일 다음 날부터 오늘까지의 사용액을 입력하세요. 마감일 미설정 시 공통 집계기간을 따릅니다. 변경분은 오늘의 사용액 조정으로 기록합니다.'
                       : _isEditing
                       ? '오늘까지의 잔액을 수정합니다. 예정 거래는 그대로 두고 변경분을 오늘의 잔액 조정으로 기록합니다.'
                       : null,

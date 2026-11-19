@@ -90,9 +90,14 @@ final accountDetailTagsProvider = FutureProvider.autoDispose<List<Tag>>(
 final accountTransactionsProvider = FutureProvider.autoDispose
     .family<List<TransactionRow>, int>((ref, id) async {
       final filter = ref.watch(accountDetailFilterProvider(id));
+      final policy = await ref.watch(statementPeriodProvider.future);
       final rows = await ref
           .watch(transactionsDaoProvider)
-          .listTransactionsByAccount(id);
+          .listTransactionsByAccount(
+            id,
+            fallbackSpendingPeriodKey: (date) =>
+                policy.range(policy.anchorForDate(date)).start,
+          );
       return rows.where((row) {
         if (filter.fromDate != null &&
             row.occurredOn.compareTo(filter.fromDate!) < 0) {

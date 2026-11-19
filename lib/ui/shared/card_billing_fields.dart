@@ -66,7 +66,7 @@ class CardBillingFields extends ConsumerWidget {
         dayField('청구 마감일', 'card-closing-day', closingDay, onClosingDayChanged),
         const SizedBox(height: 6),
         const Text(
-          '결제일 직전 마감일까지의 이용액을 청구합니다. 예: 14일 결제·말일 마감 → 전월 말일까지. 휴일 결제는 다음 영업일로 계산합니다.',
+          '마감일 당일까지는 이전 집계월에 포함하고, 다음 날부터 새 집계월로 계산합니다. 예: 10일 마감 → 10일까지 기존 기간, 11일부터 새 기간. 말일 마감은 그 달의 마지막 날까지 포함합니다. 휴일에는 결제일만 다음 영업일로 이동합니다.',
           style: TextStyle(fontSize: 12),
         ),
         const SizedBox(height: 12),
